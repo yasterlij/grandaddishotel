@@ -28,11 +28,14 @@ import {
   Users,
   Search,
   Filter,
+  CreditCard,
+  Copy,
+  Printer,
 } from 'lucide-react';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    'reservations' | 'roomTypes' | 'rooms' | 'dining' | 'spa' | 'messages' | 'testimonials'
+    'reservations' | 'payments' | 'roomTypes' | 'rooms' | 'dining' | 'spa' | 'messages' | 'testimonials'
   >('reservations');
 
   const [loading, setLoading] = useState(true);
@@ -50,6 +53,13 @@ export default function AdminPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [eventInquiries, setEventInquiries] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+
+  // Payment filters & inspection modal
+  const [paymentProviderFilter, setPaymentProviderFilter] = useState<string>('ALL');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('ALL');
+  const [paymentSearch, setPaymentSearch] = useState<string>('');
+  const [viewPaymentModal, setViewPaymentModal] = useState<any | null>(null);
 
   // Modal states
   const [editRoomTypeModal, setEditRoomTypeModal] = useState<any | null>(null);
@@ -86,6 +96,7 @@ export default function AdminPage() {
         msgRes,
         eventsRes,
         testRes,
+        payRes,
       ] = await Promise.all([
         fetch('/api/admin/overview').then((r) => r.json()),
         fetch('/api/admin/reservations').then((r) => r.json()),
@@ -96,6 +107,7 @@ export default function AdminPage() {
         fetch('/api/contact').then((r) => r.json()),
         fetch('/api/events').then((r) => r.json()),
         fetch('/api/admin/testimonials').then((r) => r.json()),
+        fetch('/api/admin/payments').then((r) => r.json()),
       ]);
 
       if (overviewRes.success) setOverview(overviewRes);
@@ -107,6 +119,7 @@ export default function AdminPage() {
       if (msgRes.success) setMessages(msgRes.messages || []);
       if (eventsRes.success) setEventInquiries(eventsRes.inquiries || []);
       if (testRes.success) setTestimonials(testRes.testimonials || []);
+      if (payRes.success) setPayments(payRes.payments || []);
     } catch (err) {
       console.error('Error loading admin data from PostgreSQL:', err);
     } finally {
@@ -122,6 +135,46 @@ export default function AdminPage() {
   const notify = (msg: string) => {
     setActionMessage(msg);
     setTimeout(() => setActionMessage(''), 4500);
+  };
+
+  // -------------------------------------------------------------
+  // Payment CRUD Handlers
+  // -------------------------------------------------------------
+  const handleUpdatePaymentStatus = async (paymentId: string, status: string) => {
+    try {
+      const res = await fetch('/api/admin/payments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: paymentId, status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify(`Payment status marked as ${status}`);
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to update payment status');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this payment transaction?')) return;
+    try {
+      const res = await fetch(`/api/admin/payments?id=${paymentId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify('Payment transaction deleted from PostgreSQL');
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to delete payment');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
   };
 
   // -------------------------------------------------------------
@@ -545,6 +598,14 @@ export default function AdminPage() {
             </div>
             <div style={{ fontSize: '26px', fontWeight: 700, color: '#153D4B' }}>{spa.length}</div>
           </div>
+
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E1DA' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#838A8D', fontSize: '12px', marginBottom: '6px' }}>
+              <span>Transactions</span>
+              <CreditCard size={16} color="#00A36C" />
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 700, color: '#00A36C' }}>{payments.length}</div>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -559,6 +620,7 @@ export default function AdminPage() {
         >
           {[
             { id: 'reservations', label: 'Bookings & Dates', icon: Calendar, count: reservations.length },
+            { id: 'payments', label: 'Payments & Transactions', icon: CreditCard, count: payments.length },
             { id: 'roomTypes', label: 'Room Catalog & Prices', icon: Bed, count: roomTypes.length },
             { id: 'rooms', label: 'Physical Rooms', icon: Bed, count: rooms.length },
             { id: 'dining', label: 'Dining Menu', icon: Utensils, count: dining.length },
@@ -781,6 +843,398 @@ export default function AdminPage() {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB: PAYMENTS & TRANSACTIONS (CHAPA, TELEBIRR, CBE BIRR, SKINA) */}
+        {/* ============================================================== */}
+        {activeTab === 'payments' && (
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E1DA', overflow: 'hidden' }}>
+            {/* Header & Controls */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#153D4B', fontWeight: 600 }}>
+                  Payments & Multi-Gateway Transactions
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#838A8D' }}>
+                  Live processing logs for Chapa, Telebirr, CBE Birr / CEB, Skina Card Pay, & Front Desk Cash
+                </p>
+              </div>
+
+              {/* Real-time Search Box */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '280px' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#838A8D' }} />
+                  <input
+                    type="text"
+                    placeholder="Search by txRef, booking ref, guest..."
+                    value={paymentSearch}
+                    onChange={(e) => setPaymentSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px 8px 32px',
+                      borderRadius: '8px',
+                      border: '1px solid #D5D4CC',
+                      fontSize: '13px',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Micro-Metrics Row */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px',
+                padding: '16px 24px',
+                backgroundColor: '#FBF9F4',
+                borderBottom: '1px solid #E2E1DA',
+              }}
+            >
+              <div style={{ backgroundColor: '#FFFFFF', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                <span style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase', fontWeight: 600 }}>Total Collected (ETB)</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#00A36C', marginTop: '2px' }}>
+                  {payments
+                    .filter((p) => p.status === 'SUCCESS' && p.currency === 'ETB')
+                    .reduce((acc, p) => acc + Number(p.amount || 0), 0)
+                    .toLocaleString()}{' '}
+                  ETB
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#FFFFFF', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                <span style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase', fontWeight: 600 }}>Total Collected (USD)</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#153D4B', marginTop: '2px' }}>
+                  $
+                  {payments
+                    .filter((p) => p.status === 'SUCCESS' && p.currency === 'USD')
+                    .reduce((acc, p) => acc + Number(p.amount || 0), 0)
+                    .toLocaleString()}
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#FFFFFF', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                <span style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase', fontWeight: 600 }}>Successful Transactions</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#10B981', marginTop: '2px' }}>
+                  {payments.filter((p) => p.status === 'SUCCESS').length} / {payments.length}
+                </div>
+              </div>
+
+              <div style={{ backgroundColor: '#FFFFFF', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                <span style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase', fontWeight: 600 }}>Pending Collections</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#D97706', marginTop: '2px' }}>
+                  {payments.filter((p) => p.status === 'PENDING').length}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Pills Toolbar */}
+            <div
+              style={{
+                padding: '12px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                gap: '12px',
+                alignItems: 'center',
+                backgroundColor: '#FFFFFF',
+              }}
+            >
+              {/* Provider Filters */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#838A8D', marginRight: '4px' }}>Gateway:</span>
+                {[
+                  { id: 'ALL', label: 'All Gateways' },
+                  { id: 'CHAPA', label: 'Chapa', color: '#00A36C' },
+                  { id: 'TELEBIRR', label: 'Telebirr', color: '#0072CE' },
+                  { id: 'CBE_BIRR', label: 'CBE Birr', color: '#6E2585' },
+                  { id: 'SKINA', label: 'Skina Card', color: '#153D4B' },
+                  { id: 'CASH_ON_ARRIVAL', label: 'Front Desk Cash', color: '#E49951' },
+                ].map((prov) => {
+                  const isSel = paymentProviderFilter === prov.id;
+                  const count =
+                    prov.id === 'ALL'
+                      ? payments.length
+                      : payments.filter((p) => p.provider === prov.id).length;
+                  return (
+                    <button
+                      key={prov.id}
+                      onClick={() => setPaymentProviderFilter(prov.id)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        border: isSel ? `1px solid ${prov.color || '#153D4B'}` : '1px solid #E2E1DA',
+                        backgroundColor: isSel ? prov.color || '#153D4B' : '#FFFFFF',
+                        color: isSel ? '#FFFFFF' : '#5E6E75',
+                        fontSize: '11px',
+                        fontWeight: isSel ? 600 : 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {prov.label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Status Filters */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#838A8D', marginRight: '4px' }}>Status:</span>
+                {['ALL', 'SUCCESS', 'PENDING', 'REFUNDED'].map((st) => {
+                  const isSel = paymentStatusFilter === st;
+                  return (
+                    <button
+                      key={st}
+                      onClick={() => setPaymentStatusFilter(st)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        border: isSel ? '1px solid #153D4B' : '1px solid #E2E1DA',
+                        backgroundColor: isSel ? '#153D4B' : '#FFFFFF',
+                        color: isSel ? '#FFFFFF' : '#5E6E75',
+                        fontSize: '11px',
+                        fontWeight: isSel ? 600 : 500,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {st}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F9F9F6', borderBottom: '1px solid #E2E1DA', color: '#838A8D', fontSize: '11px', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '12px 18px', fontWeight: 600 }}>Tx Reference</th>
+                    <th style={{ padding: '12px 18px', fontWeight: 600 }}>Booking & Room</th>
+                    <th style={{ padding: '12px 18px', fontWeight: 600 }}>Guest</th>
+                    <th style={{ padding: '12px 18px', fontWeight: 600 }}>Gateway</th>
+                    <th style={{ padding: '12px 18px', fontWeight: 600 }}>Amount</th>
+                    <th style={{ padding: '12px 18px', fontWeight: 600 }}>Status</th>
+                    <th style={{ padding: '12px 18px', fontWeight: 600 }}>Date & Time</th>
+                    <th style={{ padding: '12px 18px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments
+                    .filter((p) => {
+                      if (paymentProviderFilter !== 'ALL' && p.provider !== paymentProviderFilter) return false;
+                      if (paymentStatusFilter !== 'ALL' && p.status !== paymentStatusFilter) return false;
+                      if (paymentSearch.trim()) {
+                        const q = paymentSearch.toLowerCase();
+                        const matchTx = (p.txRef || '').toLowerCase().includes(q);
+                        const matchBooking = (p.bookingRef || '').toLowerCase().includes(q);
+                        const matchGuest = `${p.firstName || ''} ${p.lastName || ''} ${p.guestEmail || ''}`.toLowerCase().includes(q);
+                        if (!matchTx && !matchBooking && !matchGuest) return false;
+                      }
+                      return true;
+                    })
+                    .map((p) => {
+                      // Provider badge styles
+                      const providerStyles: Record<string, { bg: string; color: string; label: string }> = {
+                        CHAPA: { bg: '#E8F8F1', color: '#00A36C', label: 'Chapa' },
+                        TELEBIRR: { bg: '#E6F1FA', color: '#0072CE', label: 'Telebirr' },
+                        CBE_BIRR: { bg: '#F5ECF8', color: '#6E2585', label: 'CBE Birr' },
+                        SKINA: { bg: '#EBF1F4', color: '#153D4B', label: 'Skina Card' },
+                        CASH_ON_ARRIVAL: { bg: '#FDF9F4', color: '#E49951', label: 'Cash Front Desk' },
+                      };
+                      const pStyle = providerStyles[p.provider] || { bg: '#F3F4F6', color: '#4B5563', label: p.provider };
+
+                      return (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #ECEBE5', transition: 'background-color 0.15s' }}>
+                          <td style={{ padding: '12px 18px', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <code style={{ fontSize: '11px', color: '#153D4B', fontWeight: 600 }}>
+                                {p.txRef}
+                              </code>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(p.txRef);
+                                  notify('Transaction reference copied');
+                                }}
+                                title="Copy TxRef"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#838A8D' }}
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
+                            {p.gatewayRef && (
+                              <div style={{ fontSize: '10px', color: '#838A8D', marginTop: '2px' }}>
+                                GW: {p.gatewayRef}
+                              </div>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '12px 18px' }}>
+                            <div style={{ fontWeight: 600, color: '#E49951', fontSize: '12px' }}>
+                              {p.bookingRef || 'Direct Settle'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#5E6E75' }}>
+                              {p.roomTypeName || 'Room Stay'}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '12px 18px' }}>
+                            <div style={{ fontWeight: 600, color: '#153D4B' }}>
+                              {p.firstName ? `${p.firstName} ${p.lastName}` : 'Guest Customer'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#838A8D' }}>
+                              {p.guestEmail || p.guestPhone || 'No contact specified'}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '12px 18px' }}>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                backgroundColor: pStyle.bg,
+                                color: pStyle.color,
+                              }}
+                            >
+                              {pStyle.label}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '12px 18px', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 700, color: '#153D4B', fontSize: '14px' }}>
+                              {p.currency === 'ETB'
+                                ? `${Number(p.amount).toLocaleString()} ETB`
+                                : `$${Number(p.amount).toLocaleString()}`}
+                            </div>
+                            <span style={{ fontSize: '10px', color: '#838A8D' }}>
+                              Currency: {p.currency}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '12px 18px' }}>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                backgroundColor:
+                                  p.status === 'SUCCESS' ? '#DEF7EC' : p.status === 'PENDING' ? '#FEF3C7' : '#F3F4F6',
+                                color:
+                                  p.status === 'SUCCESS' ? '#03543F' : p.status === 'PENDING' ? '#92400E' : '#4B5563',
+                              }}
+                            >
+                              {p.status === 'SUCCESS' ? '✓ SUCCESS' : p.status === 'PENDING' ? '⏳ PENDING' : p.status}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '12px 18px', fontSize: '11px', color: '#838A8D', whiteSpace: 'nowrap' }}>
+                            <div>{new Date(p.createdAt).toLocaleDateString()}</div>
+                            <div>{new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          </td>
+
+                          <td style={{ padding: '12px 18px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                              {p.status !== 'SUCCESS' ? (
+                                <button
+                                  onClick={() => handleUpdatePaymentStatus(p.id, 'SUCCESS')}
+                                  title="Mark Verified & Paid"
+                                  style={{
+                                    padding: '5px 10px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #10B981',
+                                    backgroundColor: '#ECFDF5',
+                                    color: '#047857',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Mark Paid
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleUpdatePaymentStatus(p.id, 'REFUNDED')}
+                                  title="Refund Transaction"
+                                  style={{
+                                    padding: '5px 10px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #D1D5DB',
+                                    backgroundColor: '#F9FAFB',
+                                    color: '#4B5563',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Refund
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => setViewPaymentModal(p)}
+                                title="Inspect & Print Receipt"
+                                style={{
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #E2E1DA',
+                                  backgroundColor: '#FFFFFF',
+                                  color: '#153D4B',
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Receipt
+                              </button>
+
+                              <button
+                                onClick={() => handleDeletePayment(p.id)}
+                                title="Delete Record"
+                                style={{
+                                  padding: '5px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #FEE2E2',
+                                  backgroundColor: '#FEF2F2',
+                                  color: '#DC2626',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                  {payments.length === 0 && (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '40px 20px', textAlign: 'center', color: '#838A8D' }}>
+                        No payment records registered in PostgreSQL yet.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2641,6 +3095,251 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Payment Transaction / Receipt Modal */}
+      {viewPaymentModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 42, 51, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '560px',
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
+              border: '1px solid #E2E1DA',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                backgroundColor: '#0F2A33',
+                color: '#FFFFFF',
+                padding: '20px 24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <CreditCard size={20} color="#E49951" />
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Payment Receipt & Audit</h3>
+              </div>
+              <button
+                onClick={() => setViewPaymentModal(null)}
+                style={{ background: 'none', border: 'none', color: '#A2B5BD', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Receipt Body */}
+            <div style={{ padding: '24px' }}>
+              <div
+                style={{
+                  backgroundColor: '#FDF9F4',
+                  border: '1px solid #F5E6D3',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Amount Surcharged
+                  </span>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#153D4B' }}>
+                    {viewPaymentModal.currency === 'ETB'
+                      ? `${Number(viewPaymentModal.amount).toLocaleString()} ETB`
+                      : `$${Number(viewPaymentModal.amount).toLocaleString()}`}
+                  </div>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      backgroundColor:
+                        viewPaymentModal.status === 'SUCCESS'
+                          ? '#DEF7EC'
+                          : viewPaymentModal.status === 'PENDING'
+                          ? '#FEF3C7'
+                          : '#F3F4F6',
+                      color:
+                        viewPaymentModal.status === 'SUCCESS'
+                          ? '#03543F'
+                          : viewPaymentModal.status === 'PENDING'
+                          ? '#92400E'
+                          : '#4B5563',
+                    }}
+                  >
+                    {viewPaymentModal.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Grid of properties */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '14px',
+                  fontSize: '13px',
+                  marginBottom: '20px',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Transaction Reference</span>
+                  <code style={{ color: '#E49951', fontWeight: 600, fontSize: '12px' }}>{viewPaymentModal.txRef}</code>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Gateway Provider</span>
+                  <strong style={{ color: '#153D4B' }}>{viewPaymentModal.provider}</strong>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Gateway External Ref</span>
+                  <span style={{ color: '#5E6E75' }}>{viewPaymentModal.gatewayRef || 'Direct Transfer'}</span>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Booking Reference</span>
+                  <strong style={{ color: '#153D4B' }}>{viewPaymentModal.bookingRef || 'None'}</strong>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Guest Customer</span>
+                  <strong style={{ color: '#153D4B' }}>
+                    {viewPaymentModal.firstName ? `${viewPaymentModal.firstName} ${viewPaymentModal.lastName}` : 'Guest Customer'}
+                  </strong>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Guest Contact</span>
+                  <span style={{ color: '#5E6E75' }}>
+                    {viewPaymentModal.guestEmail || viewPaymentModal.guestPhone || 'None'}
+                  </span>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Room Category</span>
+                  <span style={{ color: '#5E6E75' }}>{viewPaymentModal.roomTypeName || 'Room Stay'}</span>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', color: '#838A8D', display: 'block' }}>Created At</span>
+                  <span style={{ color: '#5E6E75' }}>{new Date(viewPaymentModal.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons in Modal */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderTop: '1px solid #E2E1DA',
+                  paddingTop: '16px',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {viewPaymentModal.status !== 'SUCCESS' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdatePaymentStatus(viewPaymentModal.id, 'SUCCESS');
+                        setViewPaymentModal(null);
+                      }}
+                      style={{
+                        padding: '8px 14px',
+                        backgroundColor: '#10B981',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Mark Paid
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdatePaymentStatus(viewPaymentModal.id, 'REFUNDED');
+                        setViewPaymentModal(null);
+                      }}
+                      style={{
+                        padding: '8px 14px',
+                        backgroundColor: '#F3F4F6',
+                        color: '#374151',
+                        border: '1px solid #D1D5DB',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Issue Refund
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    style={{
+                      padding: '8px 14px',
+                      backgroundColor: '#FFFFFF',
+                      color: '#153D4B',
+                      border: '1px solid #D5D4CC',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Printer size={13} /> Print
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setViewPaymentModal(null)}
+                  className="btn btn-primary"
+                  style={{ padding: '8px 20px', fontSize: '12px' }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

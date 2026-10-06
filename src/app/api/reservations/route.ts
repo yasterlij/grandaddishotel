@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
       addons = {},
       totalAmount,
       currency = 'USD',
+      paymentProvider = 'CASH_ON_ARRIVAL',
+      paymentStatus = 'PENDING',
     } = body;
 
     if (!guestName || !guestEmail || !guestPhone || !checkIn || !checkOut) {
@@ -148,8 +150,26 @@ export async function POST(req: NextRequest) {
     );
 
     // 7. Insert Payment record into PostgreSQL
+    const validProviders: Record<string, string> = {
+      CHAPA: 'CHAPA',
+      TELEBIRR: 'TELEBIRR',
+      CBE_BIRR: 'CBE_BIRR',
+      CEB: 'CBE_BIRR',
+      CBE: 'CBE_BIRR',
+      SKINA: 'SKINA',
+      STRIPE: 'STRIPE',
+      CARD: 'SKINA',
+      CASH_ON_ARRIVAL: 'CASH_ON_ARRIVAL',
+      CASH: 'CASH_ON_ARRIVAL',
+    };
+
+    const mappedProvider =
+      validProviders[String(paymentProvider).toUpperCase()] || 'CASH_ON_ARRIVAL';
+    const isPaid = paymentStatus === 'SUCCESS';
+
     const paymentId = crypto.randomUUID();
-    const txRef = `TX-${bookingRef}-${Date.now()}`;
+    const txRef = `TX-${mappedProvider}-${bookingRef.replace(/[^A-Za-z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
+
     await query(
       `INSERT INTO payments (
         id,
@@ -159,15 +179,19 @@ export async function POST(req: NextRequest) {
         amount,
         currency,
         "reservationId",
+        "paidAt",
         "createdAt",
         "updatedAt"
-      ) VALUES ($1, $2, 'CASH_ON_ARRIVAL', 'PENDING', $3, $4, $5, NOW(), NOW())`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())`,
       [
         paymentId,
         txRef,
+        mappedProvider,
+        isPaid ? 'SUCCESS' : 'PENDING',
         calculatedTotal,
         currency === 'ETB' ? 'ETB' : 'USD',
         reservationId,
+        isPaid ? new Date() : null,
       ]
     );
 
@@ -176,6 +200,10 @@ export async function POST(req: NextRequest) {
       message: 'Reservation recorded successfully in PostgreSQL',
       bookingRef,
       reservationId,
+      paymentId,
+      txRef,
+      paymentProvider: mappedProvider,
+      paymentStatus: isPaid ? 'SUCCESS' : 'PENDING',
       roomName: roomType.name,
       checkIn,
       checkOut,

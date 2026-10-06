@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Check, Calendar, Users, DollarSign, ShieldCheck, Printer, ArrowLeft, ArrowRight, Sparkles, Coffee } from 'lucide-react';
+import { X, Check, Calendar, Users, DollarSign, ShieldCheck, Printer, ArrowLeft, ArrowRight, Sparkles, Coffee, CreditCard, Lock } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
+import PaymentModal from '@/components/PaymentModal';
+import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
 
 export default function BookingModal() {
   const { isOpen, closeBooking, bookingParams } = useBooking();
@@ -31,6 +33,13 @@ export default function BookingModal() {
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoMessage, setPromoMessage] = useState('');
+
+  // Payment State
+  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('CHAPA');
+  const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [createdReservationId, setCreatedReservationId] = useState('');
+  const [activeTxRef, setActiveTxRef] = useState('');
 
   // Confirmation state
   const [bookingRef, setBookingRef] = useState('');
@@ -151,23 +160,54 @@ export default function BookingModal() {
           addons,
           totalAmount: grandTotal,
           currency: 'USD',
+          paymentProvider: selectedPaymentProvider,
+          paymentStatus: 'PENDING',
         }),
       });
       const data = await res.json();
       if (data.success && data.bookingRef) {
         setBookingRef(data.bookingRef);
+        setCreatedReservationId(data.reservationId || '');
+        setActiveTxRef(data.txRef || '');
+
+        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
+          setPaymentStatus('PENDING');
+          setStep(3);
+        } else {
+          setIsPaymentModalOpen(true);
+        }
       } else {
         const fallbackRef = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
         setBookingRef(fallbackRef);
+        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
+          setPaymentStatus('PENDING');
+          setStep(3);
+        } else {
+          setIsPaymentModalOpen(true);
+        }
       }
     } catch (err) {
       console.error('Reservation error:', err);
       const fallbackRef = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
       setBookingRef(fallbackRef);
+      if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
+        setPaymentStatus('PENDING');
+        setStep(3);
+      } else {
+        setIsPaymentModalOpen(true);
+      }
     } finally {
       setIsSubmitting(false);
-      setStep(3);
     }
+  };
+
+  const handlePaymentSuccess = (paymentData: any) => {
+    setPaymentStatus('SUCCESS');
+    if (paymentData?.txRef) {
+      setActiveTxRef(paymentData.txRef);
+    }
+    setIsPaymentModalOpen(false);
+    setStep(3);
   };
 
   return (
@@ -760,6 +800,78 @@ export default function BookingModal() {
                 </div>
               </div>
 
+              {/* Payment Gateway & Method Selector */}
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #ECEBE5' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#153D4B' }}>
+                    Select Payment Method *
+                  </label>
+                  <span style={{ fontSize: '11px', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Lock size={12} /> 256-bit Encrypted
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                  {PAYMENT_PROVIDERS.map((prov) => {
+                    const isSelected = selectedPaymentProvider === prov.id;
+                    return (
+                      <div
+                        key={prov.id}
+                        onClick={() => setSelectedPaymentProvider(prov.id)}
+                        style={{
+                          padding: '10px 8px',
+                          borderRadius: '8px',
+                          border: isSelected ? `2px solid ${prov.color}` : '1px solid #E2E1DA',
+                          backgroundColor: isSelected ? prov.bgLight : '#FFFFFF',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          textAlign: 'center',
+                          gap: '2px',
+                        }}
+                      >
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: isSelected ? prov.color : '#153D4B' }}>
+                          {prov.name}
+                        </div>
+                        <span style={{ fontSize: '10px', color: '#838A8D' }}>
+                          {prov.badge}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Helper Note */}
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '6px',
+                    backgroundColor: '#F7F7F2',
+                    border: '1px solid #E2E1DA',
+                    fontSize: '11px',
+                    color: '#5E6E75',
+                  }}
+                >
+                  {selectedPaymentProvider === 'CHAPA' && (
+                    <span><strong>Chapa:</strong> Instant checkout supporting Telebirr, CBE Birr, Awash Bank, and Visa/Mastercard.</span>
+                  )}
+                  {selectedPaymentProvider === 'TELEBIRR' && (
+                    <span><strong>Telebirr:</strong> Fast USSD push prompt to phone (*127#) or scan QR via Telebirr SuperApp.</span>
+                  )}
+                  {selectedPaymentProvider === 'CBE_BIRR' && (
+                    <span><strong>Commercial Bank of Ethiopia (CBE / CEB):</strong> Pay via CBE Birr shortcode <strong>882200</strong> or CBE Mobile App.</span>
+                  )}
+                  {selectedPaymentProvider === 'SKINA' && (
+                    <span><strong>Skina / Card Pay:</strong> Secure international & local credit/debit card processing (Visa, Mastercard, Skina Digital).</span>
+                  )}
+                  {selectedPaymentProvider === 'CASH_ON_ARRIVAL' && (
+                    <span><strong>Cash / Pay at Hotel:</strong> Guarantee room now, pay upon arrival at Grand Addis Front Desk in ETB or USD.</span>
+                  )}
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div
                 style={{
@@ -788,11 +900,18 @@ export default function BookingModal() {
 
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="btn btn-primary"
                   style={{ padding: '14px 32px' }}
                 >
                   <ShieldCheck size={16} />
-                  <span>Confirm Reservation</span>
+                  <span>
+                    {isSubmitting
+                      ? 'Processing...'
+                      : selectedPaymentProvider === 'CASH_ON_ARRIVAL'
+                      ? 'Confirm Reservation'
+                      : `Proceed to Pay (${selectedPaymentProvider === 'CBE_BIRR' ? 'CBE Birr' : selectedPaymentProvider})`}
+                  </span>
                 </button>
               </div>
             </form>
@@ -806,8 +925,8 @@ export default function BookingModal() {
                   width: '68px',
                   height: '68px',
                   borderRadius: '50%',
-                  backgroundColor: '#ECFDF5',
-                  color: '#10B981',
+                  backgroundColor: paymentStatus === 'SUCCESS' ? '#ECFDF5' : '#FFFBEB',
+                  color: paymentStatus === 'SUCCESS' ? '#10B981' : '#F59E0B',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -818,7 +937,7 @@ export default function BookingModal() {
               </div>
 
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', color: '#153D4B', marginBottom: '8px' }}>
-                Your Reservation is Confirmed!
+                {paymentStatus === 'SUCCESS' ? 'Reservation & Payment Confirmed!' : 'Your Reservation is Confirmed!'}
               </h3>
               <p style={{ fontSize: '15px', color: '#5E6E75', maxWidth: '520px', margin: '0 auto 24px' }}>
                 Thank you, <strong>{guestName || 'Guest'}</strong>. We look forward to welcoming you to Grand Addis Hotel. A confirmation email has been dispatched to <strong>{guestEmail || 'your email'}</strong>.
@@ -845,9 +964,21 @@ export default function BookingModal() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase', color: '#838A8D', display: 'block' }}>
-                      HOTEL LOCATION
+                      PAYMENT STATUS
                     </span>
-                    <span style={{ fontSize: '13px', color: '#153D4B', fontWeight: 600 }}>22 Around Golagul, Addis Ababa</span>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        backgroundColor: paymentStatus === 'SUCCESS' ? '#DEF7EC' : '#FEF3C7',
+                        color: paymentStatus === 'SUCCESS' ? '#03543F' : '#92400E',
+                      }}
+                    >
+                      {paymentStatus === 'SUCCESS' ? '✓ PAID & VERIFIED' : '⏳ PAY ON ARRIVAL'}
+                    </span>
                   </div>
                 </div>
 
@@ -861,16 +992,18 @@ export default function BookingModal() {
                     <strong style={{ display: 'block', color: '#153D4B' }}>{nights} {nights === 1 ? 'Night' : 'Nights'}</strong>
                   </div>
                   <div>
+                    <span style={{ color: '#838A8D' }}>Payment Method:</span>
+                    <strong style={{ display: 'block', color: '#153D4B' }}>{selectedPaymentProvider}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#838A8D' }}>Transaction Ref:</span>
+                    <code style={{ fontSize: '11px', color: '#E49951', fontWeight: 600 }}>
+                      {activeTxRef || `TX-${selectedPaymentProvider}-${bookingRef.slice(-4)}`}
+                    </code>
+                  </div>
+                  <div>
                     <span style={{ color: '#838A8D' }}>Check-in:</span>
                     <strong style={{ display: 'block', color: '#153D4B' }}>{checkIn} (from 14:00)</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#838A8D' }}>Check-out:</span>
-                    <strong style={{ display: 'block', color: '#153D4B' }}>{checkOut} (until 12:00)</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: '#838A8D' }}>Guests:</span>
-                    <strong style={{ display: 'block', color: '#153D4B' }}>{adults} Adults, {children} Children</strong>
                   </div>
                   <div>
                     <span style={{ color: '#838A8D' }}>Total Amount:</span>
@@ -883,7 +1016,16 @@ export default function BookingModal() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                {paymentStatus !== 'SUCCESS' && (
+                  <button
+                    onClick={() => setIsPaymentModalOpen(true)}
+                    className="btn btn-primary"
+                    style={{ backgroundColor: '#00A36C', gap: '8px' }}
+                  >
+                    <CreditCard size={16} /> Pay Online Now (Chapa / Telebirr / CBE / Skina)
+                  </button>
+                )}
                 <button
                   onClick={() => window.print()}
                   className="btn btn-outline"
@@ -900,6 +1042,23 @@ export default function BookingModal() {
               </div>
             </div>
           )}
+
+          {/* Payment Modal */}
+          <PaymentModal
+            isOpen={isPaymentModalOpen}
+            onClose={() => setIsPaymentModalOpen(false)}
+            bookingRef={bookingRef}
+            reservationId={createdReservationId}
+            amountUSD={grandTotal}
+            amountETB={grandTotalETB}
+            guestName={guestName}
+            guestEmail={guestEmail}
+            guestPhone={guestPhone}
+            roomName={selectedRoom.name}
+            checkInDate={checkIn}
+            checkOutDate={checkOut}
+            onPaymentSuccess={handlePaymentSuccess}
+          />
 
         </div>
 

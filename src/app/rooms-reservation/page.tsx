@@ -18,8 +18,15 @@ import {
   Clock,
   ArrowRight,
   ArrowLeft,
+  CreditCard,
+  Smartphone,
+  Building2,
+  Banknote,
+  Lock,
 } from 'lucide-react';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
+import PaymentModal from '@/components/PaymentModal';
+import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
 
 function ReservationContent() {
   const searchParams = useSearchParams();
@@ -55,6 +62,12 @@ function ReservationContent() {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoMessage, setPromoMessage] = useState('');
   const [bookingRef, setBookingRef] = useState('');
+  const [reservationId, setReservationId] = useState('');
+  const [activeTxRef, setActiveTxRef] = useState('');
+  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('CHAPA');
+  const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [rooms, setRooms] = useState<Room[]>(ROOMS);
 
@@ -117,6 +130,7 @@ function ReservationContent() {
 
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -135,20 +149,55 @@ function ReservationContent() {
           addons,
           totalAmount: grandTotal,
           currency: 'USD',
+          paymentProvider: selectedPaymentProvider,
+          paymentStatus: 'PENDING',
         }),
       });
       const data = await res.json();
       if (data.success && data.bookingRef) {
         setBookingRef(data.bookingRef);
+        setReservationId(data.reservationId || '');
+        setActiveTxRef(data.txRef || '');
+
+        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
+          setPaymentStatus('PENDING');
+          setStep(3);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          // Open interactive payment modal for Chapa, Telebirr, CBE Birr, Skina
+          setIsPaymentModalOpen(true);
+        }
       } else {
         const ref = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
         setBookingRef(ref);
+        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
+          setPaymentStatus('PENDING');
+          setStep(3);
+        } else {
+          setIsPaymentModalOpen(true);
+        }
       }
     } catch (err) {
       console.error('Reservation error:', err);
       const ref = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
       setBookingRef(ref);
+      if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
+        setPaymentStatus('PENDING');
+        setStep(3);
+      } else {
+        setIsPaymentModalOpen(true);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handlePaymentSuccess = (paymentData: any) => {
+    setPaymentStatus('SUCCESS');
+    if (paymentData?.txRef) {
+      setActiveTxRef(paymentData.txRef);
+    }
+    setIsPaymentModalOpen(false);
     setStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -580,6 +629,89 @@ function ReservationContent() {
                   )}
                 </div>
 
+                {/* Payment Gateway & Method Selector */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#153D4B' }}>
+                      Select Payment Method *
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Lock size={12} /> 256-bit Encrypted
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                    {PAYMENT_PROVIDERS.map((prov) => {
+                      const isSelected = selectedPaymentProvider === prov.id;
+                      return (
+                        <div
+                          key={prov.id}
+                          onClick={() => setSelectedPaymentProvider(prov.id)}
+                          style={{
+                            padding: '12px 10px',
+                            borderRadius: '10px',
+                            border: isSelected ? `2px solid ${prov.color}` : '1px solid #E2E1DA',
+                            backgroundColor: isSelected ? prov.bgLight : '#FFFFFF',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            textAlign: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? prov.color : '#153D4B' }}>
+                            {prov.name}
+                          </div>
+                          <span style={{ fontSize: '10px', color: '#838A8D' }}>
+                            {prov.badge}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Payment Provider Helper Note */}
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: '#F7F7F2',
+                      border: '1px solid #E2E1DA',
+                      fontSize: '12px',
+                      color: '#5E6E75',
+                    }}
+                  >
+                    {selectedPaymentProvider === 'CHAPA' && (
+                      <div>
+                        <strong style={{ color: '#00A36C' }}>Chapa Premier Gateway:</strong> Instant checkout supporting Telebirr, CBE Birr, Awash Bank, Amole, and Visa/Mastercard.
+                      </div>
+                    )}
+                    {selectedPaymentProvider === 'TELEBIRR' && (
+                      <div>
+                        <strong style={{ color: '#0072CE' }}>Telebirr Mobile Money:</strong> Fast USSD push notification sent directly to your phone (*127#) or scan QR via Telebirr SuperApp.
+                      </div>
+                    )}
+                    {selectedPaymentProvider === 'CBE_BIRR' && (
+                      <div>
+                        <strong style={{ color: '#6E2585' }}>Commercial Bank of Ethiopia (CBE / CEB):</strong> Instant transfer to Hotel CBE Birr Shortcode <strong>882200</strong> or CBE Mobile App account <strong>1000188220011</strong>.
+                      </div>
+                    )}
+                    {selectedPaymentProvider === 'SKINA' && (
+                      <div>
+                        <strong style={{ color: '#153D4B' }}>Skina / Card Pay:</strong> Secure international & local credit/debit card processing (Visa, Mastercard, Skina Digital).
+                      </div>
+                    )}
+                    {selectedPaymentProvider === 'CASH_ON_ARRIVAL' && (
+                      <div>
+                        <strong style={{ color: '#E49951' }}>Front Desk Reception:</strong> Guarantee your room now with zero upfront payment. Settle at hotel check-in in Ethiopian Birr or USD.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Final Total Summary */}
                 <div style={{ borderTop: '1px solid #ECEBE5', paddingTop: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <div>
@@ -592,7 +724,7 @@ function ReservationContent() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <button
                   type="button"
                   onClick={() => setStep(1)}
@@ -602,10 +734,18 @@ function ReservationContent() {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="btn btn-primary"
                   style={{ padding: '14px 36px' }}
                 >
-                  <ShieldCheck size={18} /> Complete & Guarantee Reservation
+                  <ShieldCheck size={18} />
+                  <span>
+                    {isSubmitting
+                      ? 'Processing...'
+                      : selectedPaymentProvider === 'CASH_ON_ARRIVAL'
+                      ? 'Confirm & Pay at Hotel'
+                      : `Proceed to Pay with ${selectedPaymentProvider === 'CBE_BIRR' ? 'CBE Birr' : selectedPaymentProvider}`}
+                  </span>
                 </button>
               </div>
             </form>
@@ -618,8 +758,8 @@ function ReservationContent() {
                   width: '64px',
                   height: '64px',
                   borderRadius: '50%',
-                  backgroundColor: '#ECFDF5',
-                  color: '#10B981',
+                  backgroundColor: paymentStatus === 'SUCCESS' ? '#ECFDF5' : '#FFFBEB',
+                  color: paymentStatus === 'SUCCESS' ? '#10B981' : '#F59E0B',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -629,10 +769,10 @@ function ReservationContent() {
                 <Check size={32} />
               </div>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', color: '#153D4B', marginBottom: '8px' }}>
-                Reservation Confirmed!
+                {paymentStatus === 'SUCCESS' ? 'Reservation & Payment Confirmed!' : 'Reservation Confirmed!'}
               </h2>
               <p style={{ color: '#5E6E75', fontSize: '15px', marginBottom: '28px' }}>
-                Thank you, <strong>{guestName}</strong>. Your reservation at Grand Addis Hotel has been confirmed.
+                Thank you, <strong>{guestName}</strong>. Your stay at Grand Addis Hotel has been registered in our database.
               </p>
 
               {/* Confirmation voucher */}
@@ -649,15 +789,27 @@ function ReservationContent() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #ECEBE5', paddingBottom: '14px', marginBottom: '14px' }}>
                   <div>
                     <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#838A8D', display: 'block' }}>
-                      RESERVATION NUMBER
+                      BOOKING REFERENCE
                     </span>
                     <strong style={{ fontSize: '18px', color: '#E49951' }}>{bookingRef}</strong>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#838A8D', display: 'block' }}>
-                      STATUS
+                      PAYMENT STATUS
                     </span>
-                    <span style={{ color: '#10B981', fontWeight: 600, fontSize: '13px' }}>Guaranteed</span>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        backgroundColor: paymentStatus === 'SUCCESS' ? '#DEF7EC' : '#FEF3C7',
+                        color: paymentStatus === 'SUCCESS' ? '#03543F' : '#92400E',
+                      }}
+                    >
+                      {paymentStatus === 'SUCCESS' ? '✓ PAID & VERIFIED' : '⏳ PAY ON ARRIVAL'}
+                    </span>
                   </div>
                 </div>
 
@@ -671,11 +823,21 @@ function ReservationContent() {
                     <strong>{nights} Nights ({checkIn} to {checkOut})</strong>
                   </div>
                   <div>
+                    <span style={{ color: '#838A8D', display: 'block' }}>Payment Provider:</span>
+                    <strong style={{ color: '#153D4B' }}>{selectedPaymentProvider}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#838A8D', display: 'block' }}>Transaction Reference:</span>
+                    <code style={{ fontSize: '11px', color: '#E49951', fontWeight: 600 }}>
+                      {activeTxRef || `TX-${selectedPaymentProvider}-${bookingRef.slice(-4)}`}
+                    </code>
+                  </div>
+                  <div>
                     <span style={{ color: '#838A8D', display: 'block' }}>Guests:</span>
                     <strong>{adults} Adults, {children} Children</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#838A8D', display: 'block' }}>Total Paid/Due:</span>
+                    <span style={{ color: '#838A8D', display: 'block' }}>Total Amount:</span>
                     <strong style={{ color: '#E49951' }}>${grandTotal} ({grandTotalETB.toLocaleString()} ETB)</strong>
                   </div>
                 </div>
@@ -685,7 +847,16 @@ function ReservationContent() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                {paymentStatus !== 'SUCCESS' && (
+                  <button
+                    onClick={() => setIsPaymentModalOpen(true)}
+                    className="btn btn-primary"
+                    style={{ backgroundColor: '#00A36C' }}
+                  >
+                    <CreditCard size={16} /> Pay Online Now (Chapa / Telebirr / CBE / Skina)
+                  </button>
+                )}
                 <button onClick={() => window.print()} className="btn btn-outline">
                   <Printer size={16} /> Print Voucher
                 </button>
@@ -697,6 +868,23 @@ function ReservationContent() {
           )}
         </div>
       </section>
+
+      {/* Payment Processing Modal */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        bookingRef={bookingRef}
+        reservationId={reservationId}
+        amountUSD={grandTotal}
+        amountETB={grandTotalETB}
+        guestName={guestName}
+        guestEmail={guestEmail}
+        guestPhone={guestPhone}
+        roomName={selectedRoom.name}
+        checkInDate={checkIn}
+        checkOutDate={checkOut}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }

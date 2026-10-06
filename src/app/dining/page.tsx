@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Utensils,
@@ -15,9 +15,10 @@ import {
   Send,
   ArrowRight,
 } from 'lucide-react';
-import { DINING_MENUS, HOTEL_INFO } from '@/data/hotelData';
+import { DINING_MENUS, HOTEL_INFO, MenuItem } from '@/data/hotelData';
 
 export default function DiningPage() {
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(DINING_MENUS);
   const [activeTab, setActiveTab] = useState<'all' | 'starter' | 'main' | 'ethiopian' | 'dessert' | 'beverage'>('all');
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [tableDate, setTableDate] = useState('');
@@ -29,6 +30,29 @@ export default function DiningPage() {
   const [resNotes, setResNotes] = useState('');
   const [tableConfirmed, setTableConfirmed] = useState(false);
 
+  useEffect(() => {
+    async function loadPostgresMenu() {
+      try {
+        const res = await fetch('/api/menu');
+        const data = await res.json();
+        if (data.success && data.items && data.items.length > 0) {
+          setMenuItems(
+            data.items.map((it: any) => ({
+              name: it.name,
+              category: it.category,
+              price: Number(it.price),
+              description: it.description,
+              tag: it.tag || undefined,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load menu from PostgreSQL:', err);
+      }
+    }
+    loadPostgresMenu();
+  }, []);
+
   const tabs = [
     { id: 'all', label: 'Complete Menu' },
     { id: 'starter', label: 'Starters' },
@@ -38,13 +62,30 @@ export default function DiningPage() {
     { id: 'beverage', label: 'Beverages & Coffee' },
   ];
 
-  const filteredItems = DINING_MENUS.filter((item) => {
+  const filteredItems = menuItems.filter((item) => {
     if (activeTab === 'all') return true;
     return item.category === activeTab;
   });
 
-  const handleTableSubmit = (e: React.FormEvent) => {
+  const handleTableSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await fetch('/api/dining-reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: tableDate,
+          time: tableTime,
+          partySize,
+          name: resName,
+          phone: resPhone,
+          email: resEmail,
+          notes: resNotes,
+        }),
+      });
+    } catch (err) {
+      console.error('Table reservation error:', err);
+    }
     setTableConfirmed(true);
   };
 

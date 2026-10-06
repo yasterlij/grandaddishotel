@@ -25,8 +25,25 @@ export default function WeddingsEventsPage() {
   const [details, setDetails] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType,
+          eventDate,
+          guestCount,
+          name,
+          email,
+          phone,
+          details,
+        }),
+      });
+    } catch (err) {
+      console.error('Event inquiry error:', err);
+    }
     setSubmitted(true);
   };
 

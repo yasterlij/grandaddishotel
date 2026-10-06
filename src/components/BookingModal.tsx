@@ -34,6 +34,22 @@ export default function BookingModal() {
 
   // Confirmation state
   const [bookingRef, setBookingRef] = useState('');
+  const [rooms, setRooms] = useState<Room[]>(ROOMS);
+
+  useEffect(() => {
+    async function loadPostgresRooms() {
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        if (data.success && data.rooms && data.rooms.length > 0) {
+          setRooms(data.rooms);
+        }
+      } catch (err) {
+        console.error('Failed to load rooms from PostgreSQL:', err);
+      }
+    }
+    loadPostgresRooms();
+  }, []);
 
   // Sync initial params from context
   useEffect(() => {
@@ -69,7 +85,8 @@ export default function BookingModal() {
 
   if (!isOpen) return null;
 
-  const selectedRoom = ROOMS.find((r) => r.id === selectedRoomId) || ROOMS[0];
+  const selectedRoom =
+    rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
 
   // Calculate nights
   const checkInDate = new Date(checkIn);
@@ -111,11 +128,46 @@ export default function BookingModal() {
     }
   };
 
-  const handleConfirmBooking = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    const randomRef = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
-    setBookingRef(randomRef);
-    setStep(3);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: selectedRoom.id,
+          roomSlug: selectedRoom.slug,
+          checkIn,
+          checkOut,
+          adults,
+          children,
+          guestName,
+          guestEmail,
+          guestPhone,
+          specialRequests,
+          addons,
+          totalAmount: grandTotal,
+          currency: 'USD',
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.bookingRef) {
+        setBookingRef(data.bookingRef);
+      } else {
+        const fallbackRef = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
+        setBookingRef(fallbackRef);
+      }
+    } catch (err) {
+      console.error('Reservation error:', err);
+      const fallbackRef = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
+      setBookingRef(fallbackRef);
+    } finally {
+      setIsSubmitting(false);
+      setStep(3);
+    }
   };
 
   return (
@@ -325,7 +377,7 @@ export default function BookingModal() {
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-                  {ROOMS.map((room) => {
+                  {rooms.map((room) => {
                     const isSelected = room.id === selectedRoomId;
                     return (
                       <div

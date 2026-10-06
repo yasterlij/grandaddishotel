@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -24,13 +24,37 @@ import {
 import BookingBar from '@/components/BookingBar';
 import RoomCard from '@/components/RoomCard';
 import GalleryLightbox from '@/components/GalleryLightbox';
-import { ROOMS, HOTEL_INFO, TESTIMONIALS, GALLERY_IMAGES } from '@/data/hotelData';
+import { ROOMS, HOTEL_INFO, TESTIMONIALS, GALLERY_IMAGES, Room, Testimonial } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
 
 export default function HomePage() {
   const { openBooking } = useBooking();
+  const [featuredRooms, setFeaturedRooms] = useState<Room[]>(ROOMS);
+  const [testimonialsList, setTestimonialsList] = useState<Testimonial[]>(TESTIMONIALS);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  useEffect(() => {
+    async function loadPostgresData() {
+      try {
+        const [roomsRes, testRes] = await Promise.all([
+          fetch('/api/rooms'),
+          fetch('/api/testimonials'),
+        ]);
+        const roomsData = await roomsRes.json();
+        if (roomsData.success && roomsData.rooms?.length > 0) {
+          setFeaturedRooms(roomsData.rooms);
+        }
+        const testData = await testRes.json();
+        if (testData.success && testData.testimonials?.length > 0) {
+          setTestimonialsList(testData.testimonials);
+        }
+      } catch (err) {
+        console.error('Failed to load data from PostgreSQL for homepage:', err);
+      }
+    }
+    loadPostgresData();
+  }, []);
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
@@ -505,7 +529,7 @@ export default function HomePage() {
               gap: '28px',
             }}
           >
-            {ROOMS.map((room) => (
+            {featuredRooms.map((room) => (
               <RoomCard key={room.id} room={room} />
             ))}
           </div>
@@ -685,7 +709,7 @@ export default function HomePage() {
               gap: '24px',
             }}
           >
-            {TESTIMONIALS.map((t) => (
+            {testimonialsList.map((t) => (
               <div
                 key={t.id}
                 style={{

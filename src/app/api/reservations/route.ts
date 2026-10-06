@@ -1,0 +1,270 @@
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { query } from '@/lib/db';
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const {
+      roomId,
+      roomSlug,
+      checkIn,
+      checkOut,
+      adults = 2,
+      children = 0,
+      guestName,
+      guestEmail,
+      guestPhone,
+      specialRequests = '',
+      addons = {},
+      totalAmount,
+      currency = 'USD',
+    } = body;
+
+    if (!guestName || !guestEmail || !guestPhone || !checkIn || !checkOut) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required reservation fields' },
+        { status: 400 }
+      );
+    }
+
+    // 1. Resolve room_type
+    let roomTypeQuery = await query(
+      `SELECT * FROM room_types WHERE id = $1 OR slug = $2 LIMIT 1`,
+      [roomId, roomSlug || '']
+    );
+
+    if (roomTypeQuery.rows.length === 0) {
+      // Fallback to first available room type
+      roomTypeQuery = await query(`SELECT * FROM room_types LIMIT 1`);
+    }
+
+    if (roomTypeQuery.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No room types available in database' },
+        { status: 400 }
+      );
+    }
+
+    const roomType = roomTypeQuery.rows[0];
+
+    // 2. Find an available physical room for this room type
+    const roomQuery = await query(
+      `SELECT id FROM rooms WHERE "roomTypeId" = $1 AND status = 'AVAILABLE' LIMIT 1`,
+      [roomType.id]
+    );
+    const physicalRoomId = roomQuery.rows.length > 0 ? roomQuery.rows[0].id : null;
+
+    // 3. Upsert guest
+    const nameParts = guestName.trim().split(' ');
+    const firstName = nameParts[0] || 'Guest';
+    const lastName = nameParts.slice(1).join(' ') || 'Customer';
+
+    let guestId: string;
+    const existingGuest = await query(
+      `SELECT id FROM guests WHERE email = $1 LIMIT 1`,
+      [guestEmail.toLowerCase().trim()]
+    );
+
+    if (existingGuest.rows.length > 0) {
+      guestId = existingGuest.rows[0].id;
+      // Update phone
+      await query(
+        `UPDATE guests SET "phoneNumber" = $1, "updatedAt" = NOW() WHERE id = $2`,
+        [guestPhone.trim(), guestId]
+      );
+    } else {
+      guestId = crypto.randomUUID();
+      await query(
+        `INSERT INTO guests (id, "firstName", "lastName", email, "phoneNumber", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
+        [
+          guestId,
+          firstName,
+          lastName,
+          guestEmail.toLowerCase().trim(),
+          guestPhone.trim(),
+        ]
+      );
+    }
+
+    // 4. Generate unique Booking Reference
+    const datePrefix = new Date().toISOString().slice(0, 7).replace('-', '');
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const bookingRef = `GAH-${datePrefix}-${randomSuffix}`;
+
+    // 5. Calculate amounts
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    const nights = Math.max(
+      1,
+      Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    const pricePerNight = currency === 'ETB' ? Number(roomType.basePriceETB) : Number(roomType.basePriceUSD);
+    const subtotal = Number((pricePerNight * nights).toFixed(2));
+    const calculatedTotal = totalAmount ? Number(totalAmount) : subtotal;
+    const taxAmount = Number((calculatedTotal * 0.15).toFixed(2));
+
+    const reservationId = crypto.randomUUID();
+
+    // 6. Insert Reservation into PostgreSQL
+    await query(
+      `INSERT INTO reservations (
+        id,
+        "bookingRef",
+        "checkInDate",
+        "checkOutDate",
+        "adultsCount",
+        "childrenCount",
+        status,
+        currency,
+        subtotal,
+        "taxAmount",
+        "totalAmount",
+        "specialRequests",
+        "guestId",
+        "roomTypeId",
+        "roomId",
+        "createdAt",
+        "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'CONFIRMED', $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())`,
+      [
+        reservationId,
+        bookingRef,
+        checkIn,
+        checkOut,
+        adults,
+        children,
+        currency === 'ETB' ? 'ETB' : 'USD',
+        subtotal,
+        taxAmount,
+        calculatedTotal,
+        specialRequests,
+        guestId,
+        roomType.id,
+        physicalRoomId,
+      ]
+    );
+
+    // 7. Insert Payment record into PostgreSQL
+    const paymentId = crypto.randomUUID();
+    const txRef = `TX-${bookingRef}-${Date.now()}`;
+    await query(
+      `INSERT INTO payments (
+        id,
+        "txRef",
+        provider,
+        status,
+        amount,
+        currency,
+        "reservationId",
+        "createdAt",
+        "updatedAt"
+      ) VALUES ($1, $2, 'CASH_ON_ARRIVAL', 'PENDING', $3, $4, $5, NOW(), NOW())`,
+      [
+        paymentId,
+        txRef,
+        calculatedTotal,
+        currency === 'ETB' ? 'ETB' : 'USD',
+        reservationId,
+      ]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: 'Reservation recorded successfully in PostgreSQL',
+      bookingRef,
+      reservationId,
+      roomName: roomType.name,
+      checkIn,
+      checkOut,
+      nights,
+      totalAmount: calculatedTotal,
+      currency,
+      guest: {
+        name: `${firstName} ${lastName}`,
+        email: guestEmail,
+        phone: guestPhone,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error creating reservation in PostgreSQL:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Database insert error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const bookingRef = searchParams.get('bookingRef');
+
+    if (bookingRef) {
+      const res = await query(
+        `SELECT 
+          r.id,
+          r."bookingRef",
+          r."checkInDate",
+          r."checkOutDate",
+          r."adultsCount",
+          r."childrenCount",
+          r.status,
+          r.currency,
+          r."totalAmount",
+          r."specialRequests",
+          r."createdAt",
+          rt.name AS "roomTypeName",
+          g."firstName",
+          g."lastName",
+          g.email,
+          g."phoneNumber"
+        FROM reservations r
+        JOIN room_types rt ON rt.id = r."roomTypeId"
+        JOIN guests g ON g.id = r."guestId"
+        WHERE r."bookingRef" = $1
+        LIMIT 1`,
+        [bookingRef]
+      );
+
+      if (res.rows.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Reservation not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ success: true, reservation: res.rows[0] });
+    }
+
+    // Default: return recent 20 reservations
+    const list = await query(
+      `SELECT 
+        r.id,
+        r."bookingRef",
+        r."checkInDate",
+        r."checkOutDate",
+        r.status,
+        r.currency,
+        r."totalAmount",
+        r."createdAt",
+        rt.name AS "roomTypeName",
+        CONCAT(g."firstName", ' ', g."lastName") AS "guestName"
+      FROM reservations r
+      JOIN room_types rt ON rt.id = r."roomTypeId"
+      JOIN guests g ON g.id = r."guestId"
+      ORDER BY r."createdAt" DESC
+      LIMIT 20`
+    );
+
+    return NextResponse.json({ success: true, count: list.rows.length, reservations: list.rows });
+  } catch (error: any) {
+    console.error('Error querying reservations:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Database error' },
+      { status: 500 }
+    );
+  }
+}

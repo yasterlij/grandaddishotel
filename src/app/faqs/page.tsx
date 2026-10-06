@@ -1,14 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Search, HelpCircle, Phone, Mail, ArrowRight } from 'lucide-react';
-import { FAQS, HOTEL_INFO } from '@/data/hotelData';
+import { FAQS, HOTEL_INFO, FAQItem } from '@/data/hotelData';
 
 export default function FAQsPage() {
+  const [faqsList, setFaqsList] = useState<FAQItem[]>(FAQS);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+
+  useEffect(() => {
+    async function loadPostgresFaqs() {
+      try {
+        const res = await fetch('/api/faqs');
+        const data = await res.json();
+        if (data.success && data.faqs && data.faqs.length > 0) {
+          setFaqsList(
+            data.faqs.map((f: any) => ({
+              question: f.question,
+              answer: f.answer,
+              category: f.category,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load FAQs from PostgreSQL:', err);
+      }
+    }
+    loadPostgresFaqs();
+  }, []);
 
   const categories = [
     { id: 'all', label: 'All Questions' },
@@ -18,7 +40,7 @@ export default function FAQsPage() {
     { id: 'services', label: 'Hotel Services' },
   ];
 
-  const filteredFaqs = FAQS.filter((item) => {
+  const filteredFaqs = faqsList.filter((item) => {
     const matchesCat = activeCategory === 'all' || item.category === activeCategory;
     const matchesSearch =
       item.question.toLowerCase().includes(search.toLowerCase()) ||

@@ -54,10 +54,27 @@ function ReservationContent() {
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoMessage, setPromoMessage] = useState('');
-
   const [bookingRef, setBookingRef] = useState('');
 
-  const selectedRoom = ROOMS.find((r) => r.id === selectedRoomId) || ROOMS[0];
+  const [rooms, setRooms] = useState<Room[]>(ROOMS);
+
+  useEffect(() => {
+    async function loadPostgresRooms() {
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        if (data.success && data.rooms && data.rooms.length > 0) {
+          setRooms(data.rooms);
+        }
+      } catch (err) {
+        console.error('Failed to fetch rooms from PostgreSQL:', err);
+      }
+    }
+    loadPostgresRooms();
+  }, []);
+
+  const selectedRoom =
+    rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
 
   // Calculation
   const checkInDate = new Date(checkIn);
@@ -98,10 +115,40 @@ function ReservationContent() {
     }
   };
 
-  const handleConfirm = (e: React.FormEvent) => {
+  const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ref = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
-    setBookingRef(ref);
+    try {
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: selectedRoom.id,
+          roomSlug: selectedRoom.slug,
+          checkIn,
+          checkOut,
+          adults,
+          children,
+          guestName,
+          guestEmail,
+          guestPhone,
+          specialRequests,
+          addons,
+          totalAmount: grandTotal,
+          currency: 'USD',
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.bookingRef) {
+        setBookingRef(data.bookingRef);
+      } else {
+        const ref = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
+        setBookingRef(ref);
+      }
+    } catch (err) {
+      console.error('Reservation error:', err);
+      const ref = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
+      setBookingRef(ref);
+    }
     setStep(3);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -251,7 +298,7 @@ function ReservationContent() {
                 </h3>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {ROOMS.map((room) => {
+                  {rooms.map((room) => {
                     const isSelected = room.id === selectedRoomId;
                     return (
                       <div

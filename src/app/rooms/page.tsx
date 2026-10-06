@@ -1,22 +1,38 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { LayoutGrid, List, Search, Filter, Calendar, Sparkles, Check } from 'lucide-react';
 import RoomCard from '@/components/RoomCard';
-import { ROOMS } from '@/data/hotelData';
+import { ROOMS, Room } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
 
 export default function RoomsPage() {
   const { openBooking } = useBooking();
+  const [rooms, setRooms] = useState<Room[]>(ROOMS);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('recommended');
 
+  useEffect(() => {
+    async function loadPostgresRooms() {
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        if (data.success && data.rooms && data.rooms.length > 0) {
+          setRooms(data.rooms);
+        }
+      } catch (err) {
+        console.error('Failed to load rooms from PostgreSQL, using defaults:', err);
+      }
+    }
+    loadPostgresRooms();
+  }, []);
+
   const categories = ['All', 'Hotel Rooms', 'Suites'];
 
-  const filteredRooms = ROOMS.filter((room) => {
+  const filteredRooms = rooms.filter((room) => {
     const matchesCategory = selectedCategory === 'All' || room.category === selectedCategory;
     const matchesSearch =
       room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

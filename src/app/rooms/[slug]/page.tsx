@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -17,7 +17,7 @@ import {
   ArrowRight,
   Info,
 } from 'lucide-react';
-import { ROOMS, HOTEL_INFO } from '@/data/hotelData';
+import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
 import RoomCard from '@/components/RoomCard';
 
@@ -26,7 +26,13 @@ export default function RoomDetailPage() {
   const slug = params?.slug as string;
   const { openBooking } = useBooking();
 
-  const room = ROOMS.find((r) => r.slug === slug) || ROOMS.find((r) => r.slug === 'deluxe-room') || ROOMS[0];
+  const initialRoom =
+    ROOMS.find((r) => r.slug === slug) ||
+    ROOMS.find((r) => r.slug === 'deluxe-room') ||
+    ROOMS[0];
+
+  const [room, setRoom] = useState<Room>(initialRoom);
+  const [allRooms, setAllRooms] = useState<Room[]>(ROOMS);
 
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -35,6 +41,33 @@ export default function RoomDetailPage() {
   const [requestMessage, setRequestMessage] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(true);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+
+  useEffect(() => {
+    async function loadRoomFromPostgres() {
+      try {
+        const [roomRes, roomsListRes] = await Promise.all([
+          fetch(`/api/rooms/${slug}`),
+          fetch('/api/rooms'),
+        ]);
+
+        const roomData = await roomRes.json();
+        if (roomData.success && roomData.room) {
+          setRoom(roomData.room);
+        }
+
+        const listData = await roomsListRes.json();
+        if (listData.success && listData.rooms) {
+          setAllRooms(listData.rooms);
+        }
+      } catch (err) {
+        console.error('Failed to fetch room from PostgreSQL:', err);
+      }
+    }
+    if (slug) {
+      loadRoomFromPostgres();
+    }
+  }, [slug]);
 
   // Calendar Month State
   const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
@@ -47,11 +80,28 @@ export default function RoomDetailPage() {
     'March 2027',
   ];
 
-  const otherRooms = ROOMS.filter((r) => r.id !== room.id);
+  const otherRooms = allRooms.filter((r) => r.id !== room.id);
 
-  const handleRequestSubmit = (e: React.FormEvent) => {
+  const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRequestSubmitted(true);
+    setIsSubmittingRequest(true);
+    try {
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: requestName,
+          email: requestEmail,
+          subject: `Room Inquiry: ${room.name}`,
+          message: requestMessage || `Interested in booking ${room.name} (${room.slug})`,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to save inquiry to PostgreSQL:', err);
+    } finally {
+      setIsSubmittingRequest(false);
+      setRequestSubmitted(true);
+    }
   };
 
   return (

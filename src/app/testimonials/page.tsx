@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, Check, Send, ThumbsUp, MessageSquare, ArrowRight } from 'lucide-react';
 import { TESTIMONIALS } from '@/data/hotelData';
 
@@ -14,19 +14,51 @@ export default function TestimonialsPage() {
   const [formRating, setFormRating] = useState(5);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetch('/api/testimonials')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.testimonials?.length > 0) {
+          setReviews(data.testimonials);
+        }
+      })
+      .catch((err) => console.error('Error fetching testimonials:', err));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newRev = {
-      id: 't-user-' + Date.now(),
-      name: formName,
-      location: formLocation,
-      rating: formRating,
-      date: 'Just now',
-      title: formTitle,
-      comment: formComment,
-      roomType: formRoom,
-    };
-    setReviews([newRev, ...reviews]);
+    try {
+      const res = await fetch('/api/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formName,
+          location: formLocation,
+          rating: formRating,
+          title: formTitle,
+          comment: formComment,
+          roomType: formRoom,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.review) {
+        setReviews([data.review, ...reviews]);
+      } else {
+        const newRev = {
+          id: 't-user-' + Date.now(),
+          name: formName,
+          location: formLocation,
+          rating: formRating,
+          date: 'Just now',
+          title: formTitle,
+          comment: formComment,
+          roomType: formRoom,
+        };
+        setReviews([newRev, ...reviews]);
+      }
+    } catch (err) {
+      console.error('Error posting review:', err);
+    }
     setSubmitted(true);
     setFormName('');
     setFormLocation('');

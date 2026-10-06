@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Flower2,
@@ -15,9 +15,10 @@ import {
   Activity,
   ArrowRight,
 } from 'lucide-react';
-import { WELLNESS_SERVICES, HOTEL_INFO } from '@/data/hotelData';
+import { WELLNESS_SERVICES, HOTEL_INFO, SpaTreatment } from '@/data/hotelData';
 
 export default function WellnessPage() {
+  const [services, setServices] = useState<SpaTreatment[]>(WELLNESS_SERVICES);
   const [isSpaModalOpen, setIsSpaModalOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState(WELLNESS_SERVICES[0].id);
   const [spaDate, setSpaDate] = useState('');
@@ -27,10 +28,51 @@ export default function WellnessPage() {
   const [clientEmail, setClientEmail] = useState('');
   const [spaConfirmed, setSpaConfirmed] = useState(false);
 
-  const selectedService = WELLNESS_SERVICES.find((s) => s.id === selectedServiceId) || WELLNESS_SERVICES[0];
+  useEffect(() => {
+    async function loadPostgresSpa() {
+      try {
+        const res = await fetch('/api/spa-treatments');
+        const data = await res.json();
+        if (data.success && data.treatments && data.treatments.length > 0) {
+          setServices(
+            data.treatments.map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              category: t.category,
+              duration: t.duration,
+              price: Number(t.price),
+              description: t.description,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load spa treatments from PostgreSQL:', err);
+      }
+    }
+    loadPostgresSpa();
+  }, []);
 
-  const handleSpaSubmit = (e: React.FormEvent) => {
+  const selectedService = services.find((s) => s.id === selectedServiceId) || services[0];
+
+  const handleSpaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await fetch('/api/spa-appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceId: selectedService.id,
+          serviceName: selectedService.name,
+          date: spaDate,
+          time: spaTime,
+          clientName,
+          clientPhone,
+          clientEmail,
+        }),
+      });
+    } catch (err) {
+      console.error('Spa appointment error:', err);
+    }
     setSpaConfirmed(true);
   };
 

@@ -407,6 +407,9 @@ export default function Footer() {
             <Link href="/contact" style={{ color: 'inherit' }}>
               Contact
             </Link>
+            <Link href="/admin" style={{ color: '#E49951', fontWeight: 500 }}>
+              DB & Operations
+            </Link>
           </div>
         </div>
       </div>

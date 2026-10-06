@@ -90,10 +90,11 @@ function ReservationContent() {
     rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
 
   // Calculation
-  const checkInDate = new Date(checkIn);
-  const checkOutDate = new Date(checkOut);
+  const checkInDate = new Date(checkIn || todayStr);
+  const checkOutDate = new Date(checkOut || tomorrowStr);
   const diffTime = checkOutDate.getTime() - checkInDate.getTime();
-  const nights = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+  const rawNights = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  const nights = isNaN(rawNights) || rawNights < 1 ? 1 : rawNights;
 
   const addonPrices = {
     airportShuttle: 15,

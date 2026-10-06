@@ -10,10 +10,13 @@ import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
 export default function BookingModal() {
   const { isOpen, closeBooking, bookingParams } = useBooking();
 
+  const todayStr = new Date().toISOString().split('T')[0];
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Room & Dates, 2: Add-ons & Guest Details, 3: Confirmation
   const [selectedRoomId, setSelectedRoomId] = useState<string>('2');
-  const [checkIn, setCheckIn] = useState<string>('');
-  const [checkOut, setCheckOut] = useState<string>('');
+  const [checkIn, setCheckIn] = useState<string>(todayStr);
+  const [checkOut, setCheckOut] = useState<string>(tomorrowStr);
   const [adults, setAdults] = useState<number>(2);
   const [children, setChildren] = useState<number>(0);
 
@@ -40,6 +43,7 @@ export default function BookingModal() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [createdReservationId, setCreatedReservationId] = useState('');
   const [activeTxRef, setActiveTxRef] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Confirmation state
   const [bookingRef, setBookingRef] = useState('');
@@ -98,10 +102,11 @@ export default function BookingModal() {
     rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
 
   // Calculate nights
-  const checkInDate = new Date(checkIn);
-  const checkOutDate = new Date(checkOut);
+  const checkInDate = new Date(checkIn || todayStr);
+  const checkOutDate = new Date(checkOut || tomorrowStr);
   const diffTime = checkOutDate.getTime() - checkInDate.getTime();
-  const nights = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+  const rawNights = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  const nights = isNaN(rawNights) || rawNights < 1 ? 1 : rawNights;
 
   // Addon costs
   const addonPrices = {
@@ -136,8 +141,6 @@ export default function BookingModal() {
       setPromoMessage('Invalid coupon code');
     }
   };
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();

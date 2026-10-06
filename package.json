@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3050",
+    "dev:https": "next dev -p 3050 --experimental-https",
     "build": "next build",
     "start": "next start",
     "db:seed": "node scripts/seed-db.mjs"

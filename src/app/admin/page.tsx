@@ -39,6 +39,7 @@ import {
   EyeOff,
   Sparkles,
 } from 'lucide-react';
+import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
@@ -1158,8 +1159,11 @@ export default function AdminPage() {
 
               <button
                 onClick={() => {
-                  const today = new Date().toISOString().slice(0, 10);
-                  const tomorrow = new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10);
+                  const today = getTodayDateStr();
+                  const tomorrow = addDays(today, 2);
+                  const rt = roomTypes[0];
+                  const rate = rt ? Number(rt.basePriceUSD) : 50;
+                  const initialTotal = Math.round(2 * rate * 1.15 * 100) / 100;
                   setEditReservationModal({
                     guestName: '',
                     guestEmail: '',
@@ -1169,8 +1173,8 @@ export default function AdminPage() {
                     roomTypeId: roomTypes[0]?.id || '',
                     adultsCount: 2,
                     childrenCount: 0,
-                    totalAmount: 11600,
-                    currency: 'ETB',
+                    totalAmount: initialTotal,
+                    currency: 'USD',
                     status: 'CONFIRMED',
                     specialRequests: '',
                   });
@@ -3267,46 +3271,139 @@ export default function AdminPage() {
 
             <form onSubmit={handleSaveReservation} style={{ padding: '24px 28px' }}>
               {/* DATE PICKERS SECTION */}
-              <div
-                style={{
-                  padding: '16px',
-                  backgroundColor: '#FDF9F4',
-                  border: '1px solid #E8D7C3',
-                  borderRadius: '10px',
-                  marginBottom: '20px',
-                }}
-              >
-                <div style={{ fontWeight: 600, color: '#153D4B', fontSize: '14px', marginBottom: '10px' }}>
-                  📅 Reservation Dates (Instant Check-in & Check-out Adjustment)
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
-                      Check-in Date *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={editReservationModal.checkInDate || ''}
-                      onChange={(e) => setEditReservationModal({ ...editReservationModal, checkInDate: e.target.value })}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '14px', fontWeight: 600 }}
-                    />
-                  </div>
+                {(() => {
+                  const modalNights = calculateStayNights(editReservationModal.checkInDate || '', editReservationModal.checkOutDate || '');
+                  const currentRt = roomTypes.find((rt) => rt.id === editReservationModal.roomTypeId) || roomTypes[0];
+                  const isETB = editReservationModal.currency === 'ETB';
+                  const baseRate = currentRt ? (isETB ? Number(currentRt.basePriceETB) : Number(currentRt.basePriceUSD)) : 50;
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
-                      Check-out Date *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={editReservationModal.checkOutDate || ''}
-                      onChange={(e) => setEditReservationModal({ ...editReservationModal, checkOutDate: e.target.value })}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '14px', fontWeight: 600 }}
-                    />
-                  </div>
-                </div>
-              </div>
+                  const applyDateExtension = (deltaDays: number) => {
+                    const newNights = Math.max(1, modalNights + deltaDays);
+                    const newOut = addDays(editReservationModal.checkInDate || getTodayDateStr(), newNights);
+                    const newTotal = Math.round(newNights * baseRate * 1.15 * 100) / 100;
+                    setEditReservationModal({
+                      ...editReservationModal,
+                      checkOutDate: newOut,
+                      totalAmount: newTotal,
+                    });
+                  };
+
+                  const handleModalCheckIn = (newIn: string) => {
+                    let newOut = editReservationModal.checkOutDate || addDays(newIn, 1);
+                    if (newOut <= newIn) {
+                      newOut = addDays(newIn, 1);
+                    }
+                    const n = calculateStayNights(newIn, newOut);
+                    const newTotal = Math.round(n * baseRate * 1.15 * 100) / 100;
+                    setEditReservationModal({
+                      ...editReservationModal,
+                      checkInDate: newIn,
+                      checkOutDate: newOut,
+                      totalAmount: newTotal,
+                    });
+                  };
+
+                  const handleModalCheckOut = (newOut: string) => {
+                    const cIn = editReservationModal.checkInDate || getTodayDateStr();
+                    const validOut = newOut <= cIn ? addDays(cIn, 1) : newOut;
+                    const n = calculateStayNights(cIn, validOut);
+                    const newTotal = Math.round(n * baseRate * 1.15 * 100) / 100;
+                    setEditReservationModal({
+                      ...editReservationModal,
+                      checkOutDate: validOut,
+                      totalAmount: newTotal,
+                    });
+                  };
+
+                  return (
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: '#FDF9F4',
+                        border: '1px solid #E8D7C3',
+                        borderRadius: '10px',
+                        marginBottom: '20px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ fontWeight: 600, color: '#153D4B', fontSize: '14px' }}>
+                          📅 Reservation Dates & Auto Billing Recalculation
+                        </div>
+                        <span style={{ fontSize: '11px', fontWeight: 700, backgroundColor: '#153D4B', color: '#FFFFFF', padding: '2px 8px', borderRadius: '10px' }}>
+                          {modalNights} {modalNights === 1 ? 'Night' : 'Nights'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
+                            Check-in Date *
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={editReservationModal.checkInDate || ''}
+                            onChange={(e) => handleModalCheckIn(e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '14px', fontWeight: 600 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
+                            Check-out Date *
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            min={addDays(editReservationModal.checkInDate || getTodayDateStr(), 1)}
+                            value={editReservationModal.checkOutDate || ''}
+                            onChange={(e) => handleModalCheckOut(e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '14px', fontWeight: 600 }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Quick Duration Stepper */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #E8D7C3', paddingTop: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#5E6E75' }}>
+                          Stay: <strong>{formatFriendlyDate(editReservationModal.checkInDate)} → {formatFriendlyDate(editReservationModal.checkOutDate)}</strong>
+                        </span>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#153D4B' }}>Quick Adjust:</span>
+                          <button
+                            type="button"
+                            disabled={modalNights <= 1}
+                            onClick={() => applyDateExtension(-1)}
+                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #D5D4CC', backgroundColor: '#FFFFFF', fontSize: '11px', fontWeight: 600, cursor: modalNights <= 1 ? 'not-allowed' : 'pointer', color: modalNights <= 1 ? '#A0AEC0' : '#153D4B' }}
+                          >
+                            −1 Night
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyDateExtension(1)}
+                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #E49951', backgroundColor: '#FEF3C7', color: '#B45309', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            +1 Night
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyDateExtension(2)}
+                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #E49951', backgroundColor: '#FEF3C7', color: '#B45309', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            +2 Nights
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => applyDateExtension(3)}
+                            style={{ padding: '4px 10px', borderRadius: '4px', border: '1px solid #E49951', backgroundColor: '#FEF3C7', color: '#B45309', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            +3 Nights
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
               {/* GUEST DETAILS */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -3376,7 +3473,15 @@ export default function AdminPage() {
                   </label>
                   <select
                     value={editReservationModal.roomTypeId || ''}
-                    onChange={(e) => setEditReservationModal({ ...editReservationModal, roomTypeId: e.target.value })}
+                    onChange={(e) => {
+                      const newRtId = e.target.value;
+                      const rt = roomTypes.find((r) => r.id === newRtId);
+                      const n = calculateStayNights(editReservationModal.checkInDate || '', editReservationModal.checkOutDate || '');
+                      const isETB = editReservationModal.currency === 'ETB';
+                      const rate = rt ? (isETB ? Number(rt.basePriceETB) : Number(rt.basePriceUSD)) : 50;
+                      const newTotal = Math.round(n * rate * 1.15 * 100) / 100;
+                      setEditReservationModal({ ...editReservationModal, roomTypeId: newRtId, totalAmount: newTotal });
+                    }}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
                   >
                     {roomTypes.map((rt) => (
@@ -3394,7 +3499,15 @@ export default function AdminPage() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <select
                       value={editReservationModal.currency || 'USD'}
-                      onChange={(e) => setEditReservationModal({ ...editReservationModal, currency: e.target.value })}
+                      onChange={(e) => {
+                        const newCurr = e.target.value;
+                        const rt = roomTypes.find((r) => r.id === editReservationModal.roomTypeId);
+                        const n = calculateStayNights(editReservationModal.checkInDate || '', editReservationModal.checkOutDate || '');
+                        const isETB = newCurr === 'ETB';
+                        const rate = rt ? (isETB ? Number(rt.basePriceETB) : Number(rt.basePriceUSD)) : 50;
+                        const newTotal = Math.round(n * rate * 1.15 * 100) / 100;
+                        setEditReservationModal({ ...editReservationModal, currency: newCurr, totalAmount: newTotal });
+                      }}
                       style={{ padding: '10px 8px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px', width: '80px' }}
                     >
                       <option value="USD">USD</option>

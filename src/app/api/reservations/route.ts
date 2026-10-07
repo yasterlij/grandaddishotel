@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query } from '@/lib/db';
+import { calculateStayNights } from '@/lib/dates';
 
 export async function POST(req: NextRequest) {
   try {
@@ -95,18 +96,26 @@ export async function POST(req: NextRequest) {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const bookingRef = `GAH-${datePrefix}-${randomSuffix}`;
 
-    // 5. Calculate amounts
-    const checkInDate = new Date(checkIn);
-    const checkOutDate = new Date(checkOut);
-    const nights = Math.max(
-      1,
-      Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))
-    );
-
+    // 5. Calculate amounts with exact nights arithmetic
+    const nights = calculateStayNights(checkIn, checkOut);
     const pricePerNight = currency === 'ETB' ? Number(roomType.basePriceETB) : Number(roomType.basePriceUSD);
-    const subtotal = Number((pricePerNight * nights).toFixed(2));
-    const calculatedTotal = totalAmount ? Number(totalAmount) : subtotal;
-    const taxAmount = Number((calculatedTotal * 0.15).toFixed(2));
+    const roomSubtotal = Number((pricePerNight * nights).toFixed(2));
+
+    let addonsTotal = 0;
+    if (addons && typeof addons === 'object') {
+      if (addons.airportShuttle) addonsTotal += 15;
+      if (addons.breakfast) addonsTotal += 12 * (Number(adults) || 1) * nights;
+      if (addons.spaTreatment) addonsTotal += 65;
+      if (addons.coffeeCeremony) addonsTotal += 8 * (Number(adults) || 1);
+    }
+
+    const calculatedSubtotal = Number((roomSubtotal + addonsTotal).toFixed(2));
+    const computedTax = Number((calculatedSubtotal * 0.15).toFixed(2));
+    const computedGrandTotal = Number((calculatedSubtotal + computedTax).toFixed(2));
+
+    const finalTotal = totalAmount && Number(totalAmount) > 0 ? Number(Number(totalAmount).toFixed(2)) : computedGrandTotal;
+    const finalSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : Number((finalTotal / 1.15).toFixed(2));
+    const finalTax = Number((finalTotal - finalSubtotal).toFixed(2));
 
     const reservationId = crypto.randomUUID();
 
@@ -139,9 +148,9 @@ export async function POST(req: NextRequest) {
         adults,
         children,
         currency === 'ETB' ? 'ETB' : 'USD',
-        subtotal,
-        taxAmount,
-        calculatedTotal,
+        finalSubtotal,
+        finalTax,
+        finalTotal,
         specialRequests,
         guestId,
         roomType.id,
@@ -188,7 +197,7 @@ export async function POST(req: NextRequest) {
         txRef,
         mappedProvider,
         isPaid ? 'SUCCESS' : 'PENDING',
-        calculatedTotal,
+        finalTotal,
         currency === 'ETB' ? 'ETB' : 'USD',
         reservationId,
         isPaid ? new Date() : null,
@@ -208,7 +217,7 @@ export async function POST(req: NextRequest) {
       checkIn,
       checkOut,
       nights,
-      totalAmount: calculatedTotal,
+      totalAmount: finalTotal,
       currency,
       guest: {
         name: `${firstName} ${lastName}`,

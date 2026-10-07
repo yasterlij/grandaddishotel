@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query } from '@/lib/db';
+import { calculateStayNights } from '@/lib/dates';
 
 export async function GET() {
   try {
@@ -186,34 +187,90 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Reservation ID is required' }, { status: 400 });
     }
 
+    const existingRes = await query(
+      `SELECT 
+        r.id, 
+        TO_CHAR(r."checkInDate", 'YYYY-MM-DD') AS "checkInDate",
+        TO_CHAR(r."checkOutDate", 'YYYY-MM-DD') AS "checkOutDate",
+        r."roomTypeId", 
+        r.currency,
+        r."totalAmount",
+        rt."basePriceUSD", 
+        rt."basePriceETB" 
+       FROM reservations r 
+       JOIN room_types rt ON rt.id = r."roomTypeId" 
+       WHERE r.id = $1`,
+      [id]
+    );
+
+    if (existingRes.rows.length === 0) {
+      return NextResponse.json({ success: false, error: 'Reservation not found' }, { status: 404 });
+    }
+
+    const current = existingRes.rows[0];
+    const effCheckIn = checkInDate || current.checkInDate;
+    const effCheckOut = checkOutDate || current.checkOutDate;
+    const effRoomTypeId = roomTypeId || current.roomTypeId;
+    const effCurrency = currency || current.currency;
+    const nights = calculateStayNights(effCheckIn, effCheckOut);
+
+    let finalTotal: number;
+    if (totalAmount !== undefined && Number(totalAmount) > 0) {
+      finalTotal = Number(Number(totalAmount).toFixed(2));
+    } else {
+      let rate = effCurrency === 'ETB' ? Number(current.basePriceETB) : Number(current.basePriceUSD);
+      if (roomTypeId && roomTypeId !== current.roomTypeId) {
+        const rtRow = await query(`SELECT "basePriceUSD", "basePriceETB" FROM room_types WHERE id = $1`, [roomTypeId]);
+        if (rtRow.rows.length > 0) {
+          rate = effCurrency === 'ETB' ? Number(rtRow.rows[0].basePriceETB) : Number(rtRow.rows[0].basePriceUSD);
+        }
+      }
+      finalTotal = Number((nights * rate * 1.15).toFixed(2));
+    }
+
+    const finalSubtotal = Number((finalTotal / 1.15).toFixed(2));
+    const finalTax = Number((finalTotal - finalSubtotal).toFixed(2));
+
     // Update reservation
     await query(
       `UPDATE reservations SET
-        "checkInDate" = COALESCE($1::date, "checkInDate"),
-        "checkOutDate" = COALESCE($2::date, "checkOutDate"),
+        "checkInDate" = $1::date,
+        "checkOutDate" = $2::date,
         "adultsCount" = COALESCE($3, "adultsCount"),
         "childrenCount" = COALESCE($4, "childrenCount"),
-        "totalAmount" = COALESCE($5, "totalAmount"),
-        currency = COALESCE($6, currency),
-        status = COALESCE($7, status),
-        "specialRequests" = COALESCE($8, "specialRequests"),
-        "roomId" = $9,
-        "roomTypeId" = COALESCE($10, "roomTypeId"),
+        subtotal = $5,
+        "taxAmount" = $6,
+        "totalAmount" = $7,
+        currency = COALESCE($8, currency),
+        status = COALESCE($9, status),
+        "specialRequests" = COALESCE($10, "specialRequests"),
+        "roomId" = $11,
+        "roomTypeId" = COALESCE($12, "roomTypeId"),
         "updatedAt" = NOW()
-      WHERE id = $11`,
+      WHERE id = $13`,
       [
-        checkInDate || null,
-        checkOutDate || null,
+        effCheckIn,
+        effCheckOut,
         adultsCount !== undefined ? Number(adultsCount) : null,
         childrenCount !== undefined ? Number(childrenCount) : null,
-        totalAmount !== undefined ? Number(totalAmount) : null,
-        currency || null,
+        finalSubtotal,
+        finalTax,
+        finalTotal,
+        effCurrency || null,
         status || null,
         specialRequests !== undefined ? specialRequests : null,
         roomId || null,
-        roomTypeId || null,
+        effRoomTypeId || null,
         id,
       ]
+    );
+
+    // Synchronize linked PENDING payment amount to the new total
+    await query(
+      `UPDATE payments 
+       SET amount = $1, currency = COALESCE($2, currency), "updatedAt" = NOW() 
+       WHERE "reservationId" = $3 AND status = 'PENDING'`,
+      [finalTotal, effCurrency || null, id]
     );
 
     // If guest details provided, update the linked guest

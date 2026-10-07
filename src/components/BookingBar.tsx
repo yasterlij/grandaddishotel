@@ -4,12 +4,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, Users, Search, Minus, Plus, ChevronDown, Check, Sparkles, Shield, ArrowRight } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 
+import { getTodayDateStr, addDays, calculateStayNights } from '@/lib/dates';
+
 export default function BookingBar() {
   const { openBooking } = useBooking();
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const tomorrowDate = new Date(Date.now() + 86400000);
-  const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+  const todayStr = getTodayDateStr();
+  const tomorrowStr = addDays(todayStr, 1);
 
   const [checkIn, setCheckIn] = useState(todayStr);
   const [checkOut, setCheckOut] = useState(tomorrowStr);
@@ -34,26 +35,20 @@ export default function BookingBar() {
   }, []);
 
   // Calculate nights
-  const calculateNights = () => {
-    try {
-      const d1 = new Date(checkIn);
-      const d2 = new Date(checkOut);
-      const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-      return diff > 0 ? diff : 1;
-    } catch {
-      return 1;
-    }
-  };
-
-  const nights = calculateNights();
+  const nights = calculateStayNights(checkIn, checkOut);
 
   const handleCheckInChange = (newDate: string) => {
     setCheckIn(newDate);
-    if (newDate >= checkOut) {
-      const nextDay = new Date(new Date(newDate).getTime() + 86400000)
-        .toISOString()
-        .split('T')[0];
-      setCheckOut(nextDay);
+    if (!newDate || newDate >= checkOut) {
+      setCheckOut(addDays(newDate, 1));
+    }
+  };
+
+  const handleCheckOutChange = (newDate: string) => {
+    if (newDate <= checkIn) {
+      setCheckOut(addDays(checkIn, 1));
+    } else {
+      setCheckOut(newDate);
     }
   };
 
@@ -142,8 +137,8 @@ export default function BookingBar() {
               ref={checkOutInputRef}
               type="date"
               value={checkOut}
-              min={checkIn}
-              onChange={(e) => setCheckOut(e.target.value)}
+              min={addDays(checkIn, 1)}
+              onChange={(e) => handleCheckOutChange(e.target.value)}
               required
               className="tile-input"
             />

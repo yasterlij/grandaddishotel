@@ -8,13 +8,14 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import PaymentModal from '@/components/PaymentModal';
 import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
+import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
 
 export default function BookingModal() {
   const { isOpen, closeBooking, bookingParams } = useBooking();
   const { rate, currency, formatPrice } = useCurrency();
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const todayStr = getTodayDateStr();
+  const tomorrowStr = addDays(todayStr, 1);
 
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Room & Dates, 2: Add-ons & Guest Details, 3: Confirmation
   const [selectedRoomId, setSelectedRoomId] = useState<string>('2');
@@ -104,12 +105,29 @@ export default function BookingModal() {
   const selectedRoom =
     rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
 
-  // Calculate nights
-  const checkInDate = new Date(checkIn || todayStr);
-  const checkOutDate = new Date(checkOut || tomorrowStr);
-  const diffTime = checkOutDate.getTime() - checkInDate.getTime();
-  const rawNights = Math.round(diffTime / (1000 * 60 * 60 * 24));
-  const nights = isNaN(rawNights) || rawNights < 1 ? 1 : rawNights;
+  // Calculate nights safely
+  const nights = calculateStayNights(checkIn, checkOut);
+
+  const handleCheckInChange = (newDate: string) => {
+    setCheckIn(newDate);
+    if (!newDate || newDate >= checkOut) {
+      setCheckOut(addDays(newDate, 1));
+    }
+  };
+
+  const handleCheckOutChange = (newDate: string) => {
+    if (!newDate || newDate <= checkIn) {
+      setCheckOut(addDays(checkIn, 1));
+    } else {
+      setCheckOut(newDate);
+    }
+  };
+
+  const handleExtendNights = (deltaDays: number) => {
+    const currentNights = calculateStayNights(checkIn, checkOut);
+    const newNights = Math.max(1, currentNights + deltaDays);
+    setCheckOut(addDays(checkIn, newNights));
+  };
 
   // Addon costs
   const addonPrices = {
@@ -344,7 +362,8 @@ export default function BookingModal() {
                   <input
                     type="date"
                     value={checkIn}
-                    onChange={(e) => setCheckIn(e.target.value)}
+                    min={todayStr}
+                    onChange={(e) => handleCheckInChange(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '10px',
@@ -357,14 +376,19 @@ export default function BookingModal() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '6px' }}>
-                    CHECK-OUT DATE
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: '#153D4B' }}>
+                      CHECK-OUT DATE
+                    </label>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: '#E49951', backgroundColor: '#FDF4E7', padding: '1px 6px', borderRadius: '4px' }}>
+                      {nights} {nights === 1 ? 'night' : 'nights'}
+                    </span>
+                  </div>
                   <input
                     type="date"
                     value={checkOut}
-                    min={checkIn}
-                    onChange={(e) => setCheckOut(e.target.value)}
+                    min={addDays(checkIn, 1)}
+                    onChange={(e) => handleCheckOutChange(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '10px',
@@ -526,6 +550,104 @@ export default function BookingModal() {
           {/* STEP 2: Addons & Guest Details */}
           {step === 2 && (
             <form onSubmit={handleConfirmBooking}>
+              {/* Interactive Stay Duration & Date Modification Bar */}
+              <div
+                style={{
+                  backgroundColor: '#FDF9F4',
+                  border: '1px solid #E8D7C3',
+                  borderRadius: '12px',
+                  padding: '16px 20px',
+                  marginBottom: '24px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '14px',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#E49951', fontWeight: 700 }}>
+                      RESERVATION DATES & DURATION
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        backgroundColor: '#153D4B',
+                        color: '#FFFFFF',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                      }}
+                    >
+                      {nights} {nights === 1 ? 'Night' : 'Nights'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#153D4B', marginTop: '4px' }}>
+                    📅 {formatFriendlyDate(checkIn)} → {formatFriendlyDate(checkOut)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#5E6E75', marginTop: '2px' }}>
+                    {selectedRoom.name} • ${selectedRoom.pricePerNight}/night • Room stay: <strong>${roomSubtotal} USD</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B' }}>Modify Stay:</span>
+                  <button
+                    type="button"
+                    disabled={nights <= 1}
+                    onClick={() => handleExtendNights(-1)}
+                    title="Shorten stay by 1 night"
+                    style={{
+                      padding: '7px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #D5D4CC',
+                      backgroundColor: '#FFFFFF',
+                      color: nights <= 1 ? '#A0AEC0' : '#153D4B',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: nights <= 1 ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    −1 Night
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExtendNights(1)}
+                    title="Extend stay by 1 night (payment will adjust automatically)"
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid #E49951',
+                      backgroundColor: '#FEF3C7',
+                      color: '#B45309',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    +1 Night
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleExtendNights(2)}
+                    title="Extend stay by 2 nights"
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '6px',
+                      border: '1px solid #E49951',
+                      backgroundColor: '#FEF3C7',
+                      color: '#B45309',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    +2 Nights
+                  </button>
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '28px' }}>
                 
                 {/* Left: Add-ons & Promo */}

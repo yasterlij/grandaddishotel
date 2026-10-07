@@ -48,11 +48,9 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // 1. Load cached currency preference
-    const savedCurrency = localStorage.getItem('gah_currency');
-    if (savedCurrency === 'ETB' || savedCurrency === 'USD') {
-      setCurrencyState(savedCurrency);
-    }
+    // 1. Force default currency to USD as requested
+    setCurrencyState('USD');
+    localStorage.setItem('gah_currency', 'USD');
 
     // 2. Load cached exchange rate for instant render
     const savedRate = localStorage.getItem('gah_usd_to_etb_rate');
@@ -139,22 +137,12 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     amount: number;
     currency: Currency;
   } => {
-    const etbPrice = Math.round(usdPrice * rate);
-    if (currency === 'ETB') {
-      return {
-        primary: `${etbPrice.toLocaleString()} ETB`,
-        secondary: `$${usdPrice.toLocaleString()} USD`,
-        amount: etbPrice,
-        currency: 'ETB',
-      };
-    } else {
-      return {
-        primary: `$${usdPrice.toLocaleString()}`,
-        secondary: `${etbPrice.toLocaleString()} ETB`,
-        amount: usdPrice,
-        currency: 'USD',
-      };
-    }
+    return {
+      primary: `$${usdPrice.toLocaleString()}`,
+      secondary: '',
+      amount: usdPrice,
+      currency: 'USD',
+    };
   };
 
   const refreshRate = async (): Promise<number> => {

@@ -59,9 +59,8 @@ export default function PaymentModal({
   initialProvider = 'SKINA',
   onPaymentSuccess,
 }: PaymentModalProps) {
-  // Default to SkinaPay as requested
   const [selectedProvider, setSelectedProvider] = useState<PaymentProviderType>(initialProvider || 'SKINA');
-  const [currency, setCurrency] = useState<'ETB' | 'USD'>('ETB');
+  const currency: 'USD' = 'USD';
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [completedPayment, setCompletedPayment] = useState<any>(null);
@@ -92,7 +91,7 @@ export default function PaymentModal({
 
   if (!isOpen) return null;
 
-  const currentAmount = currency === 'ETB' ? amountETB : amountUSD;
+  const currentAmount = amountUSD;
   const detectedCard: CardBrandMeta = detectCardBrand(cardNumber);
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -398,7 +397,7 @@ export default function PaymentModal({
                     Amount Processed
                   </span>
                   <strong style={{ color: '#28A745', fontSize: '16px' }}>
-                    {currency === 'ETB' ? `${currentAmount.toLocaleString()} ETB` : `$${currentAmount}`}
+                    ${amountUSD} USD
                   </strong>
                 </div>
 
@@ -470,53 +469,11 @@ export default function PaymentModal({
                   Total Amount Due
                 </span>
                 <div style={{ fontSize: '24px', fontWeight: 700, color: '#153D4B' }}>
-                  {currency === 'ETB' ? `${amountETB.toLocaleString()} ETB` : `$${amountUSD}`}
+                  ${amountUSD} USD
                 </div>
                 <div style={{ fontSize: '11px', color: '#5E6E75' }}>
                   Booking Ref: <strong>{bookingRef}</strong> • {roomName}
                 </div>
-              </div>
-
-              {/* Currency Toggle */}
-              <div
-                style={{
-                  display: 'flex',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '8px',
-                  border: '1px solid #D5D4CC',
-                  overflow: 'hidden',
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setCurrency('ETB')}
-                  style={{
-                    padding: '7px 13px',
-                    border: 'none',
-                    backgroundColor: currency === 'ETB' ? '#153D4B' : '#FFFFFF',
-                    color: currency === 'ETB' ? '#FFFFFF' : '#153D4B',
-                    fontWeight: 600,
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ETB (Br)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrency('USD')}
-                  style={{
-                    padding: '7px 13px',
-                    border: 'none',
-                    backgroundColor: currency === 'USD' ? '#153D4B' : '#FFFFFF',
-                    color: currency === 'USD' ? '#FFFFFF' : '#153D4B',
-                    fontWeight: 600,
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  USD ($)
-                </button>
               </div>
             </div>
 
@@ -1199,8 +1156,8 @@ export default function PaymentModal({
                     {selectedProvider === 'CASH_ON_ARRIVAL'
                       ? 'Confirm Booking (Pay at Hotel)'
                       : selectedProvider === 'SKINA'
-                      ? `Pay ${currency === 'ETB' ? `${currentAmount.toLocaleString()} ETB` : `$${currentAmount}`} with SkinaPay (${detectedCard.brand})`
-                      : `Pay ${currency === 'ETB' ? `${currentAmount.toLocaleString()} ETB` : `$${currentAmount}`} with ${selectedProvider}`}
+                      ? `Pay $${amountUSD} with SkinaPay (${detectedCard.brand})`
+                      : `Pay $${amountUSD} with ${selectedProvider}`}
                   </span>
                   <ArrowRight size={16} />
                 </>

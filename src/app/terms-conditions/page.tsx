@@ -46,7 +46,7 @@ export default function TermsConditionsPage() {
               2. Reservations & Guarantee
             </h2>
             <p style={{ marginBottom: '20px' }}>
-              A valid reservation guarantee (via credit card, corporate agreement, or approved direct deposit) is required to secure any room reservation made through this site or directly with our front desk. All rates quoted on our direct reservation engine are in USD and Ethiopian Birr (ETB) and include 15% Value Added Tax (VAT) and municipal tourism fees.
+              A valid reservation guarantee (via credit card, corporate agreement, or approved direct deposit) is required to secure any room reservation made through this site or directly with our front desk. All rates quoted on our direct reservation engine are in USD ($) and include 15% Value Added Tax (VAT) and municipal tourism fees.
             </p>
 
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: '#153D4B', marginBottom: '14px' }}>

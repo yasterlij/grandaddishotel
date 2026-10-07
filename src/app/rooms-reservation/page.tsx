@@ -719,15 +719,9 @@ function ReservationContent() {
                 <div style={{ borderTop: '1px solid #ECEBE5', paddingTop: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <div>
                     <span style={{ fontSize: '13px', color: '#5E6E75' }}>Total (includes 15% VAT):</span>
-                    <div style={{ fontSize: '11px', color: '#838A8D', fontWeight: 500, marginTop: '2px' }}>
-                      ≈ {grandTotalETB.toLocaleString()} Ethiopian Birr
-                      <span style={{ fontSize: '10px', color: '#A2B5BD', marginLeft: '5px' }}>
-                        (@ {rate} Br/$)
-                      </span>
-                    </div>
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 700, color: '#E49951' }}>
-                    ${grandTotal}
+                    ${grandTotal} USD
                   </div>
                 </div>
               </div>
@@ -846,7 +840,7 @@ function ReservationContent() {
                   </div>
                   <div>
                     <span style={{ color: '#838A8D', display: 'block' }}>Total Amount:</span>
-                    <strong style={{ color: '#E49951' }}>${grandTotal} ({grandTotalETB.toLocaleString()} ETB)</strong>
+                    <strong style={{ color: '#E49951' }}>${grandTotal} USD</strong>
                   </div>
                 </div>
 

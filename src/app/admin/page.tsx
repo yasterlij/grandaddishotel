@@ -3393,12 +3393,12 @@ export default function AdminPage() {
                   </label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <select
-                      value={editReservationModal.currency || 'ETB'}
+                      value={editReservationModal.currency || 'USD'}
                       onChange={(e) => setEditReservationModal({ ...editReservationModal, currency: e.target.value })}
                       style={{ padding: '10px 8px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px', width: '80px' }}
                     >
-                      <option value="ETB">ETB</option>
                       <option value="USD">USD</option>
+                      <option value="ETB">ETB</option>
                     </select>
                     <input
                       type="number"

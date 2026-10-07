@@ -264,9 +264,6 @@ export default function DiningPage() {
                     <div style={{ fontSize: '18px', fontWeight: 700, color: '#E49951' }}>
                       {formatPrice(item.price).primary}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#838A8D' }}>
-                      ≈ {formatPrice(item.price).secondary}
-                    </div>
                   </div>
                 </div>
 

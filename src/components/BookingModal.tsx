@@ -795,13 +795,7 @@ export default function BookingModal() {
                     >
                       <span>Grand Total:</span>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ color: '#E49951' }}>${grandTotal}</span>
-                        <div style={{ fontSize: '11px', color: '#838A8D', fontWeight: 500, marginTop: '2px' }}>
-                          ≈ {grandTotalETB.toLocaleString()} ETB
-                          <span style={{ fontSize: '10px', color: '#A2B5BD', marginLeft: '5px' }}>
-                            (@ {rate} Br/$)
-                          </span>
-                        </div>
+                        <span style={{ color: '#E49951' }}>${grandTotal} USD</span>
                       </div>
                     </div>
                   </div>
@@ -1015,7 +1009,7 @@ export default function BookingModal() {
                   </div>
                   <div>
                     <span style={{ color: '#838A8D' }}>Total Amount:</span>
-                    <strong style={{ display: 'block', color: '#E49951' }}>${grandTotal} ({grandTotalETB.toLocaleString()} ETB)</strong>
+                    <strong style={{ display: 'block', color: '#E49951' }}>${grandTotal} USD</strong>
                   </div>
                 </div>
 

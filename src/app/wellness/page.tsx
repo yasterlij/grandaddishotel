@@ -223,9 +223,6 @@ export default function WellnessPage() {
                     <div style={{ fontSize: '20px', fontWeight: 700, color: '#E49951' }}>
                       {formatPrice(service.price).primary}
                     </div>
-                    <div style={{ fontSize: '11px', color: '#838A8D' }}>
-                      ≈ {formatPrice(service.price).secondary}
-                    </div>
                   </div>
                 </div>
 

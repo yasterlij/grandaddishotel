@@ -17,7 +17,6 @@ import {
   Phone,
   Mail,
   ChevronRight,
-  Star,
   CheckCircle2,
   Clock,
   Compass,
@@ -293,11 +292,6 @@ export default function HomePage() {
                   border: '1px solid rgba(228, 153, 81, 0.3)',
                 }}
               >
-                <div style={{ display: 'flex', gap: '3px', marginBottom: '8px' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={16} fill="#E49951" color="#E49951" />
-                  ))}
-                </div>
                 <div style={{ fontSize: '20px', fontWeight: 600, fontFamily: 'var(--font-serif)', marginBottom: '4px' }}>
                   99% of Guests
                 </div>
@@ -723,12 +717,6 @@ export default function HomePage() {
                   flexDirection: 'column',
                 }}
               >
-                <div style={{ display: 'flex', gap: '4px', marginBottom: '14px' }}>
-                  {[...Array(t.rating)].map((_, i) => (
-                    <Star key={i} size={16} fill="#E49951" color="#E49951" />
-                  ))}
-                </div>
-
                 <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#153D4B', marginBottom: '10px' }}>
                   “{t.title}”
                 </h4>

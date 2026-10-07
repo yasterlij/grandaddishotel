@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       reservationId,
       provider = 'SKINA', // Default to SKINA as requested
       amount,
-      currency = 'ETB',
+      currency = 'USD',
       guestEmail,
       guestName,
       bookingRef,

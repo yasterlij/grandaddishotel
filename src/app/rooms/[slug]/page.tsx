@@ -160,9 +160,6 @@ export default function RoomDetailPage() {
                   </span>
                   <span style={{ fontSize: '13px', color: '#A2B5BD' }}> / night</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#8BA1AB', marginTop: '2px' }}>
-                  ≈ {formatPrice(room.pricePerNight).secondary}
-                </div>
               </div>
 
               <button
@@ -544,9 +541,6 @@ export default function RoomDetailPage() {
                       {formatPrice(room.pricePerNight).primary}
                     </span>
                     <span style={{ fontSize: '14px', color: '#5E6E75' }}>/ per night</span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#838A8D', marginTop: '2px' }}>
-                    ≈ {formatPrice(room.pricePerNight).secondary}
                   </div>
                 </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Star, Check, Send, ThumbsUp, MessageSquare, ArrowRight } from 'lucide-react';
+import { Check, Send, ThumbsUp, MessageSquare, ArrowRight } from 'lucide-react';
 import { TESTIMONIALS } from '@/data/hotelData';
 
 export default function TestimonialsPage() {
@@ -108,14 +108,11 @@ export default function TestimonialsPage() {
           >
             <div>
               <div style={{ fontSize: '38px', fontFamily: 'var(--font-serif)', fontWeight: 700, color: '#153D4B', lineHeight: '1' }}>
-                4.9 / 5
+                500+
               </div>
-              <div style={{ display: 'flex', gap: '3px', justifyContent: 'center', margin: '6px 0' }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={16} fill="#E49951" color="#E49951" />
-                ))}
-              </div>
-              <span style={{ fontSize: '12px', color: '#838A8D' }}>Overall Guest Rating</span>
+              <span style={{ fontSize: '12px', color: '#838A8D', display: 'block', marginTop: '6px' }}>
+                Happy Guests Hosted
+              </span>
             </div>
 
             <div>
@@ -157,11 +154,7 @@ export default function TestimonialsPage() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', gap: '3px' }}>
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} size={15} fill="#E49951" color="#E49951" />
-                    ))}
-                  </div>
+                  <span style={{ fontSize: '12px', color: '#E49951', fontWeight: 600 }}>Verified Guest</span>
                   <span style={{ fontSize: '11px', color: '#838A8D' }}>{t.date}</span>
                 </div>
 
@@ -262,20 +255,6 @@ export default function TestimonialsPage() {
                       <option value="Standard Room">Standard Room</option>
                       <option value="Twin Room">Twin Room</option>
                       <option value="Executive Suite">Grand Executive Suite</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
-                      Rating *
-                    </label>
-                    <select
-                      value={formRating}
-                      onChange={(e) => setFormRating(Number(e.target.value))}
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
-                    >
-                      <option value={5}>★★★★★ (5 Stars - Exceptional)</option>
-                      <option value={4}>★★★★☆ (4 Stars - Very Good)</option>
-                      <option value={3}>★★★☆☆ (3 Stars - Average)</option>
                     </select>
                   </div>
                 </div>

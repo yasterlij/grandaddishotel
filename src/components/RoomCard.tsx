@@ -78,9 +78,6 @@ export default function RoomCard({ room, viewMode = 'grid' }: { room: Room; view
             <span style={{ fontSize: '15px', fontWeight: 700, color: '#E49951' }}>{price.primary}</span>
             <span style={{ fontSize: '10px', color: '#A2B5BD' }}>/ nt</span>
           </div>
-          <div style={{ fontSize: '10px', color: '#8BA1AB', marginTop: '1px' }}>
-            ≈ {price.secondary}
-          </div>
         </div>
 
         {/* Category Pill */}

@@ -30,10 +30,6 @@ export default function Header() {
 
   const navLinks = [
     { label: 'Rooms', href: '/rooms' },
-    { label: 'Dining', href: '/dining' },
-    { label: 'Wellness', href: '/wellness' },
-    { label: 'Experiences', href: '/experiences' },
-    { label: 'Events', href: '/weddings-events' },
     { label: 'Gallery', href: '/gallery' },
     { label: 'About', href: '/about-us' },
     { label: 'Contact', href: '/contact' },

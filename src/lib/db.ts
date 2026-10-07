@@ -36,6 +36,8 @@ export async function initDatabase(): Promise<void> {
         ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "category" TEXT DEFAULT 'Hotel Rooms';
         ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "featured" BOOLEAN DEFAULT true;
         ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "aliases" TEXT[] DEFAULT '{}';
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS "isDateExtended" BOOLEAN DEFAULT false;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS "dateChangeNote" TEXT;
       `);
 
       // 2. Auxiliary table: table_reservations (for Dining)

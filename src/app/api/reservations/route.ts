@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
       currency = 'USD',
       paymentProvider = 'CASH_ON_ARRIVAL',
       paymentStatus = 'PENDING',
+      isDateExtended = false,
+      dateChangeNote = '',
     } = body;
 
     if (!guestName || !guestEmail || !guestPhone || !checkIn || !checkOut) {
@@ -119,6 +121,9 @@ export async function POST(req: NextRequest) {
 
     const reservationId = crypto.randomUUID();
 
+    const isExtendedFlag = Boolean(isDateExtended || nights > 1);
+    const finalNote = dateChangeNote || (nights > 1 ? `Extended stay of ${nights} nights` : null);
+
     // 6. Insert Reservation into PostgreSQL
     await query(
       `INSERT INTO reservations (
@@ -137,9 +142,11 @@ export async function POST(req: NextRequest) {
         "guestId",
         "roomTypeId",
         "roomId",
+        "isDateExtended",
+        "dateChangeNote",
         "createdAt",
         "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'CONFIRMED', $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'CONFIRMED', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())`,
       [
         reservationId,
         bookingRef,
@@ -155,6 +162,8 @@ export async function POST(req: NextRequest) {
         guestId,
         roomType.id,
         physicalRoomId,
+        isExtendedFlag,
+        finalNote,
       ]
     );
 
@@ -219,6 +228,8 @@ export async function POST(req: NextRequest) {
       nights,
       totalAmount: finalTotal,
       currency,
+      isDateExtended: isExtendedFlag,
+      dateChangeNote: finalNote,
       guest: {
         name: `${firstName} ${lastName}`,
         email: guestEmail,

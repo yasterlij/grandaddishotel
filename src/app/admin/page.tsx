@@ -1218,6 +1218,31 @@ export default function AdminPage() {
                           <div style={{ fontSize: '12px', color: '#E49951', fontWeight: 500, marginTop: '2px' }}>
                             📅 {r.checkInDate} → {r.checkOutDate}
                           </div>
+                          {r.isDateExtended && (
+                            <div style={{ marginTop: '5px' }}>
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#B45309',
+                                  border: '1px solid #F59E0B',
+                                  borderRadius: '6px',
+                                  padding: '2px 7px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                🚩 Dates Extended
+                              </span>
+                              {r.dateChangeNote && (
+                                <div style={{ fontSize: '10px', color: '#838A8D', marginTop: '2px', maxWidth: '190px', lineHeight: 1.25 }}>
+                                  {r.dateChangeNote}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td style={{ padding: '14px 18px' }}>
                           <div style={{ fontWeight: 600, color: '#153D4B' }}>
@@ -1269,6 +1294,8 @@ export default function AdminPage() {
                                   currency: r.currency,
                                   status: r.status,
                                   specialRequests: r.specialRequests || '',
+                                  isDateExtended: r.isDateExtended,
+                                  dateChangeNote: r.dateChangeNote,
                                 });
                                 setIsCreatingReservation(false);
                               }}
@@ -3281,10 +3308,13 @@ export default function AdminPage() {
                     const newNights = Math.max(1, modalNights + deltaDays);
                     const newOut = addDays(editReservationModal.checkInDate || getTodayDateStr(), newNights);
                     const newTotal = Math.round(newNights * baseRate * 1.15 * 100) / 100;
+                    const isExt = newNights > 1;
                     setEditReservationModal({
                       ...editReservationModal,
                       checkOutDate: newOut,
                       totalAmount: newTotal,
+                      isDateExtended: isExt,
+                      dateChangeNote: isExt ? `Stay adjusted by ${deltaDays > 0 ? '+' + deltaDays : deltaDays} nights (${newNights} nights total)` : '',
                     });
                   };
 
@@ -3295,11 +3325,14 @@ export default function AdminPage() {
                     }
                     const n = calculateStayNights(newIn, newOut);
                     const newTotal = Math.round(n * baseRate * 1.15 * 100) / 100;
+                    const isExt = n > 1;
                     setEditReservationModal({
                       ...editReservationModal,
                       checkInDate: newIn,
                       checkOutDate: newOut,
                       totalAmount: newTotal,
+                      isDateExtended: isExt,
+                      dateChangeNote: isExt ? `Stay scheduled for ${n} nights (${newIn} to ${newOut})` : '',
                     });
                   };
 
@@ -3308,10 +3341,13 @@ export default function AdminPage() {
                     const validOut = newOut <= cIn ? addDays(cIn, 1) : newOut;
                     const n = calculateStayNights(cIn, validOut);
                     const newTotal = Math.round(n * baseRate * 1.15 * 100) / 100;
+                    const isExt = n > 1;
                     setEditReservationModal({
                       ...editReservationModal,
                       checkOutDate: validOut,
                       totalAmount: newTotal,
+                      isDateExtended: isExt,
+                      dateChangeNote: isExt ? `Stay scheduled for ${n} nights (${cIn} to ${validOut})` : '',
                     });
                   };
 
@@ -3401,6 +3437,45 @@ export default function AdminPage() {
                           </button>
                         </div>
                       </div>
+
+                      {/* Date Extension / Adjustment Alert Flag Banner */}
+                      {(modalNights > 1 || editReservationModal.isDateExtended) && (
+                        <div
+                          style={{
+                            marginTop: '12px',
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            backgroundColor: '#FEF3C7',
+                            border: '1px solid #F59E0B',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            fontSize: '12px',
+                            color: '#92400E',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <span style={{ fontSize: '16px' }}>🚩</span>
+                          <div style={{ flex: 1 }}>
+                            <strong>Date Extension Notification Flag Active:</strong>{' '}
+                            <span>
+                              {editReservationModal.dateChangeNote || `Extended stay of ${modalNights} nights (${formatFriendlyDate(editReservationModal.checkInDate)} → ${formatFriendlyDate(editReservationModal.checkOutDate)}).`} Total billing automatically adjusted to {editReservationModal.currency || 'USD'} {editReservationModal.totalAmount}.
+                            </span>
+                          </div>
+                          <span
+                            style={{
+                              backgroundColor: '#F59E0B',
+                              color: '#FFFFFF',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            Auto-Updated
+                          </span>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

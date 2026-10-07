@@ -72,6 +72,7 @@ function ReservationContent() {
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dateChangeFlag, setDateChangeFlag] = useState<{ isExtended: boolean; text: string; delta: number; totalNights: number } | null>(null);
 
   const [rooms, setRooms] = useState<Room[]>(ROOMS);
 
@@ -90,6 +91,19 @@ function ReservationContent() {
     loadPostgresRooms();
   }, []);
 
+  // Initialize date change flag if query params provide multi-night stay
+  useEffect(() => {
+    const initialNights = calculateStayNights(queryCheckIn, queryCheckOut);
+    if (initialNights > 1) {
+      setDateChangeFlag({
+        isExtended: true,
+        text: `Stay scheduled for ${initialNights} nights (${formatFriendlyDate(queryCheckIn)} → ${formatFriendlyDate(queryCheckOut)}). Payment scaled automatically.`,
+        delta: initialNights - 1,
+        totalNights: initialNights,
+      });
+    }
+  }, [queryCheckIn, queryCheckOut]);
+
   const selectedRoom =
     rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
 
@@ -98,23 +112,66 @@ function ReservationContent() {
 
   const handleCheckInChange = (newDate: string) => {
     setCheckIn(newDate);
+    let nextOut = checkOut;
     if (!newDate || newDate >= checkOut) {
-      setCheckOut(addDays(newDate, 1));
+      nextOut = addDays(newDate, 1);
+      setCheckOut(nextOut);
+    }
+    const newNights = calculateStayNights(newDate, nextOut);
+    if (newNights > 1) {
+      setDateChangeFlag({
+        isExtended: true,
+        text: `Stay scheduled for ${newNights} nights (${formatFriendlyDate(newDate)} → ${formatFriendlyDate(nextOut)}). Total payment scaled automatically.`,
+        delta: newNights - 1,
+        totalNights: newNights,
+      });
     }
   };
 
   const handleCheckOutChange = (newDate: string) => {
-    if (!newDate || newDate <= checkIn) {
-      setCheckOut(addDays(checkIn, 1));
-    } else {
-      setCheckOut(newDate);
+    const validOut = (!newDate || newDate <= checkIn) ? addDays(checkIn, 1) : newDate;
+    setCheckOut(validOut);
+    const newNights = calculateStayNights(checkIn, validOut);
+    const prevNights = calculateStayNights(checkIn, checkOut);
+    const diff = newNights - prevNights;
+    if (diff > 0) {
+      setDateChangeFlag({
+        isExtended: true,
+        text: `Stay extended by +${diff} ${diff === 1 ? 'night' : 'nights'} (${newNights} nights total). Payment scaled automatically.`,
+        delta: diff,
+        totalNights: newNights,
+      });
+    } else if (diff < 0) {
+      setDateChangeFlag({
+        isExtended: false,
+        text: `Stay shortened by ${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'night' : 'nights'} (${newNights} nights total). Payment scaled automatically.`,
+        delta: diff,
+        totalNights: newNights,
+      });
     }
   };
 
   const handleExtendNights = (deltaDays: number) => {
     const currentNights = calculateStayNights(checkIn, checkOut);
     const newNights = Math.max(1, currentNights + deltaDays);
-    setCheckOut(addDays(checkIn, newNights));
+    const newOut = addDays(checkIn, newNights);
+    setCheckOut(newOut);
+    const delta = newNights - currentNights;
+    if (delta > 0) {
+      setDateChangeFlag({
+        isExtended: true,
+        text: `Stay extended by +${delta} ${delta === 1 ? 'night' : 'nights'}! Total duration is now ${newNights} nights. Payment updated automatically.`,
+        delta,
+        totalNights: newNights,
+      });
+    } else if (delta < 0) {
+      setDateChangeFlag({
+        isExtended: false,
+        text: `Stay shortened by ${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'night' : 'nights'}. Total duration is now ${newNights} nights. Payment updated automatically.`,
+        delta,
+        totalNights: newNights,
+      });
+    }
   };
 
   const addonPrices = {
@@ -173,6 +230,8 @@ function ReservationContent() {
           currency: 'USD',
           paymentProvider: selectedPaymentProvider,
           paymentStatus: 'PENDING',
+          isDateExtended: Boolean(dateChangeFlag?.isExtended || nights > 1),
+          dateChangeNote: dateChangeFlag?.text || (nights > 1 ? `Extended stay of ${nights} nights (${checkIn} to ${checkOut})` : ''),
         }),
       });
       const data = await res.json();
@@ -454,6 +513,46 @@ function ReservationContent() {
                   </div>
                 </div>
 
+                {/* Date Extension / Adjustment Alert Flag Banner */}
+                {dateChangeFlag && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      backgroundColor: dateChangeFlag.isExtended ? '#FEF3C7' : '#EFF6FF',
+                      border: dateChangeFlag.isExtended ? '1px solid #F59E0B' : '1px solid #93C5FD',
+                      color: dateChangeFlag.isExtended ? '#92400E' : '#1E40AF',
+                      padding: '14px 18px',
+                      borderRadius: '10px',
+                      marginBottom: '24px',
+                      fontSize: '13px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>🚩</span>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ fontWeight: 700 }}>
+                        {dateChangeFlag.isExtended ? 'Stay Date Extension Notification Flag:' : 'Stay Duration Notification Flag:'}
+                      </strong>{' '}
+                      <span>{dateChangeFlag.text}</span>
+                    </div>
+                    <span
+                      style={{
+                        backgroundColor: dateChangeFlag.isExtended ? '#F59E0B' : '#2563EB',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {nights} {nights === 1 ? 'Night' : 'Nights'}
+                    </span>
+                  </div>
+                )}
+
                 {/* Rooms selection */}
                 <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', color: '#153D4B', marginBottom: '18px' }}>
                   Select Accommodations ({nights} {nights === 1 ? 'Night' : 'Nights'})
@@ -716,6 +815,46 @@ function ReservationContent() {
                   </button>
                 </div>
               </div>
+
+              {/* Date Extension / Adjustment Alert Flag Banner */}
+              {dateChangeFlag && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    backgroundColor: dateChangeFlag.isExtended ? '#FEF3C7' : '#EFF6FF',
+                    border: dateChangeFlag.isExtended ? '1px solid #F59E0B' : '1px solid #93C5FD',
+                    color: dateChangeFlag.isExtended ? '#92400E' : '#1E40AF',
+                    padding: '14px 18px',
+                    borderRadius: '10px',
+                    marginBottom: '24px',
+                    fontSize: '13px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>🚩</span>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ fontWeight: 700 }}>
+                      {dateChangeFlag.isExtended ? 'Stay Date Extension Flag Active:' : 'Stay Duration Modified:'}
+                    </strong>{' '}
+                    <span>{dateChangeFlag.text}</span>
+                  </div>
+                  <span
+                    style={{
+                      backgroundColor: dateChangeFlag.isExtended ? '#F59E0B' : '#2563EB',
+                      color: '#FFFFFF',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Auto-Scaled to ${grandTotal} USD
+                  </span>
+                </div>
+              )}
 
               <div
                 style={{
@@ -1057,6 +1196,32 @@ function ReservationContent() {
                     </span>
                   </div>
                 </div>
+
+                {(dateChangeFlag?.isExtended || nights > 1) && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      backgroundColor: '#FEF3C7',
+                      border: '1px solid #F59E0B',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      marginBottom: '16px',
+                      fontSize: '12px',
+                      color: '#92400E',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span style={{ fontSize: '16px' }}>🚩</span>
+                    <div style={{ flex: 1 }}>
+                      <strong>Extended Stay Confirmed ({nights} Nights Total)</strong>
+                      <div style={{ fontSize: '11px', color: '#B45309', fontWeight: 500, marginTop: '2px' }}>
+                        {dateChangeFlag?.text || `Dates extended to ${checkOut}. Payment scaled automatically to $${grandTotal} USD.`}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', color: '#153D4B', marginBottom: '16px' }}>
                   <div>

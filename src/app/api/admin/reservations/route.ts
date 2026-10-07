@@ -19,6 +19,8 @@ export async function GET() {
         r."taxAmount",
         r."totalAmount",
         r."specialRequests",
+        COALESCE(r."isDateExtended", false) AS "isDateExtended",
+        r."dateChangeNote",
         r."createdAt",
         r."roomId",
         r."roomTypeId",
@@ -231,6 +233,17 @@ export async function PUT(req: NextRequest) {
     const finalSubtotal = Number((finalTotal / 1.15).toFixed(2));
     const finalTax = Number((finalTotal - finalSubtotal).toFixed(2));
 
+    const oldNights = calculateStayNights(current.checkInDate, current.checkOutDate);
+    const dateDiff = nights - oldNights;
+    const isExtended = dateDiff > 0;
+    const isShortened = dateDiff < 0;
+    const isDateExtended = isExtended || (body.isDateExtended === true) || Boolean(current.isDateExtended);
+    const dateChangeNote = isExtended
+      ? `Extended by +${dateDiff} ${dateDiff === 1 ? 'night' : 'nights'} (${nights} nights total)`
+      : isShortened
+      ? `Shortened by ${Math.abs(dateDiff)} ${Math.abs(dateDiff) === 1 ? 'night' : 'nights'} (${nights} nights total)`
+      : current.dateChangeNote || null;
+
     // Update reservation
     await query(
       `UPDATE reservations SET
@@ -246,8 +259,10 @@ export async function PUT(req: NextRequest) {
         "specialRequests" = COALESCE($10, "specialRequests"),
         "roomId" = $11,
         "roomTypeId" = COALESCE($12, "roomTypeId"),
+        "isDateExtended" = $13,
+        "dateChangeNote" = $14,
         "updatedAt" = NOW()
-      WHERE id = $13`,
+      WHERE id = $15`,
       [
         effCheckIn,
         effCheckOut,
@@ -261,6 +276,8 @@ export async function PUT(req: NextRequest) {
         specialRequests !== undefined ? specialRequests : null,
         roomId || null,
         effRoomTypeId || null,
+        isDateExtended,
+        dateChangeNote,
         id,
       ]
     );
@@ -295,7 +312,14 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, message: 'Reservation updated successfully' });
+    return NextResponse.json({
+      success: true,
+      message: 'Reservation updated successfully',
+      isDateExtended,
+      dateChangeNote,
+      totalAmount: finalTotal,
+      nights,
+    });
   } catch (error: any) {
     console.error('Error updating reservation:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -6,12 +6,14 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Phone, ArrowRight, Menu, X, Calendar } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
+import { useCurrency } from '@/context/CurrencyContext';
 import { HOTEL_INFO } from '@/data/hotelData';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
   const { openBooking, openNavDrawer } = useBooking();
+  const { currency, setCurrency, rate } = useCurrency();
 
   const isHomePage = pathname === '/';
 
@@ -223,8 +225,56 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Right: Phone & Book CTA */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Right: Currency, Phone & Book CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          {/* Currency Switcher */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              backgroundColor: isScrolled ? '#F2F1EA' : 'rgba(255, 255, 255, 0.12)',
+              borderRadius: '20px',
+              padding: '2px',
+              border: isScrolled ? '1px solid #E2E1DA' : '1px solid rgba(255, 255, 255, 0.2)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <button
+              onClick={() => setCurrency('USD')}
+              title={`Show prices in US Dollars (1 USD = ${rate} ETB)`}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '16px',
+                fontSize: '11px',
+                fontWeight: 600,
+                backgroundColor: currency === 'USD' ? '#E49951' : 'transparent',
+                color: currency === 'USD' ? '#FFFFFF' : isScrolled ? '#153D4B' : 'rgba(255, 255, 255, 0.85)',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+                border: 'none',
+              }}
+            >
+              USD
+            </button>
+            <button
+              onClick={() => setCurrency('ETB')}
+              title={`Show prices in Ethiopian Birr (1 USD = ${rate} ETB)`}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '16px',
+                fontSize: '11px',
+                fontWeight: 600,
+                backgroundColor: currency === 'ETB' ? '#E49951' : 'transparent',
+                color: currency === 'ETB' ? '#FFFFFF' : isScrolled ? '#153D4B' : 'rgba(255, 255, 255, 0.85)',
+                transition: 'all 0.2s ease',
+                cursor: 'pointer',
+                border: 'none',
+              }}
+            >
+              ETB
+            </button>
+          </div>
+
           <a
             href={`tel:${HOTEL_INFO.phone}`}
             style={{

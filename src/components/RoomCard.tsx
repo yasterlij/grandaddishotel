@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { Users, Wifi, Tv, Wind, Bath, ArrowRight, Calendar, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { Room } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function RoomCard({ room, viewMode = 'grid' }: { room: Room; viewMode?: 'grid' | 'list' }) {
   const { openBooking } = useBooking();
+  const { formatPrice } = useCurrency();
+  const price = formatPrice(room.pricePerNight);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const nextImage = (e: React.MouseEvent) => {
@@ -61,18 +64,23 @@ export default function RoomCard({ room, viewMode = 'grid' }: { room: Room; view
             position: 'absolute',
             top: '16px',
             right: '16px',
-            backgroundColor: '#0F2A33',
+            backgroundColor: 'rgba(15, 42, 51, 0.92)',
+            backdropFilter: 'blur(4px)',
             color: '#FFFFFF',
-            padding: '6px 14px',
-            borderRadius: '4px',
-            fontSize: '13px',
-            fontWeight: 600,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
             zIndex: 2,
+            textAlign: 'right',
           }}
         >
-          <span style={{ fontSize: '16px', color: '#E49951' }}>${room.pricePerNight}</span>
-          <span style={{ fontSize: '11px', color: '#A2B5BD', marginLeft: '4px' }}>/ night</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'flex-end', gap: '3px' }}>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: '#E49951' }}>{price.primary}</span>
+            <span style={{ fontSize: '10px', color: '#A2B5BD' }}>/ nt</span>
+          </div>
+          <div style={{ fontSize: '10px', color: '#8BA1AB', marginTop: '1px' }}>
+            ≈ {price.secondary}
+          </div>
         </div>
 
         {/* Category Pill */}

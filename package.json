@@ -1,5 +1,6 @@
 {
   "name": "grandaddishotel",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,20 +8,29 @@
     "dev:https": "next dev -p 3050 --experimental-https",
     "build": "next build",
     "start": "next start",
-    "db:seed": "node scripts/seed-db.mjs"
+    "db:seed": "node scripts/seed-db.mjs",
+    "prisma:emit": "prisma contract emit",
+    "prisma:sign": "prisma db sign --yes",
+    "prisma:infer": "prisma contract infer --db $DATABASE_URL --output ./src/prisma/contract.prisma --yes"
   },
   "dependencies": {
+    "@prisma/client": "^7.10.0",
+    "@prisma/orm-postgres": "^8.0.0-rc.14",
+    "dotenv": "^18.0.6",
     "lucide-react": "^1.52.0",
     "next": "16.3.8",
     "pg": "^8.23.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "temporal-polyfill": "^1.0.5"
   },
   "devDependencies": {
+    "@prisma/cli-engine": "^0.6.2",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "prisma": "^8.0.0-rc.20",
     "typescript": "^5"
   }
 }

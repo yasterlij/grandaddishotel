@@ -16,8 +16,10 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { DINING_MENUS, HOTEL_INFO, MenuItem } from '@/data/hotelData';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function DiningPage() {
+  const { formatPrice } = useCurrency();
   const [menuItems, setMenuItems] = useState<MenuItem[]>(DINING_MENUS);
   const [activeTab, setActiveTab] = useState<'all' | 'starter' | 'main' | 'ethiopian' | 'dessert' | 'beverage'>('all');
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -258,9 +260,14 @@ export default function DiningPage() {
                   <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 600, color: '#153D4B' }}>
                     {item.name}
                   </h3>
-                  <span style={{ fontSize: '20px', fontWeight: 700, color: '#E49951', marginLeft: '12px' }}>
-                    ${item.price}
-                  </span>
+                  <div style={{ textAlign: 'right', marginLeft: '12px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#E49951' }}>
+                      {formatPrice(item.price).primary}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#838A8D' }}>
+                      ≈ {formatPrice(item.price).secondary}
+                    </div>
+                  </div>
                 </div>
 
                 {item.tag && (

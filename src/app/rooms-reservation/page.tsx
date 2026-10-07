@@ -25,11 +25,13 @@ import {
   Lock,
 } from 'lucide-react';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
+import { useCurrency } from '@/context/CurrencyContext';
 import PaymentModal from '@/components/PaymentModal';
 import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
 
 function ReservationContent() {
   const searchParams = useSearchParams();
+  const { rate, currency, formatPrice } = useCurrency();
 
   const todayStr = new Date().toISOString().split('T')[0];
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -64,7 +66,7 @@ function ReservationContent() {
   const [bookingRef, setBookingRef] = useState('');
   const [reservationId, setReservationId] = useState('');
   const [activeTxRef, setActiveTxRef] = useState('');
-  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('CHAPA');
+  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('SKINA');
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,7 +116,7 @@ function ReservationContent() {
   const subtotalAfterDiscount = roomSubtotal - discountAmount + addonsTotal;
   const tax = Math.round(subtotalAfterDiscount * 0.15 * 100) / 100;
   const grandTotal = Math.round((subtotalAfterDiscount + tax) * 100) / 100;
-  const grandTotalETB = Math.round(grandTotal * 135);
+  const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
 
   const applyPromo = () => {
     const code = promoCode.trim().toUpperCase();
@@ -685,9 +687,9 @@ function ReservationContent() {
                       color: '#5E6E75',
                     }}
                   >
-                    {selectedPaymentProvider === 'CHAPA' && (
+                    {selectedPaymentProvider === 'SKINA' && (
                       <div>
-                        <strong style={{ color: '#00A36C' }}>Chapa Premier Gateway:</strong> Instant checkout supporting Telebirr, CBE Birr, Awash Bank, Amole, and Visa/Mastercard.
+                        <strong style={{ color: '#153D4B' }}>SkinaPay (Default Provider):</strong> Instant, 256-bit SSL secured card checkout accepting <strong>Visa, Mastercard, American Express, UnionPay</strong>, and Ethiopian local debit cards via SkinaPay Sandbox.
                       </div>
                     )}
                     {selectedPaymentProvider === 'TELEBIRR' && (
@@ -695,14 +697,14 @@ function ReservationContent() {
                         <strong style={{ color: '#0072CE' }}>Telebirr Mobile Money:</strong> Fast USSD push notification sent directly to your phone (*127#) or scan QR via Telebirr SuperApp.
                       </div>
                     )}
+                    {selectedPaymentProvider === 'CHAPA' && (
+                      <div>
+                        <strong style={{ color: '#00A36C' }}>Chapa Premier Gateway:</strong> Online gateway supporting Telebirr, CBE Birr, Awash Bank, Amole, and cards.
+                      </div>
+                    )}
                     {selectedPaymentProvider === 'CBE_BIRR' && (
                       <div>
                         <strong style={{ color: '#6E2585' }}>Commercial Bank of Ethiopia (CBE / CEB):</strong> Instant transfer to Hotel CBE Birr Shortcode <strong>882200</strong> or CBE Mobile App account <strong>1000188220011</strong>.
-                      </div>
-                    )}
-                    {selectedPaymentProvider === 'SKINA' && (
-                      <div>
-                        <strong style={{ color: '#153D4B' }}>Skina / Card Pay:</strong> Secure international & local credit/debit card processing (Visa, Mastercard, Skina Digital).
                       </div>
                     )}
                     {selectedPaymentProvider === 'CASH_ON_ARRIVAL' && (
@@ -717,7 +719,12 @@ function ReservationContent() {
                 <div style={{ borderTop: '1px solid #ECEBE5', paddingTop: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <div>
                     <span style={{ fontSize: '13px', color: '#5E6E75' }}>Total (includes 15% VAT):</span>
-                    <div style={{ fontSize: '11px', color: '#838A8D' }}>≈ {grandTotalETB.toLocaleString()} Ethiopian Birr</div>
+                    <div style={{ fontSize: '11px', color: '#838A8D', fontWeight: 500, marginTop: '2px' }}>
+                      ≈ {grandTotalETB.toLocaleString()} Ethiopian Birr
+                      <span style={{ fontSize: '10px', color: '#A2B5BD', marginLeft: '5px' }}>
+                        (@ {rate} Br/$)
+                      </span>
+                    </div>
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 700, color: '#E49951' }}>
                     ${grandTotal}
@@ -884,6 +891,7 @@ function ReservationContent() {
         roomName={selectedRoom.name}
         checkInDate={checkIn}
         checkOutDate={checkOut}
+        initialProvider={selectedPaymentProvider}
         onPaymentSuccess={handlePaymentSuccess}
       />
     </div>

@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, Check, Calendar, Users, DollarSign, ShieldCheck, Printer, ArrowLeft, ArrowRight, Sparkles, Coffee, CreditCard, Lock } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
+import { useCurrency } from '@/context/CurrencyContext';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import PaymentModal from '@/components/PaymentModal';
 import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
 
 export default function BookingModal() {
   const { isOpen, closeBooking, bookingParams } = useBooking();
+  const { rate, currency, formatPrice } = useCurrency();
 
   const todayStr = new Date().toISOString().split('T')[0];
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -38,7 +40,7 @@ export default function BookingModal() {
   const [promoMessage, setPromoMessage] = useState('');
 
   // Payment State
-  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('CHAPA');
+  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('SKINA');
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [createdReservationId, setCreatedReservationId] = useState('');
@@ -127,7 +129,7 @@ export default function BookingModal() {
   const subtotalAfterDiscount = roomSubtotal - discountAmount + addonsTotal;
   const tax = Math.round(subtotalAfterDiscount * 0.15 * 100) / 100; // 15% VAT
   const grandTotal = Math.round((subtotalAfterDiscount + tax) * 100) / 100;
-  const grandTotalETB = Math.round(grandTotal * 135); // Approx USD to ETB
+  const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
 
   const applyPromo = () => {
     const code = promoCode.trim().toUpperCase();
@@ -794,8 +796,11 @@ export default function BookingModal() {
                       <span>Grand Total:</span>
                       <div style={{ textAlign: 'right' }}>
                         <span style={{ color: '#E49951' }}>${grandTotal}</span>
-                        <div style={{ fontSize: '11px', color: '#838A8D', fontWeight: 400 }}>
+                        <div style={{ fontSize: '11px', color: '#838A8D', fontWeight: 500, marginTop: '2px' }}>
                           ≈ {grandTotalETB.toLocaleString()} ETB
+                          <span style={{ fontSize: '10px', color: '#A2B5BD', marginLeft: '5px' }}>
+                            (@ {rate} Br/$)
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -857,17 +862,17 @@ export default function BookingModal() {
                     color: '#5E6E75',
                   }}
                 >
-                  {selectedPaymentProvider === 'CHAPA' && (
-                    <span><strong>Chapa:</strong> Instant checkout supporting Telebirr, CBE Birr, Awash Bank, and Visa/Mastercard.</span>
+                  {selectedPaymentProvider === 'SKINA' && (
+                    <span><strong>SkinaPay (Default):</strong> Secure instant checkout accepting <strong>Visa, Mastercard, American Express, UnionPay</strong>, and local Ethiopian debit cards.</span>
                   )}
                   {selectedPaymentProvider === 'TELEBIRR' && (
                     <span><strong>Telebirr:</strong> Fast USSD push prompt to phone (*127#) or scan QR via Telebirr SuperApp.</span>
                   )}
+                  {selectedPaymentProvider === 'CHAPA' && (
+                    <span><strong>Chapa:</strong> Online gateway supporting Telebirr, CBE Birr, Awash Bank, and Visa/Mastercard.</span>
+                  )}
                   {selectedPaymentProvider === 'CBE_BIRR' && (
                     <span><strong>Commercial Bank of Ethiopia (CBE / CEB):</strong> Pay via CBE Birr shortcode <strong>882200</strong> or CBE Mobile App.</span>
-                  )}
-                  {selectedPaymentProvider === 'SKINA' && (
-                    <span><strong>Skina / Card Pay:</strong> Secure international & local credit/debit card processing (Visa, Mastercard, Skina Digital).</span>
                   )}
                   {selectedPaymentProvider === 'CASH_ON_ARRIVAL' && (
                     <span><strong>Cash / Pay at Hotel:</strong> Guarantee room now, pay upon arrival at Grand Addis Front Desk in ETB or USD.</span>
@@ -1060,6 +1065,7 @@ export default function BookingModal() {
             roomName={selectedRoom.name}
             checkInDate={checkIn}
             checkOutDate={checkOut}
+            initialProvider={selectedPaymentProvider}
             onPaymentSuccess={handlePaymentSuccess}
           />
 

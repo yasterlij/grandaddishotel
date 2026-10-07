@@ -4,10 +4,12 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { X, Phone, Mail, MapPin, Calendar, ArrowRight, Send } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
+import { useCurrency } from '@/context/CurrencyContext';
 import { HOTEL_INFO } from '@/data/hotelData';
 
 export default function NavDrawer() {
   const { isNavDrawerOpen, closeNavDrawer, openBooking } = useBooking();
+  const { currency, setCurrency, rate } = useCurrency();
 
   // Handle escape key
   useEffect(() => {
@@ -136,6 +138,58 @@ export default function NavDrawer() {
           >
             <X size={20} />
           </button>
+        </div>
+
+        {/* Display Currency Switcher */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            marginBottom: '20px',
+          }}
+        >
+          <span style={{ fontSize: '12px', color: '#B5C4CB', letterSpacing: '0.5px' }}>
+            Display Currency <span style={{ fontSize: '10px', color: '#E49951', marginLeft: '6px' }}>(1$ ≈ {rate} Br)</span>
+          </span>
+          <div style={{ display: 'flex', gap: '4px', backgroundColor: 'rgba(0, 0, 0, 0.25)', borderRadius: '20px', padding: '3px' }}>
+            <button
+              onClick={() => setCurrency('USD')}
+              style={{
+                padding: '4px 12px',
+                borderRadius: '16px',
+                fontSize: '11px',
+                fontWeight: 600,
+                backgroundColor: currency === 'USD' ? '#E49951' : 'transparent',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                border: 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              USD ($)
+            </button>
+            <button
+              onClick={() => setCurrency('ETB')}
+              style={{
+                padding: '4px 12px',
+                borderRadius: '16px',
+                fontSize: '11px',
+                fontWeight: 600,
+                backgroundColor: currency === 'ETB' ? '#E49951' : 'transparent',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                border: 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              ETB (Br)
+            </button>
+          </div>
         </div>
 
         {/* Action Button */}

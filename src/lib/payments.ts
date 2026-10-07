@@ -12,6 +12,7 @@ export async function initializePaymentRecord({
   guestEmail,
   guestName,
   bookingRef,
+  extraPayload,
 }: {
   reservationId: string;
   provider: PaymentProviderType;
@@ -20,12 +21,20 @@ export async function initializePaymentRecord({
   guestEmail?: string;
   guestName?: string;
   bookingRef?: string;
+  extraPayload?: any;
 }) {
   const paymentId = crypto.randomUUID();
   const txRef = `TX-${provider}-${(bookingRef || Date.now().toString()).replace(/[^A-Za-z0-9]/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
   const isInstant = provider !== 'CASH_ON_ARRIVAL';
   const initialStatus = provider === 'CASH_ON_ARRIVAL' ? 'PENDING' : 'INITIALIZED';
+
+  const rawPayload = JSON.stringify({
+    guestEmail,
+    guestName,
+    initializedAt: new Date().toISOString(),
+    ...(extraPayload || {}),
+  });
 
   await query(
     `INSERT INTO payments (
@@ -39,7 +48,7 @@ export async function initializePaymentRecord({
       Number(amount),
       currency,
       reservationId,
-      JSON.stringify({ guestEmail, guestName, initializedAt: new Date().toISOString() }),
+      rawPayload,
     ]
   );
 

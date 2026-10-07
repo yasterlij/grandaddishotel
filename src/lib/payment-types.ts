@@ -1,15 +1,15 @@
 export type PaymentProviderType =
-  | 'CHAPA'
-  | 'TELEBIRR'
-  | 'CBE_BIRR'
   | 'SKINA'
+  | 'TELEBIRR'
+  | 'CHAPA'
+  | 'CBE_BIRR'
   | 'CASH_ON_ARRIVAL';
 
 export interface PaymentProviderInfo {
   id: PaymentProviderType;
   name: string;
   badge: string;
-  category: 'super-gateway' | 'mobile-money' | 'bank' | 'card' | 'cash';
+  category: 'card' | 'mobile-money' | 'super-gateway' | 'bank' | 'cash';
   color: string;
   bgLight: string;
   description: string;
@@ -18,14 +18,21 @@ export interface PaymentProviderInfo {
 
 export const PAYMENT_PROVIDERS: PaymentProviderInfo[] = [
   {
-    id: 'CHAPA',
-    name: 'Chapa',
-    badge: 'Fast & Secure Gateway',
-    category: 'super-gateway',
-    color: '#00A36C',
-    bgLight: '#E8F8F1',
-    description: "Ethiopia's premier online payment gateway supporting Telebirr, CBE Birr, Awash, Amole, and local/intl cards.",
-    acceptedMethods: ['Telebirr', 'CBE Birr', 'Debit/Credit Cards', 'Awash Bank'],
+    id: 'SKINA',
+    name: 'SkinaPay (Cards & Digital)',
+    badge: 'Default • Visa, Mastercard & All Cards',
+    category: 'card',
+    color: '#153D4B',
+    bgLight: '#EBF1F4',
+    description: 'Fast, secure instant checkout accepting Visa, Mastercard, American Express, UnionPay, local Ethiopian debit cards, and Skina digital authorization.',
+    acceptedMethods: [
+      'Visa (Credit & Debit)',
+      'Mastercard (Credit & Debit)',
+      'American Express',
+      'UnionPay',
+      'Ethiopian Local Cards',
+      'Skina Digital Wallet',
+    ],
   },
   {
     id: 'TELEBIRR',
@@ -38,6 +45,16 @@ export const PAYMENT_PROVIDERS: PaymentProviderInfo[] = [
     acceptedMethods: ['Telebirr USSD Push (*127#)', 'SuperApp QR Code', 'Telebirr PIN'],
   },
   {
+    id: 'CHAPA',
+    name: 'Chapa',
+    badge: 'Fast & Secure Gateway',
+    category: 'super-gateway',
+    color: '#00A36C',
+    bgLight: '#E8F8F1',
+    description: "Ethiopia's premier online payment gateway supporting Telebirr, CBE Birr, Awash, Amole, and local/intl cards.",
+    acceptedMethods: ['Telebirr', 'CBE Birr', 'Debit/Credit Cards', 'Awash Bank'],
+  },
+  {
     id: 'CBE_BIRR',
     name: 'CBE Birr / CEB',
     badge: 'Commercial Bank of Ethiopia',
@@ -46,16 +63,6 @@ export const PAYMENT_PROVIDERS: PaymentProviderInfo[] = [
     bgLight: '#F5ECF8',
     description: 'Direct transfer to Grand Addis Hotel via CBE Birr Shortcode (882200) or CBE Mobile Banking App (1000188220011).',
     acceptedMethods: ['CBE Birr Shortcode (882200)', 'CBE Mobile Banking (1000188220011)', 'CBE USSD (*847#)'],
-  },
-  {
-    id: 'SKINA',
-    name: 'Skina / Card Pay',
-    badge: 'Debit & Credit Cards',
-    category: 'card',
-    color: '#153D4B',
-    bgLight: '#EBF1F4',
-    description: 'Secure instant payment using Visa, Mastercard, or Skina digital debit authorization.',
-    acceptedMethods: ['Visa', 'Mastercard', 'Skina Digital', 'American Express'],
   },
   {
     id: 'CASH_ON_ARRIVAL',

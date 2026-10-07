@@ -1,0 +1,291 @@
+// use prisma-8
+// Contract inferred from the live database schema. Edit as needed, then run `prisma contract emit`.
+
+namespace public {
+  model ContactMessages {
+    id        String       @id(map: "contact_messages_pkey")
+    name      String
+    email     String
+    phone     String?
+    subject   String
+    message   String
+    status    String       @default("NEW")
+    createdAt Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("contact_messages")
+  }
+
+  model DiningMenu {
+    id          String         @id(map: "dining_menu_pkey")
+    name        String
+    category    String
+    price       Numeric(10, 2)
+    description String
+    tag         String?
+    createdAt   Timestamp(3)   @default(now()) @map("created_at")
+
+    @@map("dining_menu")
+  }
+
+  model EventInquiries {
+    id          String       @id(map: "event_inquiries_pkey")
+    eventType   String       @map("event_type")
+    targetDate  Date         @map("target_date")
+    guestsCount String       @map("guests_count")
+    name        String
+    email       String
+    phone       String
+    details     String?
+    status      String       @default("NEW")
+    createdAt   Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("event_inquiries")
+  }
+
+  model Experiences {
+    id          String       @id(map: "experiences_pkey")
+    title       String
+    subtitle    String
+    category    String
+    duration    String
+    image       String
+    description String
+    highlights  String[]     @noCheck(elementNotNull)
+    createdAt   Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("experiences")
+  }
+
+  model Faqs {
+    id        String       @id(map: "faqs_pkey")
+    question  String
+    answer    String
+    category  String
+    sortOrder Int?         @default(0) @map("sort_order")
+    createdAt Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("faqs")
+  }
+
+  model Guests {
+    id               String         @id(map: "guests_pkey")
+    firstName        String
+    lastName         String
+    email            String
+    phoneNumber      String
+    nationalIdOrPass String?
+    createdAt        Timestamp(3)   @default(now())
+    updatedAt        Timestamp(3)
+    reservations     Reservations[]
+
+    @@index([email], map: "guests_email_idx")
+    @@index([email], map: "guests_email_key", unique: true)
+    @@index([phoneNumber], map: "guests_phoneNumber_idx")
+    @@map("guests")
+  }
+
+  model RoomTypes {
+    id           String         @id(map: "room_types_pkey")
+    slug         String
+    name         String
+    description  String
+    baseCapacity Int            @default(2)
+    maxCapacity  Int            @default(3)
+    amenities    String[]?      @noCheck(elementNotNull)
+    images       String[]?      @noCheck(elementNotNull)
+    basePriceETB Numeric(10, 2)
+    basePriceUSD Numeric(10, 2)
+    createdAt    Timestamp(3)   @default(now())
+    updatedAt    Timestamp(3)
+    size         String?        @default("32 m²")
+    bedType      String?        @default("King Bed")
+    view         String?        @default("City View")
+    category     String?        @default("Hotel Rooms")
+    featured     Boolean?       @default(true)
+    aliases      String[]?      @default([]) @noCheck(elementNotNull)
+    reservations Reservations[]
+    rooms        Rooms[]
+
+    @@index([slug], map: "room_types_slug_key", unique: true)
+    @@map("room_types")
+  }
+
+  model Rooms {
+    id           String              @id(map: "rooms_pkey")
+    roomNumber   String
+    floor        Int
+    status       pg.enum(RoomStatus) @default("AVAILABLE")
+    roomTypeId   String
+    createdAt    Timestamp(3)        @default(now())
+    updatedAt    Timestamp(3)
+    reservations Reservations[]
+    roomType     RoomTypes           @relation(fields: [roomTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "rooms_roomTypeId_fkey", index: false)
+
+    @@index([roomNumber], map: "rooms_roomNumber_key", unique: true)
+    @@index([roomTypeId, status], map: "rooms_roomTypeId_status_idx")
+    @@map("rooms")
+  }
+
+  model Reservations {
+    id              String                     @id(map: "reservations_pkey")
+    bookingRef      String
+    checkInDate     Date
+    checkOutDate    Date
+    adultsCount     Int                        @default(1)
+    childrenCount   Int                        @default(0)
+    status          pg.enum(ReservationStatus) @default("PENDING")
+    expiresAt       Timestamp(3)?
+    currency        pg.enum(Currency)          @default("ETB")
+    subtotal        Numeric(10, 2)
+    taxAmount       Numeric(10, 2)             @default(0.00)
+    totalAmount     Numeric(10, 2)
+    specialRequests String?
+    guestId         String
+    roomTypeId      String
+    roomId          String?
+    createdAt       Timestamp(3)               @default(now())
+    updatedAt       Timestamp(3)
+    payments        Payments[]
+    guest           Guests                     @relation(fields: [guestId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "reservations_guestId_fkey", index: false)
+    room            Rooms?                     @relation(fields: [roomId], references: [id], onDelete: SetNull, onUpdate: Cascade, map: "reservations_roomId_fkey", index: false)
+    roomType        RoomTypes                  @relation(fields: [roomTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade, map: "reservations_roomTypeId_fkey", index: false)
+
+    @@index([bookingRef], map: "reservations_bookingRef_idx")
+    @@index([bookingRef], map: "reservations_bookingRef_key", unique: true)
+    @@index([checkInDate, checkOutDate], map: "reservations_checkInDate_checkOutDate_idx")
+    @@index([status, expiresAt], map: "reservations_status_expiresAt_idx")
+    @@map("reservations")
+  }
+
+  model Payments {
+    id            String                   @id(map: "payments_pkey")
+    txRef         String
+    gatewayRef    String?
+    provider      pg.enum(PaymentProvider)
+    status        pg.enum(PaymentStatus)   @default("INITIALIZED")
+    amount        Numeric(10, 2)
+    currency      pg.enum(Currency)        @default("ETB")
+    rawPayload    Jsonb?
+    rawWebhook    Jsonb?
+    reservationId String
+    paidAt        Timestamp(3)?
+    createdAt     Timestamp(3)             @default(now())
+    updatedAt     Timestamp(3)
+    reservation   Reservations             @relation(fields: [reservationId], references: [id], onDelete: Cascade, onUpdate: Cascade, map: "payments_reservationId_fkey")
+
+    @@index([reservationId], map: "payments_reservationId_idx")
+    @@index([txRef], map: "payments_txRef_idx")
+    @@index([txRef], map: "payments_txRef_key", unique: true)
+    @@map("payments")
+  }
+
+  model Promotions {
+    id          String       @id(map: "promotions_pkey")
+    title       String
+    badge       String
+    discount    String
+    description String
+    inclusions  String[]     @noCheck(elementNotNull)
+    code        String
+    validUntil  String       @map("valid_until")
+    createdAt   Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("promotions")
+  }
+
+  model SpaAppointments {
+    id          String       @id(map: "spa_appointments_pkey")
+    serviceId   String       @map("service_id")
+    serviceName String       @map("service_name")
+    date        Date
+    time        String
+    clientName  String       @map("client_name")
+    clientPhone String       @map("client_phone")
+    clientEmail String       @map("client_email")
+    status      String       @default("CONFIRMED")
+    createdAt   Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("spa_appointments")
+  }
+
+  model SpaTreatments {
+    id          String         @id(map: "spa_treatments_pkey")
+    name        String
+    category    String
+    duration    String
+    price       Numeric(10, 2)
+    description String
+    createdAt   Timestamp(3)   @default(now()) @map("created_at")
+
+    @@map("spa_treatments")
+  }
+
+  model TableReservations {
+    id         String       @id(map: "table_reservations_pkey")
+    date       Date
+    time       String
+    partySize  Int          @map("party_size")
+    guestName  String       @map("guest_name")
+    guestPhone String       @map("guest_phone")
+    guestEmail String       @map("guest_email")
+    notes      String?
+    status     String       @default("CONFIRMED")
+    createdAt  Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("table_reservations")
+  }
+
+  model Testimonials {
+    id        String       @id(map: "testimonials_pkey")
+    name      String
+    location  String
+    rating    Int          @default(5)
+    date      String
+    title     String
+    comment   String
+    roomType  String       @map("room_type")
+    status    String       @default("APPROVED")
+    createdAt Timestamp(3) @default(now()) @map("created_at")
+
+    @@map("testimonials")
+  }
+
+  native_enum Currency {
+    ETB = "ETB"
+    USD = "USD"
+  }
+
+  native_enum PaymentProvider {
+    CHAPA = "CHAPA"
+    TELEBIRR = "TELEBIRR"
+    CBE_BIRR = "CBE_BIRR"
+    STRIPE = "STRIPE"
+    CASH_ON_ARRIVAL = "CASH_ON_ARRIVAL"
+    SANTIMPAY = "SANTIMPAY"
+    SKINA = "SKINA"
+  }
+
+  native_enum PaymentStatus {
+    INITIALIZED = "INITIALIZED"
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    REFUNDED = "REFUNDED"
+  }
+
+  native_enum ReservationStatus {
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    CHECKED_IN = "CHECKED_IN"
+    CHECKED_OUT = "CHECKED_OUT"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+  }
+
+  native_enum RoomStatus {
+    AVAILABLE = "AVAILABLE"
+    MAINTENANCE = "MAINTENANCE"
+    OUT_OF_SERVICE = "OUT_OF_SERVICE"
+    OCCUPIED = "OCCUPIED"
+  }
+}

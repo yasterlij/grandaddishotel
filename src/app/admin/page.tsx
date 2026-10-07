@@ -24,6 +24,7 @@ import {
   Edit,
   Trash2,
   Plus,
+  Upload,
   Image as ImageIcon,
   Users,
   Search,
@@ -31,6 +32,12 @@ import {
   CreditCard,
   Copy,
   Printer,
+  Lock,
+  LogOut,
+  Key,
+  Eye,
+  EyeOff,
+  Sparkles,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -79,9 +86,31 @@ export default function AdminPage() {
 
   const [editTestimonialModal, setEditTestimonialModal] = useState<any | null>(null);
 
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [adminUser, setAdminUser] = useState<any>(null);
+  const [loginUsername, setLoginUsername] = useState('admin');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Quick Price Modal
+  const [quickPriceModal, setQuickPriceModal] = useState<any | null>(null);
+  const [isSavingQuickPrice, setIsSavingQuickPrice] = useState(false);
+
+  // Universal Forex / Exchange Rate State
+  const [universalRate, setUniversalRate] = useState<number>(189);
+  const [tempUniversalRate, setTempUniversalRate] = useState<string>('189');
+  const [syncRoomsWithRate, setSyncRoomsWithRate] = useState<boolean>(true);
+  const [isSavingRate, setIsSavingRate] = useState<boolean>(false);
+  const [rateSaveSuccess, setRateSaveSuccess] = useState<string>('');
+
   // New Image URL input for Room Type modal
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newAmenityText, setNewAmenityText] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const loadAllData = async () => {
     try {
@@ -97,6 +126,7 @@ export default function AdminPage() {
         eventsRes,
         testRes,
         payRes,
+        rateRes,
       ] = await Promise.all([
         fetch('/api/admin/overview').then((r) => r.json()),
         fetch('/api/admin/reservations').then((r) => r.json()),
@@ -108,6 +138,7 @@ export default function AdminPage() {
         fetch('/api/events').then((r) => r.json()),
         fetch('/api/admin/testimonials').then((r) => r.json()),
         fetch('/api/admin/payments').then((r) => r.json()),
+        fetch('/api/settings/exchange-rate').then((r) => r.json()),
       ]);
 
       if (overviewRes.success) setOverview(overviewRes);
@@ -120,6 +151,10 @@ export default function AdminPage() {
       if (eventsRes.success) setEventInquiries(eventsRes.inquiries || []);
       if (testRes.success) setTestimonials(testRes.testimonials || []);
       if (payRes.success) setPayments(payRes.payments || []);
+      if (rateRes?.success && rateRes?.rate) {
+        setUniversalRate(rateRes.rate);
+        setTempUniversalRate(rateRes.rate.toString());
+      }
     } catch (err) {
       console.error('Error loading admin data from PostgreSQL:', err);
     } finally {
@@ -129,8 +164,131 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    loadAllData();
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/admin/auth-check');
+        const data = await res.json();
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+          setAdminUser(data.user);
+          loadAllData();
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch {
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+        setLoading(false);
+      }
+    }
+    checkAuth();
   }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: loginUsername,
+          password: loginPassword,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsAuthenticated(true);
+        setAdminUser(data.user);
+        loadAllData();
+      } else {
+        setLoginError(data.error || 'Invalid credentials');
+      }
+    } catch (err: any) {
+      setLoginError(err.message || 'Login failed');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setIsAuthenticated(false);
+      setAdminUser(null);
+      setLoginPassword('');
+    }
+  };
+
+  const handleQuickPriceSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickPriceModal) return;
+    setIsSavingQuickPrice(true);
+    try {
+      const res = await fetch('/api/admin/room-types', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: quickPriceModal.id,
+          basePriceUSD: Number(quickPriceModal.basePriceUSD),
+          basePriceETB: Number(quickPriceModal.basePriceETB),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify(`Price updated for "${quickPriceModal.name}"!`);
+        setQuickPriceModal(null);
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to update price');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error updating price');
+    } finally {
+      setIsSavingQuickPrice(false);
+    }
+  };
+
+  const handleSaveUniversalRate = async (customRate?: number) => {
+    const rateToSave = customRate !== undefined ? customRate : parseFloat(tempUniversalRate);
+    if (isNaN(rateToSave) || rateToSave <= 0) {
+      alert('Please enter a valid exchange rate (e.g. 189)');
+      return;
+    }
+    setIsSavingRate(true);
+    setRateSaveSuccess('');
+    try {
+      const res = await fetch('/api/admin/settings/exchange-rate', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rate: rateToSave, syncRooms: syncRoomsWithRate }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUniversalRate(rateToSave);
+        setTempUniversalRate(rateToSave.toString());
+        localStorage.setItem('gah_usd_to_etb_rate', rateToSave.toString());
+        window.dispatchEvent(new CustomEvent('gah_exchange_rate_updated', { detail: { rate: rateToSave } }));
+        setRateSaveSuccess(data.message || `Universal exchange rate updated to 1 USD = ${rateToSave} ETB!`);
+        notify(`Universal exchange rate updated to 1 USD = ${rateToSave} ETB!`);
+        // Refresh room types from DB so updated basePriceETB is displayed
+        const rtRes = await fetch('/api/admin/room-types').then((r) => r.json());
+        if (rtRes.success) setRoomTypes(rtRes.roomTypes || []);
+        setTimeout(() => setRateSaveSuccess(''), 7000);
+      } else {
+        alert(data.error || 'Failed to update exchange rate');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error updating exchange rate');
+    } finally {
+      setIsSavingRate(false);
+    }
+  };
 
   const notify = (msg: string) => {
     setActionMessage(msg);
@@ -180,6 +338,34 @@ export default function AdminPage() {
   // -------------------------------------------------------------
   // Room Type CRUD Handlers
   // -------------------------------------------------------------
+  const handleRoomImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingImage(true);
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        const imgs = editRoomTypeModal.images || [];
+        setEditRoomTypeModal({ ...editRoomTypeModal, images: [...imgs, data.url] });
+        notify('Photo uploaded and added to room gallery!');
+      } else {
+        alert(data.error || 'Failed to upload photo');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error uploading photo');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
   const handleSaveRoomType = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editRoomTypeModal) return;
@@ -429,6 +615,205 @@ export default function AdminPage() {
     }
   };
 
+  if (isCheckingAuth) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0F2A33', color: '#FFFFFF' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '48px', height: '48px', border: '3px solid rgba(228, 153, 81, 0.2)', borderTopColor: '#E49951', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <div style={{ fontSize: '15px', color: '#A2B5BD', letterSpacing: '1px' }}>Verifying Administrator Session...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#09191F',
+          backgroundImage: `radial-gradient(circle at 50% 30%, rgba(21, 61, 75, 0.6) 0%, rgba(9, 25, 31, 0.95) 100%), url('/images/BO5A5779-scaled.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '440px',
+            backgroundColor: 'rgba(15, 42, 51, 0.94)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            border: '1px solid rgba(228, 153, 81, 0.35)',
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.6)',
+            padding: '40px 32px',
+            color: '#FFFFFF',
+          }}
+        >
+          {/* Logo & Header */}
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                margin: '0 auto 16px',
+                borderRadius: '50%',
+                backgroundColor: '#FFFFFF',
+                padding: '6px',
+                boxShadow: '0 4px 20px rgba(228, 153, 81, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <img src="/images/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '3px', color: '#E49951', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+              GRAND ADDIS HOTEL & RESORT
+            </span>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 600, margin: 0 }}>
+              Executive Management Portal
+            </h2>
+            <p style={{ fontSize: '13px', color: '#A2B5BD', marginTop: '6px' }}>
+              Secure access to rates, rooms inventory & reservations.
+            </p>
+          </div>
+
+          {/* Error Alert */}
+          {loginError && (
+            <div
+              style={{
+                backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                border: '1px solid rgba(220, 53, 69, 0.5)',
+                color: '#FF6B6B',
+                padding: '12px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <AlertCircle size={16} style={{ flexShrink: 0 }} />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin}>
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#C5D3D9', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                Username or Email
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  required
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  placeholder="e.g. admin"
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 40px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '10px',
+                    color: '#FFFFFF',
+                    fontSize: '14px',
+                    outline: 'none',
+                  }}
+                />
+                <Users size={16} color="#E49951" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#C5D3D9', letterSpacing: '0.5px' }}>
+                  Password or Security PIN
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ fontSize: '11px', color: '#E49951', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Enter password or PIN"
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 40px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '10px',
+                    color: '#FFFFFF',
+                    fontSize: '14px',
+                    outline: 'none',
+                  }}
+                />
+                <Lock size={16} color="#E49951" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="btn btn-primary"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '14px',
+                fontWeight: 700,
+                borderRadius: '10px',
+                letterSpacing: '1px',
+                boxShadow: '0 8px 24px rgba(228, 153, 81, 0.4)',
+                cursor: isLoggingIn ? 'wait' : 'pointer',
+              }}
+            >
+              {isLoggingIn ? 'Verifying Credentials...' : 'Sign In to Dashboard'}
+            </button>
+          </form>
+
+          {/* Credentials Reminder */}
+          <div
+            style={{
+              marginTop: '24px',
+              padding: '12px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(228, 153, 81, 0.1)',
+              border: '1px solid rgba(228, 153, 81, 0.25)',
+              fontSize: '12px',
+              color: '#D1DEE3',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontWeight: 600, color: '#E49951', marginBottom: '2px' }}>Default Credentials:</div>
+            <div>Username: <strong style={{ color: '#FFFFFF' }}>admin</strong> · Password: <strong style={{ color: '#FFFFFF' }}>GrandAddis2026!</strong> (or PIN <strong style={{ color: '#FFFFFF' }}>2026</strong>)</div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '20px' }}>
+            <Link href="/" style={{ fontSize: '12px', color: '#A2B5BD', textDecoration: 'none' }}>
+              ← Back to Hotel Website
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ paddingTop: '84px', backgroundColor: '#F7F7F2', minHeight: '100vh', paddingBottom: '90px' }}>
       {/* Top Banner Header */}
@@ -507,6 +892,61 @@ export default function AdminPage() {
                 <span>Guest Booking Portal</span>
                 <ExternalLink size={14} />
               </Link>
+
+              {/* Admin Profile & Logout */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '5px 12px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
+                    backgroundColor: '#E49951',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                  }}
+                >
+                  A
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: 1.2 }}>
+                  <div style={{ fontWeight: 600, color: '#FFFFFF' }}>{adminUser?.username || 'admin'}</div>
+                  <div style={{ fontSize: '10px', color: '#E49951' }}>{adminUser?.role || 'Super Admin'}</div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleLogout}
+                title="Sign Out of Dashboard"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 14px',
+                  backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                  color: '#FF6B6B',
+                  border: '1px solid rgba(220, 53, 69, 0.4)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                }}
+              >
+                <LogOut size={14} />
+                <span>Sign Out</span>
+              </button>
             </div>
           </div>
         </div>
@@ -605,6 +1045,27 @@ export default function AdminPage() {
               <CreditCard size={16} color="#00A36C" />
             </div>
             <div style={{ fontSize: '26px', fontWeight: 700, color: '#00A36C' }}>{payments.length}</div>
+          </div>
+
+          <div
+            onClick={() => setActiveTab('roomTypes')}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '12px',
+              padding: '18px',
+              border: '1px solid #E2E1DA',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#838A8D', fontSize: '12px', marginBottom: '6px' }}>
+              <span>Universal Forex</span>
+              <span style={{ fontSize: '10px', backgroundColor: '#E49951', color: '#FFFFFF', padding: '2px 6px', borderRadius: '10px', fontWeight: 600 }}>LIVE</span>
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: '#E49951' }}>
+              1 $ = {universalRate} Br
+            </div>
+            <div style={{ fontSize: '11px', color: '#838A8D', marginTop: '4px' }}>Click to manage rate</div>
           </div>
         </div>
 
@@ -736,7 +1197,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reservations.map((r) => {
+                  {reservations.map((r, idx) => {
                     const statusColors: any = {
                       CONFIRMED: { bg: '#EBF8F0', text: '#28A745' },
                       CHECKED_IN: { bg: '#E6F0FA', text: '#0066CC' },
@@ -747,7 +1208,7 @@ export default function AdminPage() {
                     const col = statusColors[r.status] || statusColors.PENDING;
 
                     return (
-                      <tr key={r.id} style={{ borderBottom: '1px solid #F0EFEB' }}>
+                      <tr key={`${r.id}-${idx}`} style={{ borderBottom: '1px solid #F0EFEB' }}>
                         <td style={{ padding: '14px 18px' }}>
                           <div style={{ fontWeight: 700, color: '#153D4B' }}>{r.bookingRef}</div>
                           <div style={{ fontSize: '12px', color: '#E49951', fontWeight: 500, marginTop: '2px' }}>
@@ -1295,6 +1756,204 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {/* ============================================================== */}
+            {/* UNIVERSAL FOREX / EXCHANGE RATE CONTROLLER */}
+            {/* ============================================================== */}
+            <div
+              style={{
+                margin: '20px 24px 0',
+                padding: '22px 24px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #0F2A33 0%, #153D4B 100%)',
+                color: '#FFFFFF',
+                boxShadow: '0 4px 16px rgba(15, 42, 51, 0.15)',
+                border: '1px solid #1E4E5F',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                    <span
+                      style={{
+                        backgroundColor: '#E49951',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        letterSpacing: '1px',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Global Forex Engine
+                    </span>
+                    <span style={{ fontSize: '13px', color: '#A2B5BD' }}>Live USD to Ethiopian Birr (ETB) Converter</span>
+                  </div>
+                  <h4 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#FFFFFF' }}>
+                    Universal Exchange Rate: 1 USD = <span style={{ color: '#E49951' }}>{universalRate} ETB</span>
+                  </h4>
+                  <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#B5C4CB', maxWidth: '680px', lineHeight: '1.5' }}>
+                    Updating this rate automatically recalculates prices across room cards, booking modals, direct reservations, and checkout totals site-wide in real-time.
+                  </p>
+                </div>
+
+                {/* Quick Status / Reset */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      loadAllData();
+                      notify('Exchange rate synced with database');
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#FFFFFF',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
+                    <span>Refresh Rate</span>
+                  </button>
+                </div>
+              </div>
+
+              {rateSaveSuccess && (
+                <div
+                  style={{
+                    backgroundColor: 'rgba(0, 163, 108, 0.2)',
+                    border: '1px solid #00A36C',
+                    color: '#A3E635',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <CheckCircle size={18} color="#00A36C" />
+                  <span>{rateSaveSuccess}</span>
+                </div>
+              )}
+
+              {/* Rate Adjustment Controls */}
+              <div
+                style={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.22)',
+                  borderRadius: '10px',
+                  padding: '16px 20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#FFFFFF' }}>1 USD =</span>
+                    <div style={{ position: 'relative', width: '130px' }}>
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="1"
+                        value={tempUniversalRate}
+                        onChange={(e) => setTempUniversalRate(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveUniversalRate();
+                          }
+                        }}
+                        placeholder="e.g. 189"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px 10px 14px',
+                          borderRadius: '8px',
+                          border: '2px solid #E49951',
+                          backgroundColor: '#09191F',
+                          color: '#FFFFFF',
+                          fontSize: '18px',
+                          fontWeight: 700,
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#E49951' }}>ETB (Birr)</span>
+                  </div>
+
+                  {/* Preset quick buttons */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#8BA1AB', marginRight: '4px' }}>Presets:</span>
+                    {[180, 185, 189, 190, 195, 200].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setTempUniversalRate(preset.toString())}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '6px',
+                          border: tempUniversalRate === preset.toString() ? '1px solid #E49951' : '1px solid rgba(255,255,255,0.15)',
+                          backgroundColor: tempUniversalRate === preset.toString() ? 'rgba(228, 153, 81, 0.25)' : 'rgba(255,255,255,0.06)',
+                          color: tempUniversalRate === preset.toString() ? '#E49951' : '#FFFFFF',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#CAD5DA', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={syncRoomsWithRate}
+                      onChange={(e) => setSyncRoomsWithRate(e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#E49951', cursor: 'pointer' }}
+                    />
+                    <span>Auto-sync all room catalog Birr prices (USD × Rate)</span>
+                  </label>
+
+                  <button
+                    onClick={() => handleSaveUniversalRate()}
+                    disabled={isSavingRate}
+                    style={{
+                      padding: '10px 22px',
+                      borderRadius: '8px',
+                      backgroundColor: '#E49951',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: isSavingRate ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(228, 153, 81, 0.3)',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <Sparkles size={16} />
+                    <span>{isSavingRate ? 'Applying Rate...' : 'Save & Update Whole Site'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
               {roomTypes.map((rt) => (
                 <div
@@ -1367,7 +2026,7 @@ export default function AdminPage() {
                       Slug: <code>{rt.slug}</code>
                     </div>
 
-                    {/* Dual Pricing Badge */}
+                    {/* Dual Pricing Badge with Quick Price Edit Button */}
                     <div
                       style={{
                         padding: '12px',
@@ -1375,19 +2034,56 @@ export default function AdminPage() {
                         border: '1px solid #F5E6D3',
                         borderRadius: '8px',
                         marginBottom: '14px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
                       }}
                     >
-                      <div>
-                        <div style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase' }}>USD Rate</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#E49951' }}>${rt.basePriceUSD} / night</div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase' }}>USD Rate</div>
+                          <div style={{ fontSize: '18px', fontWeight: 700, color: '#E49951' }}>${rt.basePriceUSD} / night</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase' }}>ETB Rate</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#153D4B' }}>{Number(rt.basePriceETB).toLocaleString()} Br</div>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase' }}>ETB Rate</div>
-                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#153D4B' }}>{Number(rt.basePriceETB).toLocaleString()} Br</div>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setQuickPriceModal({
+                            id: rt.id,
+                            name: rt.name,
+                            basePriceUSD: rt.basePriceUSD,
+                            basePriceETB: rt.basePriceETB,
+                          })
+                        }
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          backgroundColor: 'rgba(228, 153, 81, 0.15)',
+                          color: '#C57E37',
+                          border: '1px dashed #E49951',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <DollarSign size={13} />
+                        <span>Quick Edit Price ($ / Br)</span>
+                      </button>
                     </div>
 
                     {/* Specs Pills */}
@@ -1981,6 +2677,165 @@ export default function AdminPage() {
       </div>
 
       {/* ========================================================================= */}
+      {/* MODAL 0: QUICK ROOM PRICE EDITOR (1-CLICK INSTANT RATE CHANGER) */}
+      {/* ========================================================================= */}
+      {quickPriceModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '460px',
+              width: '100%',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.3)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '18px 24px',
+                backgroundColor: '#0F2A33',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'rgba(228, 153, 81, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E49951' }}>
+                  <DollarSign size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Quick Price Editor</h3>
+                  <div style={{ fontSize: '11px', color: '#E49951' }}>{quickPriceModal.name}</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setQuickPriceModal(null)}
+                style={{ background: 'none', border: 'none', color: '#A2B5BD', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickPriceSave} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Base Rate in US Dollars ($ / night)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#E49951' }}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    value={quickPriceModal.basePriceUSD}
+                    onChange={(e) => {
+                      const usd = parseFloat(e.target.value) || 0;
+                      setQuickPriceModal({
+                        ...quickPriceModal,
+                        basePriceUSD: e.target.value,
+                        basePriceETB: Math.round(usd * universalRate),
+                      });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '11px 12px 11px 28px',
+                      borderRadius: '8px',
+                      border: '1px solid #D5D4CC',
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: '#153D4B',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <span style={{ fontSize: '11px', color: '#838A8D', marginTop: '3px', display: 'block' }}>
+                  Updating USD automatically recalculates ETB at the active universal rate (1 USD = {universalRate} ETB). Can be manually adjusted below.
+                </span>
+              </div>
+
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Base Rate in Ethiopian Birr (ETB / night)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#153D4B' }}>Br</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    required
+                    value={quickPriceModal.basePriceETB}
+                    onChange={(e) =>
+                      setQuickPriceModal({
+                        ...quickPriceModal,
+                        basePriceETB: e.target.value,
+                      })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '11px 12px 11px 36px',
+                      borderRadius: '8px',
+                      border: '1px solid #D5D4CC',
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: '#153D4B',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid #F0EFEB', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setQuickPriceModal(null)}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #D5D4CC',
+                    backgroundColor: '#FFFFFF',
+                    color: '#5E6E75',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingQuickPrice}
+                  className="btn btn-primary"
+                  style={{
+                    padding: '10px 22px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: isSavingQuickPrice ? 'wait' : 'pointer',
+                  }}
+                >
+                  {isSavingQuickPrice ? 'Updating...' : 'Update Price in PostgreSQL'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL 1: ROOM TYPE & PRICING & IMAGES EDITOR (CRUD) */}
       {/* ========================================================================= */}
       {editRoomTypeModal && (
@@ -2089,7 +2944,14 @@ export default function AdminPage() {
                       step="0.01"
                       required
                       value={editRoomTypeModal.basePriceUSD || ''}
-                      onChange={(e) => setEditRoomTypeModal({ ...editRoomTypeModal, basePriceUSD: e.target.value })}
+                      onChange={(e) => {
+                        const usd = parseFloat(e.target.value) || 0;
+                        setEditRoomTypeModal({
+                          ...editRoomTypeModal,
+                          basePriceUSD: e.target.value,
+                          basePriceETB: usd > 0 ? Math.round(usd * universalRate) : editRoomTypeModal.basePriceETB,
+                        });
+                      }}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '14px', fontWeight: 600 }}
                     />
                   </div>
@@ -2107,6 +2969,9 @@ export default function AdminPage() {
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '14px', fontWeight: 600 }}
                     />
                   </div>
+                </div>
+                <div style={{ fontSize: '11px', color: '#838A8D', marginTop: '6px' }}>
+                  💡 Universal Exchange Rate: <strong>1 USD = {universalRate} ETB</strong>. Typing USD auto-calculates Birr (or enter custom ETB).
                 </div>
               </div>
 
@@ -2186,36 +3051,72 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {/* Add Image URL Row */}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    placeholder="Enter image URL or path (e.g. /hotel_images/1760816082.webp)"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '12px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!newImageUrl.trim()) return;
-                      const imgs = editRoomTypeModal.images || [];
-                      setEditRoomTypeModal({ ...editRoomTypeModal, images: [...imgs, newImageUrl.trim()] });
-                      setNewImageUrl('');
-                    }}
-                    style={{
-                      padding: '8px 14px',
-                      backgroundColor: '#153D4B',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Add Photo
-                  </button>
+                {/* Upload & Add Image Controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* File Upload Button */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <label
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        backgroundColor: '#E49951',
+                        color: '#FFFFFF',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: uploadingImage ? 'wait' : 'pointer',
+                        boxShadow: '0 2px 6px rgba(228, 153, 81, 0.3)',
+                      }}
+                    >
+                      <Upload size={14} />
+                      <span>{uploadingImage ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingImage}
+                        onChange={handleRoomImageUpload}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                    <span style={{ fontSize: '11px', color: '#838A8D' }}>
+                      Supports JPG, PNG, WEBP (Saved to /public/uploads/)
+                    </span>
+                  </div>
+
+                  {/* Add Image URL / Path Row */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Or enter image URL / path (e.g. /hotel_images/1760816082.webp)"
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '12px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newImageUrl.trim()) return;
+                        const imgs = editRoomTypeModal.images || [];
+                        setEditRoomTypeModal({ ...editRoomTypeModal, images: [...imgs, newImageUrl.trim()] });
+                        setNewImageUrl('');
+                      }}
+                      style={{
+                        padding: '8px 14px',
+                        backgroundColor: '#153D4B',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Add URL
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { BookingProvider } from '@/context/BookingContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';
 import Header from '@/components/Header';
 import NavDrawer from '@/components/NavDrawer';
 import BookingModal from '@/components/BookingModal';
+import FloatingConcierge from '@/components/FloatingConcierge';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
@@ -55,15 +57,18 @@ export default function RootLayout({
         <meta name="theme-color" content="#0F2A33" />
       </head>
       <body>
-        <BookingProvider>
-          <Header />
-          <NavDrawer />
-          <BookingModal />
-          <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            {children}
-          </main>
-          <Footer />
-        </BookingProvider>
+        <CurrencyProvider>
+          <BookingProvider>
+            <Header />
+            <NavDrawer />
+            <BookingModal />
+            <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+              {children}
+            </main>
+            <Footer />
+            <FloatingConcierge />
+          </BookingProvider>
+        </CurrencyProvider>
       </body>
     </html>
   );

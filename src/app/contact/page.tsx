@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import {
   MapPin,
+  ExternalLink,
   Phone,
   Mail,
   Clock,
@@ -269,16 +270,80 @@ export default function ContactPage() {
       </section>
 
       {/* Map Section */}
-      <section style={{ height: '420px', width: '100%', position: 'relative' }}>
+      <section style={{ height: '440px', width: '100%', position: 'relative' }}>
         <iframe
           title="Grand Addis Hotel Google Map"
-          src="https://maps.google.com/maps?q=Golagul+Tower,+22+Addis+Ababa,+Ethiopia&t=&z=15&ie=UTF8&iwloc=&output=embed"
+          src="https://maps.google.com/maps?q=Grand+Addis+Hotel,+22,+Addis+Ababa,+Ethiopia&t=&z=17&ie=UTF8&iwloc=&output=embed"
           width="100%"
           height="100%"
           style={{ border: 0 }}
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
         />
+
+        {/* Floating Exact Location Badge */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '24px',
+            backgroundColor: 'rgba(21, 61, 75, 0.94)',
+            color: '#FFFFFF',
+            backdropFilter: 'blur(8px)',
+            padding: '14px 18px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 28px rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            maxWidth: '340px',
+            zIndex: 10,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+            <MapPin size={16} color="#E49951" />
+            <strong style={{ fontSize: '14px', color: '#FFFFFF', letterSpacing: '0.3px' }}>
+              Grand Addis Hotel
+            </strong>
+            <span
+              style={{
+                fontSize: '10px',
+                backgroundColor: 'rgba(228, 153, 81, 0.25)',
+                color: '#E49951',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontWeight: 600,
+              }}
+            >
+              Exact Pin
+            </span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#C2D1D9', lineHeight: '1.4' }}>
+            22 Around Golagul, behind Meklit Building, Addis Ababa, Ethiopia
+          </div>
+          <div style={{ fontSize: '11px', color: '#E49951', marginTop: '4px' }}>
+            Phone: {HOTEL_INFO.phone}
+          </div>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Grand+Addis+Hotel+Addis+Ababa+Ethiopia"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              color: '#FFFFFF',
+              fontWeight: 600,
+              marginTop: '10px',
+              textDecoration: 'none',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: '#E49951',
+            }}
+          >
+            <span>Get Directions in Google Maps</span>
+            <ExternalLink size={11} />
+          </a>
+        </div>
       </section>
     </div>
   );

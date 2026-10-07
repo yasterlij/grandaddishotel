@@ -16,8 +16,10 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { WELLNESS_SERVICES, HOTEL_INFO, SpaTreatment } from '@/data/hotelData';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function WellnessPage() {
+  const { formatPrice } = useCurrency();
   const [services, setServices] = useState<SpaTreatment[]>(WELLNESS_SERVICES);
   const [isSpaModalOpen, setIsSpaModalOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState(WELLNESS_SERVICES[0].id);
@@ -217,8 +219,13 @@ export default function WellnessPage() {
                   <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#E49951', fontWeight: 600 }}>
                     {service.category}
                   </span>
-                  <div style={{ fontSize: '22px', fontWeight: 700, color: '#E49951' }}>
-                    ${service.price}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#E49951' }}>
+                      {formatPrice(service.price).primary}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#838A8D' }}>
+                      ≈ {formatPrice(service.price).secondary}
+                    </div>
                   </div>
                 </div>
 
@@ -369,7 +376,7 @@ export default function WellnessPage() {
                   >
                     {WELLNESS_SERVICES.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} — ${s.price} ({s.duration})
+                        {s.name} — {formatPrice(s.price).primary} ({s.duration})
                       </option>
                     ))}
                   </select>

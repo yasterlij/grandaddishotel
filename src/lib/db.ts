@@ -183,6 +183,18 @@ export async function initDatabase(): Promise<void> {
           created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
       `);
+
+      // 12. Universal Settings table (Forex / Exchange Rate, etc.)
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS hotel_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO hotel_settings (key, value)
+        VALUES ('usd_to_etb_rate', '189')
+        ON CONFLICT (key) DO NOTHING;
+      `);
     } catch (err) {
       console.error('Database initialization error:', err);
     }
@@ -424,6 +436,45 @@ export async function getDbStats() {
     console.error('getDbStats error:', e);
     return null;
   }
+}
+
+export async function getExchangeRate(): Promise<number> {
+  try {
+    const res = await query(`SELECT value FROM hotel_settings WHERE key = 'usd_to_etb_rate' LIMIT 1`);
+    if (res.rows.length > 0) {
+      const val = parseFloat(res.rows[0].value);
+      if (!isNaN(val) && val > 0) return val;
+    }
+  } catch (e) {
+    console.error('getExchangeRate error:', e);
+  }
+  return 189; // Default fallback rate
+}
+
+export async function setExchangeRate(
+  newRate: number,
+  syncRooms = false
+): Promise<{ rate: number; updatedRoomsCount: number }> {
+  await query(
+    `INSERT INTO hotel_settings (key, value, updated_at)
+     VALUES ('usd_to_etb_rate', $1, CURRENT_TIMESTAMP)
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+    [newRate.toString()]
+  );
+
+  let updatedRoomsCount = 0;
+  if (syncRooms) {
+    const res = await query(
+      `UPDATE room_types
+       SET "basePriceETB" = ROUND("basePriceUSD" * $1),
+           "updatedAt" = CURRENT_TIMESTAMP
+       RETURNING id`,
+      [newRate]
+    );
+    updatedRoomsCount = res.rowCount || 0;
+  }
+
+  return { rate: newRate, updatedRoomsCount };
 }
 
 export default pool;

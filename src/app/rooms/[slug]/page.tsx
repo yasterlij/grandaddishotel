@@ -19,12 +19,14 @@ import {
 } from 'lucide-react';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
+import { useCurrency } from '@/context/CurrencyContext';
 import RoomCard from '@/components/RoomCard';
 
 export default function RoomDetailPage() {
   const params = useParams();
   const slug = params?.slug as string;
   const { openBooking } = useBooking();
+  const { formatPrice } = useCurrency();
 
   const initialRoom =
     ROOMS.find((r) => r.slug === slug) ||
@@ -152,10 +154,15 @@ export default function RoomDetailPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div>
                 <span style={{ fontSize: '11px', color: '#A2B5BD', display: 'block' }}>STARTING FROM</span>
-                <span style={{ fontSize: '28px', fontWeight: 600, color: '#E49951' }}>
-                  ${room.pricePerNight}
-                </span>
-                <span style={{ fontSize: '13px', color: '#A2B5BD' }}> / night</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+                  <span style={{ fontSize: '28px', fontWeight: 600, color: '#E49951' }}>
+                    {formatPrice(room.pricePerNight).primary}
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#A2B5BD' }}> / night</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#8BA1AB', marginTop: '2px' }}>
+                  ≈ {formatPrice(room.pricePerNight).secondary}
+                </div>
               </div>
 
               <button
@@ -533,10 +540,13 @@ export default function RoomDetailPage() {
                     STARTING FROM
                   </span>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                    <span style={{ fontSize: '32px', fontWeight: 700, color: '#E49951' }}>
-                      ${room.pricePerNight}
+                    <span style={{ fontSize: '30px', fontWeight: 700, color: '#E49951' }}>
+                      {formatPrice(room.pricePerNight).primary}
                     </span>
                     <span style={{ fontSize: '14px', color: '#5E6E75' }}>/ per night</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#838A8D', marginTop: '2px' }}>
+                    ≈ {formatPrice(room.pricePerNight).secondary}
                   </div>
                 </div>
 

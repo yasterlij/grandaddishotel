@@ -13,6 +13,7 @@ import {
   Flower2,
   ShieldCheck,
   MapPin,
+  ExternalLink,
   Phone,
   Mail,
   ChevronRight,
@@ -892,19 +893,80 @@ export default function HomePage() {
                 border: '1px solid #E2E1DA',
                 boxShadow: 'var(--shadow-md)',
                 backgroundColor: '#FFFFFF',
-                height: '400px',
+                height: '420px',
                 position: 'relative',
               }}
             >
               <iframe
                 title="Grand Addis Hotel Location"
-                src="https://maps.google.com/maps?q=Golagul+Tower,+22+Addis+Ababa,+Ethiopia&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                src="https://maps.google.com/maps?q=Grand+Addis+Hotel,+22,+Addis+Ababa,+Ethiopia&t=&z=17&ie=UTF8&iwloc=&output=embed"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
               />
+
+              {/* Exact Location Card Overlay */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '14px',
+                  left: '14px',
+                  backgroundColor: 'rgba(21, 61, 75, 0.94)',
+                  color: '#FFFFFF',
+                  backdropFilter: 'blur(8px)',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  maxWidth: '320px',
+                  pointerEvents: 'auto',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                  <MapPin size={15} color="#E49951" />
+                  <strong style={{ fontSize: '13px', color: '#FFFFFF', letterSpacing: '0.3px' }}>
+                    Grand Addis Hotel
+                  </strong>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      backgroundColor: 'rgba(228, 153, 81, 0.25)',
+                      color: '#E49951',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Exact Location
+                  </span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#C2D1D9', lineHeight: '1.4' }}>
+                  22 Around Golagul, behind Meklit Building, Addis Ababa
+                </div>
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=Grand+Addis+Hotel+Addis+Ababa+Ethiopia"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    color: '#E49951',
+                    fontWeight: 600,
+                    marginTop: '8px',
+                    textDecoration: 'none',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  }}
+                >
+                  <span>Open in Google Maps / Directions</span>
+                  <ExternalLink size={11} />
+                </a>
+              </div>
             </div>
           </div>
         </div>

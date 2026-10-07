@@ -765,7 +765,7 @@ export default function BookingModal() {
                   <span style={{ fontSize: '20px' }}>🚩</span>
                   <div style={{ flex: 1 }}>
                     <strong style={{ fontWeight: 700 }}>
-                      {dateChangeFlag.isExtended ? 'Stay Date Extension Flag Active:' : 'Stay Duration Modified:'}
+                      {dateChangeFlag.isExtended ? 'Stay Date Extension Flag Active:' : 'Stay Date Shortened / Decreased Flag:'}
                     </strong>{' '}
                     <span>{dateChangeFlag.text}</span>
                   </div>
@@ -780,7 +780,7 @@ export default function BookingModal() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    Auto-Scaled to ${grandTotal} USD
+                    {dateChangeFlag.isExtended ? 'Scaled to' : 'Decreased to'} ${grandTotal} USD
                   </span>
                 </div>
               )}
@@ -1250,27 +1250,31 @@ export default function BookingModal() {
                   </div>
                 </div>
 
-                {(dateChangeFlag?.isExtended || nights > 1) && (
+                {(dateChangeFlag || nights > 1) && (
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
-                      backgroundColor: '#FEF3C7',
-                      border: '1px solid #F59E0B',
+                      backgroundColor: (dateChangeFlag && !dateChangeFlag.isExtended) ? '#EFF6FF' : '#FEF3C7',
+                      border: (dateChangeFlag && !dateChangeFlag.isExtended) ? '1px solid #93C5FD' : '1px solid #F59E0B',
                       borderRadius: '8px',
                       padding: '8px 14px',
                       marginBottom: '16px',
                       fontSize: '12px',
-                      color: '#92400E',
+                      color: (dateChangeFlag && !dateChangeFlag.isExtended) ? '#1E40AF' : '#92400E',
                       fontWeight: 600,
                     }}
                   >
                     <span style={{ fontSize: '16px' }}>🚩</span>
                     <div style={{ flex: 1 }}>
-                      <strong>Extended Stay Confirmed ({nights} Nights Total)</strong>
-                      <div style={{ fontSize: '11px', color: '#B45309', fontWeight: 500, marginTop: '2px' }}>
-                        {dateChangeFlag?.text || `Dates extended to ${checkOut}. Payment scaled automatically to $${grandTotal} USD.`}
+                      <strong>
+                        {dateChangeFlag && !dateChangeFlag.isExtended
+                          ? `Stay Shortened / Decreased (${nights} ${nights === 1 ? 'Night' : 'Nights'} Total)`
+                          : `Extended Stay Confirmed (${nights} Nights Total)`}
+                      </strong>
+                      <div style={{ fontSize: '11px', color: (dateChangeFlag && !dateChangeFlag.isExtended) ? '#2563EB' : '#B45309', fontWeight: 500, marginTop: '2px' }}>
+                        {dateChangeFlag?.text || `Dates confirmed (${checkIn} to ${checkOut}). Total payment adjusted to $${grandTotal} USD.`}
                       </div>
                     </div>
                   </div>

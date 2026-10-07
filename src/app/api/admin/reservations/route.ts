@@ -237,7 +237,7 @@ export async function PUT(req: NextRequest) {
     const dateDiff = nights - oldNights;
     const isExtended = dateDiff > 0;
     const isShortened = dateDiff < 0;
-    const isDateExtended = isExtended || (body.isDateExtended === true) || Boolean(current.isDateExtended);
+    const isDateExtended = isExtended || isShortened || (body.isDateExtended === true) || Boolean(current.isDateExtended);
     const dateChangeNote = isExtended
       ? `Extended by +${dateDiff} ${dateDiff === 1 ? 'night' : 'nights'} (${nights} nights total)`
       : isShortened

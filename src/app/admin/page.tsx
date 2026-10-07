@@ -1225,16 +1225,16 @@ export default function AdminPage() {
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
-                                  backgroundColor: '#FEF3C7',
-                                  color: '#B45309',
-                                  border: '1px solid #F59E0B',
+                                  backgroundColor: r.dateChangeNote?.toLowerCase().includes('shorten') ? '#EFF6FF' : '#FEF3C7',
+                                  color: r.dateChangeNote?.toLowerCase().includes('shorten') ? '#1E40AF' : '#B45309',
+                                  border: r.dateChangeNote?.toLowerCase().includes('shorten') ? '1px solid #93C5FD' : '1px solid #F59E0B',
                                   borderRadius: '6px',
                                   padding: '2px 7px',
                                   fontSize: '11px',
                                   fontWeight: 700,
                                 }}
                               >
-                                🚩 Dates Extended
+                                {r.dateChangeNote?.toLowerCase().includes('shorten') ? '🚩 Stay Shortened' : '🚩 Stay Extended'}
                               </span>
                               {r.dateChangeNote && (
                                 <div style={{ fontSize: '10px', color: '#838A8D', marginTop: '2px', maxWidth: '190px', lineHeight: 1.25 }}>
@@ -3308,13 +3308,16 @@ export default function AdminPage() {
                     const newNights = Math.max(1, modalNights + deltaDays);
                     const newOut = addDays(editReservationModal.checkInDate || getTodayDateStr(), newNights);
                     const newTotal = Math.round(newNights * baseRate * 1.15 * 100) / 100;
-                    const isExt = newNights > 1;
+                    const isShortened = deltaDays < 0;
+                    const isChanged = newNights !== modalNights;
                     setEditReservationModal({
                       ...editReservationModal,
                       checkOutDate: newOut,
                       totalAmount: newTotal,
-                      isDateExtended: isExt,
-                      dateChangeNote: isExt ? `Stay adjusted by ${deltaDays > 0 ? '+' + deltaDays : deltaDays} nights (${newNights} nights total)` : '',
+                      isDateExtended: isChanged || newNights > 1,
+                      dateChangeNote: isShortened
+                        ? `Stay shortened by ${Math.abs(deltaDays)} ${Math.abs(deltaDays) === 1 ? 'night' : 'nights'} (${newNights} nights total)`
+                        : `Stay extended by +${deltaDays} ${deltaDays === 1 ? 'night' : 'nights'} (${newNights} nights total)`,
                     });
                   };
 
@@ -3445,26 +3448,30 @@ export default function AdminPage() {
                             marginTop: '12px',
                             padding: '10px 14px',
                             borderRadius: '8px',
-                            backgroundColor: '#FEF3C7',
-                            border: '1px solid #F59E0B',
+                            backgroundColor: editReservationModal.dateChangeNote?.toLowerCase().includes('shorten') ? '#EFF6FF' : '#FEF3C7',
+                            border: editReservationModal.dateChangeNote?.toLowerCase().includes('shorten') ? '1px solid #93C5FD' : '1px solid #F59E0B',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
                             fontSize: '12px',
-                            color: '#92400E',
+                            color: editReservationModal.dateChangeNote?.toLowerCase().includes('shorten') ? '#1E40AF' : '#92400E',
                             fontWeight: 600,
                           }}
                         >
                           <span style={{ fontSize: '16px' }}>🚩</span>
                           <div style={{ flex: 1 }}>
-                            <strong>Date Extension Notification Flag Active:</strong>{' '}
+                            <strong>
+                              {editReservationModal.dateChangeNote?.toLowerCase().includes('shorten')
+                                ? 'Stay Shortened / Decreased Notice:'
+                                : 'Date Extension Notification Flag Active:'}
+                            </strong>{' '}
                             <span>
-                              {editReservationModal.dateChangeNote || `Extended stay of ${modalNights} nights (${formatFriendlyDate(editReservationModal.checkInDate)} → ${formatFriendlyDate(editReservationModal.checkOutDate)}).`} Total billing automatically adjusted to {editReservationModal.currency || 'USD'} {editReservationModal.totalAmount}.
+                              {editReservationModal.dateChangeNote || `Stay of ${modalNights} nights (${formatFriendlyDate(editReservationModal.checkInDate)} → ${formatFriendlyDate(editReservationModal.checkOutDate)}).`} Total billing automatically adjusted to {editReservationModal.currency || 'USD'} {editReservationModal.totalAmount}.
                             </span>
                           </div>
                           <span
                             style={{
-                              backgroundColor: '#F59E0B',
+                              backgroundColor: editReservationModal.dateChangeNote?.toLowerCase().includes('shorten') ? '#2563EB' : '#F59E0B',
                               color: '#FFFFFF',
                               padding: '2px 8px',
                               borderRadius: '999px',
@@ -3472,7 +3479,7 @@ export default function AdminPage() {
                               fontWeight: 700,
                             }}
                           >
-                            Auto-Updated
+                            {editReservationModal.dateChangeNote?.toLowerCase().includes('shorten') ? 'Payment Decreased' : 'Payment Scaled'}
                           </span>
                         </div>
                       )}

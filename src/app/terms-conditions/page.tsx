@@ -6,7 +6,7 @@ import { HOTEL_INFO } from '@/data/hotelData';
 
 export default function TermsConditionsPage() {
   return (
-    <div style={{ paddingTop: '84px' }}>
+    <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       <section style={{ backgroundColor: '#0F2A33', color: '#FFFFFF', padding: '60px 0 40px', textAlign: 'center' }}>
         <div className="container">
           <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '3px', color: '#E49951', fontWeight: 600 }}>

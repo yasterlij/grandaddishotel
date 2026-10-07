@@ -815,7 +815,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div style={{ paddingTop: '84px', backgroundColor: '#F7F7F2', minHeight: '100vh', paddingBottom: '90px' }}>
+    <div style={{ paddingTop: 'var(--header-height, 96px)', backgroundColor: '#F7F7F2', minHeight: '100vh', paddingBottom: '90px' }}>
       {/* Top Banner Header */}
       <section
         style={{

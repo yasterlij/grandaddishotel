@@ -207,7 +207,7 @@ function ReservationContent() {
   };
 
   return (
-    <div style={{ paddingTop: '84px' }}>
+    <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Banner */}
       <section style={{ backgroundColor: '#0F2A33', color: '#FFFFFF', padding: '60px 0 40px', textAlign: 'center' }}>
         <div className="container">

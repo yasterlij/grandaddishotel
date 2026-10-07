@@ -31,7 +31,7 @@ export default function ExperiencesPage() {
   };
 
   return (
-    <div style={{ paddingTop: '84px' }}>
+    <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Banner */}
       <section
         style={{

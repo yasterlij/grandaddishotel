@@ -108,7 +108,7 @@ export default function RoomDetailPage() {
   };
 
   return (
-    <div style={{ paddingTop: '84px' }}>
+    <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Breadcrumb & Title Bar */}
       <section style={{ backgroundColor: '#0F2A33', color: '#FFFFFF', padding: '40px 0 30px' }}>
         <div className="container">

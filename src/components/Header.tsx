@@ -43,141 +43,91 @@ export default function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-        isScrolled ? 'py-3' : 'py-5'
-      } ${headerBgClass}`}
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${headerBgClass}`}
       style={{
         backgroundColor: isScrolled
-          ? 'rgba(255, 255, 255, 0.95)'
+          ? 'rgba(255, 255, 255, 0.96)'
           : isHomePage
-          ? 'rgba(15, 42, 51, 0.4)'
+          ? 'rgba(15, 42, 51, 0.45)'
           : '#0F2A33',
         backdropFilter: 'blur(12px)',
         borderBottom: isScrolled
           ? '1px solid #E2E1DA'
-          : '1px solid rgba(255, 255, 255, 0.1)',
+          : '1px solid rgba(255, 255, 255, 0.12)',
         color: isScrolled ? '#153D4B' : '#FFFFFF',
+        paddingTop: isScrolled ? '16px' : '24px',
+        paddingBottom: isScrolled ? '16px' : '24px',
+        transition: 'padding 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease',
       }}
     >
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px' }}>
         
-        {/* Left: Hamburger & Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-          <button
-            onClick={openNavDrawer}
-            aria-label="Open menu drawer"
+        {/* Left: Brand Logo & Title */}
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '14px', textDecoration: 'none' }}>
+          <div
             style={{
+              position: 'relative',
+              width: '46px',
+              height: '46px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
               display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
               alignItems: 'center',
-              width: '42px',
-              height: '42px',
-              borderRadius: '6px',
-              border: isScrolled ? '1px solid #E2E1DA' : '1px solid rgba(255,255,255,0.25)',
-              backgroundColor: isScrolled ? '#F7F7F2' : 'rgba(255, 255, 255, 0.1)',
-              cursor: 'pointer',
-              padding: '8px',
-              gap: '5px',
-              transition: 'all 0.2s',
+              justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            <span
+            <Image
+              src="/images/logo.png"
+              alt="Grand Addis Hotel Logo"
+              width={46}
+              height={46}
+              priority
               style={{
-                display: 'block',
-                width: '20px',
-                height: '2px',
-                backgroundColor: isScrolled ? '#153D4B' : '#FFFFFF',
-                borderRadius: '2px',
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
               }}
             />
+          </div>
+          <div>
             <span
               style={{
+                fontFamily: 'var(--font-serif)',
+                fontSize: '21px',
+                fontWeight: 600,
+                letterSpacing: '1.2px',
                 display: 'block',
-                width: '14px',
-                height: '2px',
-                backgroundColor: '#E49951',
-                alignSelf: 'flex-start',
-                marginLeft: '3px',
-                borderRadius: '2px',
-              }}
-            />
-            <span
-              style={{
-                display: 'block',
-                width: '20px',
-                height: '2px',
-                backgroundColor: isScrolled ? '#153D4B' : '#FFFFFF',
-                borderRadius: '2px',
-              }}
-            />
-          </button>
-
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <div
-              style={{
-                position: 'relative',
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                overflow: 'hidden',
-                backgroundColor: '#FFFFFF',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
+                lineHeight: '1.15',
+                color: isScrolled ? '#153D4B' : '#FFFFFF',
               }}
             >
-              <Image
-                src="/images/logo.png"
-                alt="Grand Addis Hotel Logo"
-                width={44}
-                height={44}
-                priority
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                }}
-              />
-            </div>
-            <div>
-              <span
-                style={{
-                  fontFamily: 'var(--font-serif)',
-                  fontSize: '20px',
-                  fontWeight: 600,
-                  letterSpacing: '1px',
-                  display: 'block',
-                  lineHeight: '1.1',
-                  color: isScrolled ? '#153D4B' : '#FFFFFF',
-                }}
-              >
-                GRAND ADDIS
-              </span>
-              <span
-                style={{
-                  fontSize: '10px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '2.5px',
-                  color: '#E49951',
-                  fontWeight: 600,
-                  display: 'block',
-                }}
-              >
-                HOTEL & RESORT
-              </span>
-            </div>
-          </Link>
-        </div>
+              GRAND ADDIS
+            </span>
+            <span
+              style={{
+                fontSize: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '2.8px',
+                color: '#E49951',
+                fontWeight: 600,
+                display: 'block',
+                marginTop: '2px',
+              }}
+            >
+              HOTEL & RESORT
+            </span>
+          </div>
+        </Link>
 
-        {/* Center: Desktop Navigation */}
+        {/* Center: Desktop Navigation with Breathing Space */}
         <nav
           style={{
             display: 'none',
             alignItems: 'center',
-            gap: '24px',
+            gap: '34px',
           }}
           className="desktop-nav"
         >
@@ -188,9 +138,9 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 style={{
-                  fontSize: '13px',
+                  fontSize: '14px',
                   fontWeight: 500,
-                  letterSpacing: '1px',
+                  letterSpacing: '1.2px',
                   textTransform: 'uppercase',
                   textDecoration: 'none',
                   color: isActive
@@ -198,7 +148,7 @@ export default function Header() {
                     : isScrolled
                     ? '#153D4B'
                     : '#FFFFFF',
-                  padding: '6px 0',
+                  padding: '10px 4px',
                   position: 'relative',
                   transition: 'color 0.2s',
                 }}
@@ -209,8 +159,8 @@ export default function Header() {
                     style={{
                       position: 'absolute',
                       bottom: 0,
-                      left: 0,
-                      right: 0,
+                      left: '4px',
+                      right: '4px',
                       height: '2px',
                       backgroundColor: '#E49951',
                       borderRadius: '1px',
@@ -222,7 +172,7 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Right: Currency, Phone & Book CTA */}
+        {/* Right: Phone, Book CTA & Menu in Standard Right Position */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
 
           <a
@@ -241,8 +191,8 @@ export default function Header() {
           >
             <div
               style={{
-                width: '32px',
-                height: '32px',
+                width: '34px',
+                height: '34px',
                 borderRadius: '50%',
                 backgroundColor: 'rgba(228, 153, 81, 0.15)',
                 display: 'flex',
@@ -262,7 +212,7 @@ export default function Header() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '10px 22px',
+              padding: '11px 22px',
               backgroundColor: '#E49951',
               color: '#FFFFFF',
               fontSize: '12px',
@@ -281,6 +231,69 @@ export default function Header() {
             <span>Book Your Stay</span>
             <ArrowRight size={14} />
           </button>
+
+          {/* Menu / Drawer Button (Standard Right-hand Position) */}
+          <button
+            onClick={openNavDrawer}
+            aria-label="Open navigation menu"
+            className="header-menu-btn"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              border: isScrolled ? '1px solid #E2E1DA' : '1px solid rgba(255, 255, 255, 0.25)',
+              backgroundColor: isScrolled ? '#F7F7F2' : 'rgba(255, 255, 255, 0.1)',
+              color: isScrolled ? '#153D4B' : '#FFFFFF',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '20px' }}>
+              <span
+                style={{
+                  display: 'block',
+                  width: '20px',
+                  height: '2px',
+                  backgroundColor: isScrolled ? '#153D4B' : '#FFFFFF',
+                  borderRadius: '2px',
+                  transition: 'all 0.2s',
+                }}
+              />
+              <span
+                style={{
+                  display: 'block',
+                  width: '14px',
+                  height: '2px',
+                  backgroundColor: '#E49951',
+                  borderRadius: '2px',
+                  transition: 'all 0.2s',
+                }}
+              />
+              <span
+                style={{
+                  display: 'block',
+                  width: '20px',
+                  height: '2px',
+                  backgroundColor: isScrolled ? '#153D4B' : '#FFFFFF',
+                  borderRadius: '2px',
+                  transition: 'all 0.2s',
+                }}
+              />
+            </div>
+            <span
+              className="header-menu-text"
+              style={{
+                fontSize: '12px',
+                fontWeight: 600,
+                letterSpacing: '1.2px',
+                textTransform: 'uppercase',
+              }}
+            >
+              Menu
+            </span>
+          </button>
         </div>
       </div>
 
@@ -298,7 +311,13 @@ export default function Header() {
             display: none;
           }
           .header-book-btn {
-            padding: 8px 12px !important;
+            padding: 9px 12px !important;
+          }
+          .header-menu-text {
+            display: none !important;
+          }
+          .header-menu-btn {
+            padding: 9px 10px !important;
           }
         }
       `}</style>

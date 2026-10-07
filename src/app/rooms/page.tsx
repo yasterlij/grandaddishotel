@@ -45,7 +45,7 @@ export default function RoomsPage() {
   });
 
   return (
-    <div style={{ paddingTop: '84px' }}>
+    <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Page Header Banner */}
       <section
         style={{

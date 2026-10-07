@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Phone, Mail, MapPin, Send, Check, Heart, ArrowRight } from 'lucide-react';
 import { HOTEL_INFO } from '@/data/hotelData';
 
@@ -163,9 +164,12 @@ export default function Footer() {
                   padding: '2px',
                 }}
               >
-                <img
+                <Image
                   src="/images/logo.png"
                   alt="Logo"
+                  width={42}
+                  height={42}
+                  loading="lazy"
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
               </div>

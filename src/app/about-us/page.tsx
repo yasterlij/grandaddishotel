@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Award,
   ShieldCheck,
@@ -90,8 +91,15 @@ export default function AboutPage() {
             </div>
 
             <div style={{ position: 'relative' }}>
-              <div style={{ borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
-                <img src="/images/BO5A5821-scaled.jpg" alt="Interior Details" style={{ width: '100%', height: '420px', objectFit: 'cover' }} />
+              <div style={{ position: 'relative', height: '420px', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
+                <Image
+                  src="/images/BO5A5821-scaled.jpg"
+                  alt="Interior Details"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  loading="lazy"
+                  style={{ objectFit: 'cover' }}
+                />
               </div>
             </div>
           </div>

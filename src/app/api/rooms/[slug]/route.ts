@@ -16,10 +16,17 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      room,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        room,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error fetching room by slug from PostgreSQL:', error);
     return NextResponse.json(

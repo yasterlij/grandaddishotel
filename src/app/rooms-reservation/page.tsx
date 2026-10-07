@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Calendar,
   Users,
@@ -369,8 +370,15 @@ function ReservationContent() {
                           transition: 'all 0.2s',
                         }}
                       >
-                        <div style={{ height: '110px', borderRadius: '8px', overflow: 'hidden' }}>
-                          <img src={room.images[0]} alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{ position: 'relative', height: '110px', borderRadius: '8px', overflow: 'hidden' }}>
+                          <Image
+                            src={room.images[0] || '/images/BO5A5779-scaled.jpg'}
+                            alt={room.name}
+                            fill
+                            sizes="180px"
+                            loading="lazy"
+                            style={{ objectFit: 'cover' }}
+                          />
                         </div>
 
                         <div>

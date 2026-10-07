@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { query } from '@/lib/db';
+import { query, invalidateCache } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -11,7 +11,14 @@ export async function GET() {
        ORDER BY created_at DESC
        LIMIT 50`
     );
-    return NextResponse.json({ success: true, testimonials: res.rows });
+    return NextResponse.json(
+      { success: true, testimonials: res.rows },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error fetching testimonials:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -37,6 +44,8 @@ export async function POST(req: NextRequest) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'APPROVED', NOW())`,
       [id, name, location || 'Addis Ababa', rating || 5, currentDate, title, comment, roomType || 'Deluxe Room']
     );
+
+    invalidateCache('db_testimonials');
 
     return NextResponse.json({
       success: true,

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Camera, Eye, ArrowRight } from 'lucide-react';
 import GalleryLightbox from '@/components/GalleryLightbox';
 import { GALLERY_IMAGES } from '@/data/hotelData';
@@ -149,16 +150,17 @@ export default function GalleryPage() {
                 }}
                 className="gallery-grid-item"
               >
-                <img
+                <Image
                   src={img.src}
                   alt={img.title}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 380px"
+                  loading="lazy"
+                  className="gallery-grid-img"
                   style={{
-                    width: '100%',
-                    height: '100%',
                     objectFit: 'cover',
                     transition: 'transform 0.4s ease',
                   }}
-                  className="gallery-grid-img"
                 />
 
                 <div

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { X, Check, Calendar, Users, DollarSign, ShieldCheck, Printer, ArrowLeft, ArrowRight, Sparkles, Coffee, CreditCard, Lock } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import { useCurrency } from '@/context/CurrencyContext';
@@ -278,7 +279,13 @@ export default function BookingModal() {
                 overflow: 'hidden',
               }}
             >
-              <img src="/images/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <Image
+                src="/images/logo.png"
+                alt="Logo"
+                width={38}
+                height={38}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
             </div>
             <div>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600 }}>

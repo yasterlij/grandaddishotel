@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { query } from '@/lib/db';
+import { query, invalidateCache } from '@/lib/db';
 
 export async function GET() {
   try {
@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
       ]
     );
 
+    invalidateCache('db_room');
     return NextResponse.json({ success: true, message: 'Room type created successfully', id });
   } catch (error: any) {
     console.error('Error creating room type:', error);
@@ -161,6 +162,7 @@ export async function PUT(req: NextRequest) {
       ]
     );
 
+    invalidateCache('db_room');
     return NextResponse.json({ success: true, message: 'Room type updated successfully' });
   } catch (error: any) {
     console.error('Error updating room type:', error);
@@ -190,6 +192,7 @@ export async function DELETE(req: NextRequest) {
     await query(`DELETE FROM rooms WHERE "roomTypeId" = $1`, [id]);
     await query(`DELETE FROM room_types WHERE id = $1`, [id]);
 
+    invalidateCache('db_room');
     return NextResponse.json({ success: true, message: 'Room type deleted successfully' });
   } catch (error: any) {
     console.error('Error deleting room type:', error);

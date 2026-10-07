@@ -195,6 +195,16 @@ export async function initDatabase(): Promise<void> {
         VALUES ('usd_to_etb_rate', '189')
         ON CONFLICT (key) DO NOTHING;
       `);
+
+      // 13. Performance Indexes
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_room_types_slug ON room_types (slug);
+        CREATE INDEX IF NOT EXISTS idx_testimonials_status ON testimonials (status, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_faqs_order ON faqs (sort_order ASC, id ASC);
+        CREATE INDEX IF NOT EXISTS idx_table_res_date ON table_reservations (date);
+        CREATE INDEX IF NOT EXISTS idx_spa_app_date ON spa_appointments (date);
+        CREATE INDEX IF NOT EXISTS idx_dining_menu_cat ON dining_menu (category);
+      `);
     } catch (err) {
       console.error('Database initialization error:', err);
     }
@@ -210,6 +220,38 @@ export async function query<T extends QueryResultRow = any>(
   await initDatabase();
   return pool.query<T>(text, params);
 }
+
+// -------------------------------------------------------------
+// High-performance In-Memory TTL Cache
+// -------------------------------------------------------------
+const cacheStore = new Map<string, { data: any; expiry: number }>();
+
+export function getCached<T>(key: string): T | null {
+  const entry = cacheStore.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiry) {
+    cacheStore.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+export function setCached<T>(key: string, data: T, ttlMs = 45000): void {
+  cacheStore.set(key, { data, expiry: Date.now() + ttlMs });
+}
+
+export function invalidateCache(keyPrefix?: string): void {
+  if (!keyPrefix) {
+    cacheStore.clear();
+    return;
+  }
+  for (const key of cacheStore.keys()) {
+    if (key.startsWith(keyPrefix)) {
+      cacheStore.delete(key);
+    }
+  }
+}
+
 
 // -------------------------------------------------------------
 // High-level Typed Database Access Methods
@@ -236,6 +278,9 @@ export interface DbRoom {
 }
 
 export async function getDbRooms(): Promise<DbRoom[]> {
+  const cached = getCached<DbRoom[]>('db_rooms');
+  if (cached) return cached;
+
   try {
     const res = await query(`
       SELECT 
@@ -262,7 +307,7 @@ export async function getDbRooms(): Promise<DbRoom[]> {
       ORDER BY rt."basePriceUSD" ASC;
     `);
 
-    return res.rows.map((row) => ({
+    const rooms: DbRoom[] = res.rows.map((row) => ({
       id: row.id,
       slug: row.slug,
       name: row.name,
@@ -281,6 +326,9 @@ export async function getDbRooms(): Promise<DbRoom[]> {
       availableCount: Number(row.availableCount) || 1,
       aliases: row.aliases || [],
     }));
+
+    setCached('db_rooms', rooms, 60000);
+    return rooms;
   } catch (error) {
     console.error('getDbRooms error:', error);
     return [];
@@ -288,6 +336,10 @@ export async function getDbRooms(): Promise<DbRoom[]> {
 }
 
 export async function getDbRoomBySlug(slug: string): Promise<DbRoom | null> {
+  const cacheKey = `db_room_${slug.toLowerCase()}`;
+  const cached = getCached<DbRoom>(cacheKey);
+  if (cached) return cached;
+
   try {
     const res = await query(
       `
@@ -320,7 +372,7 @@ export async function getDbRoomBySlug(slug: string): Promise<DbRoom | null> {
 
     if (res.rows.length === 0) return null;
     const row = res.rows[0];
-    return {
+    const room: DbRoom = {
       id: row.id,
       slug: row.slug,
       name: row.name,
@@ -339,6 +391,9 @@ export async function getDbRoomBySlug(slug: string): Promise<DbRoom | null> {
       availableCount: Number(row.availableCount) || 1,
       aliases: row.aliases || [],
     };
+
+    setCached(cacheKey, room, 60000);
+    return room;
   } catch (error) {
     console.error('getDbRoomBySlug error:', error);
     return null;
@@ -346,8 +401,12 @@ export async function getDbRoomBySlug(slug: string): Promise<DbRoom | null> {
 }
 
 export async function getDbMenuItems() {
+  const cached = getCached<any[]>('db_menu');
+  if (cached) return cached;
+
   try {
     const res = await query(`SELECT * FROM dining_menu ORDER BY id ASC`);
+    setCached('db_menu', res.rows, 60000);
     return res.rows;
   } catch (e) {
     console.error('getDbMenuItems error:', e);
@@ -356,8 +415,12 @@ export async function getDbMenuItems() {
 }
 
 export async function getDbSpaTreatments() {
+  const cached = getCached<any[]>('db_spa');
+  if (cached) return cached;
+
   try {
     const res = await query(`SELECT * FROM spa_treatments ORDER BY id ASC`);
+    setCached('db_spa', res.rows, 60000);
     return res.rows;
   } catch (e) {
     console.error('getDbSpaTreatments error:', e);
@@ -366,8 +429,12 @@ export async function getDbSpaTreatments() {
 }
 
 export async function getDbExperiences() {
+  const cached = getCached<any[]>('db_experiences');
+  if (cached) return cached;
+
   try {
     const res = await query(`SELECT * FROM experiences ORDER BY id ASC`);
+    setCached('db_experiences', res.rows, 60000);
     return res.rows;
   } catch (e) {
     console.error('getDbExperiences error:', e);
@@ -376,8 +443,12 @@ export async function getDbExperiences() {
 }
 
 export async function getDbPromotions() {
+  const cached = getCached<any[]>('db_promotions');
+  if (cached) return cached;
+
   try {
     const res = await query(`SELECT * FROM promotions ORDER BY id ASC`);
+    setCached('db_promotions', res.rows, 60000);
     return res.rows;
   } catch (e) {
     console.error('getDbPromotions error:', e);
@@ -386,8 +457,12 @@ export async function getDbPromotions() {
 }
 
 export async function getDbFaqs() {
+  const cached = getCached<any[]>('db_faqs');
+  if (cached) return cached;
+
   try {
     const res = await query(`SELECT * FROM faqs ORDER BY sort_order ASC, id ASC`);
+    setCached('db_faqs', res.rows, 60000);
     return res.rows;
   } catch (e) {
     console.error('getDbFaqs error:', e);
@@ -396,10 +471,14 @@ export async function getDbFaqs() {
 }
 
 export async function getDbTestimonials() {
+  const cached = getCached<any[]>('db_testimonials');
+  if (cached) return cached;
+
   try {
     const res = await query(
       `SELECT * FROM testimonials WHERE status = 'APPROVED' ORDER BY created_at DESC LIMIT 50`
     );
+    setCached('db_testimonials', res.rows, 60000);
     return res.rows;
   } catch (e) {
     console.error('getDbTestimonials error:', e);
@@ -439,11 +518,17 @@ export async function getDbStats() {
 }
 
 export async function getExchangeRate(): Promise<number> {
+  const cached = getCached<number>('db_rate');
+  if (cached !== null) return cached;
+
   try {
     const res = await query(`SELECT value FROM hotel_settings WHERE key = 'usd_to_etb_rate' LIMIT 1`);
     if (res.rows.length > 0) {
       const val = parseFloat(res.rows[0].value);
-      if (!isNaN(val) && val > 0) return val;
+      if (!isNaN(val) && val > 0) {
+        setCached('db_rate', val, 30000);
+        return val;
+      }
     }
   } catch (e) {
     console.error('getExchangeRate error:', e);
@@ -462,6 +547,8 @@ export async function setExchangeRate(
     [newRate.toString()]
   );
 
+  invalidateCache('db_rate');
+
   let updatedRoomsCount = 0;
   if (syncRooms) {
     const res = await query(
@@ -472,6 +559,7 @@ export async function setExchangeRate(
       [newRate]
     );
     updatedRoomsCount = res.rowCount || 0;
+    invalidateCache('db_room');
   }
 
   return { rate: newRate, updatedRoomsCount };

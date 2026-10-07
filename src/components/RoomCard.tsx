@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Users, Wifi, Tv, Wind, Bath, ArrowRight, Calendar, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { Room } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
@@ -47,12 +48,13 @@ export default function RoomCard({ room, viewMode = 'grid' }: { room: Room; view
           backgroundColor: '#0F2A33',
         }}
       >
-        <img
-          src={room.images[activeImageIndex]}
+        <Image
+          src={room.images[activeImageIndex] || '/images/BO5A5779-scaled.jpg'}
           alt={room.name}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 380px"
+          loading="lazy"
           style={{
-            width: '100%',
-            height: '100%',
             objectFit: 'cover',
             transition: 'transform 0.4s ease',
           }}

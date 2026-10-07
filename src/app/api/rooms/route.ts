@@ -4,10 +4,17 @@ import { getDbRooms } from '@/lib/db';
 export async function GET() {
   try {
     const rooms = await getDbRooms();
-    return NextResponse.json({
-      success: true,
-      rooms,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        rooms,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error fetching rooms from PostgreSQL:', error);
     return NextResponse.json(

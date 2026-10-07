@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { X, Phone, Mail, MapPin, Calendar, ArrowRight, Send } from 'lucide-react';
 import { useBooking } from '@/context/BookingContext';
 import { HOTEL_INFO } from '@/data/hotelData';
@@ -101,9 +102,11 @@ export default function NavDrawer() {
                 padding: '2px',
               }}
             >
-              <img
+              <Image
                 src="/images/logo.png"
                 alt="Logo"
+                width={40}
+                height={40}
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </div>

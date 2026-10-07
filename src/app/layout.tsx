@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Jost, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { BookingProvider } from '@/context/BookingContext';
 import { CurrencyProvider } from '@/context/CurrencyContext';
@@ -7,6 +8,20 @@ import NavDrawer from '@/components/NavDrawer';
 import BookingModal from '@/components/BookingModal';
 import FloatingConcierge from '@/components/FloatingConcierge';
 import Footer from '@/components/Footer';
+
+const jost = Jost({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-serif',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://grandaddishotel.com'),
@@ -51,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${jost.variable} ${playfair.variable}`}>
       <head>
         <link rel="icon" href="/images/logo.png" />
         <meta name="theme-color" content="#0F2A33" />

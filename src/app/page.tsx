@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Calendar,
   Users,
@@ -79,18 +80,27 @@ export default function HomePage() {
           overflow: 'hidden',
         }}
       >
-        {/* Background Image with Cinematic Gradient Overlay */}
+        {/* LCP Optimized Hero Image */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: `url('/images/BO5A5779-scaled.jpg')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            transform: 'scale(1.02)',
             zIndex: 0,
           }}
-        />
+        >
+          <Image
+            src="/images/BO5A5779-scaled.jpg"
+            alt="Grand Addis Hotel & Resort"
+            fill
+            priority
+            sizes="100vw"
+            quality={85}
+            style={{
+              objectFit: 'cover',
+              transform: 'scale(1.02)',
+            }}
+          />
+        </div>
         <div
           style={{
             position: 'absolute',
@@ -602,7 +612,7 @@ export default function HomePage() {
       </section>
 
       {/* ================= INTERACTIVE PHOTO GALLERY ================= */}
-      <section className="section-padding bg-light">
+      <section className="section-padding bg-light defer-render">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <span className="section-subtitle">VISUAL TOUR</span>
@@ -634,16 +644,17 @@ export default function HomePage() {
                 }}
                 className="gallery-item"
               >
-                <img
+                <Image
                   src={item.src}
                   alt={item.title}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 320px"
+                  loading="lazy"
+                  className="gallery-img"
                   style={{
-                    width: '100%',
-                    height: '100%',
                     objectFit: 'cover',
                     transition: 'transform 0.5s ease',
                   }}
-                  className="gallery-img"
                 />
                 <div
                   style={{
@@ -687,7 +698,7 @@ export default function HomePage() {
       </section>
 
       {/* ================= TESTIMONIALS SECTION ================= */}
-      <section className="section-padding">
+      <section className="section-padding defer-render">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
             <span className="section-subtitle">GUEST EXPERIENCES</span>

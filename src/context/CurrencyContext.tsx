@@ -64,10 +64,12 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     // 3. Fetch latest live exchange rate from PostgreSQL database
     fetchRate().then(() => setIsLoaded(true));
 
-    // 4. Polling every 20 seconds so visitors always receive admin rate updates automatically
+    // 4. Polling every 60s only when tab is visible to avoid idle battery and network waste
     const pollTimer = setInterval(() => {
-      fetchRate();
-    }, 20000);
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchRate();
+      }
+    }, 60000);
 
     // 5. Instantly refresh when the browser window or tab becomes active
     const handleVisibilityOrFocus = () => {
@@ -113,25 +115,28 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchRate]);
 
-  const setCurrency = (c: Currency) => {
+  const setCurrency = useCallback((c: Currency) => {
     setCurrencyState(c);
     localStorage.setItem('gah_currency', c);
-  };
+  }, []);
 
-  const toggleCurrency = () => {
-    const next = currency === 'USD' ? 'ETB' : 'USD';
-    setCurrency(next);
-  };
+  const toggleCurrency = useCallback(() => {
+    setCurrencyState((prev) => {
+      const next = prev === 'USD' ? 'ETB' : 'USD';
+      localStorage.setItem('gah_currency', next);
+      return next;
+    });
+  }, []);
 
-  const convertUsdToEtb = (usdPrice: number): number => {
+  const convertUsdToEtb = useCallback((usdPrice: number): number => {
     return Math.round(usdPrice * rate);
-  };
+  }, [rate]);
 
-  const convertEtbToUsd = (etbPrice: number): number => {
+  const convertEtbToUsd = useCallback((etbPrice: number): number => {
     return rate > 0 ? Math.round((etbPrice / rate) * 100) / 100 : 0;
-  };
+  }, [rate]);
 
-  const formatPrice = (usdPrice: number): {
+  const formatPrice = useCallback((usdPrice: number): {
     primary: string;
     secondary: string;
     amount: number;
@@ -143,13 +148,13 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       amount: usdPrice,
       currency: 'USD',
     };
-  };
+  }, []);
 
-  const refreshRate = async (): Promise<number> => {
+  const refreshRate = useCallback(async (): Promise<number> => {
     return await fetchRate();
-  };
+  }, [fetchRate]);
 
-  const updateUniversalRate = async (newRate: number, syncRooms = false) => {
+  const updateUniversalRate = useCallback(async (newRate: number, syncRooms = false) => {
     try {
       const res = await fetch('/api/admin/settings/exchange-rate', {
         method: 'PUT',
@@ -168,23 +173,34 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       return { success: false, rate, message: err.message || 'Network error' };
     }
-  };
+  }, [rate]);
+
+  const contextValue = React.useMemo<CurrencyContextType>(() => ({
+    currency,
+    rate,
+    isLoaded,
+    setCurrency,
+    toggleCurrency,
+    convertUsdToEtb,
+    convertEtbToUsd,
+    formatPrice,
+    refreshRate,
+    updateUniversalRate,
+  }), [
+    currency,
+    rate,
+    isLoaded,
+    setCurrency,
+    toggleCurrency,
+    convertUsdToEtb,
+    convertEtbToUsd,
+    formatPrice,
+    refreshRate,
+    updateUniversalRate,
+  ]);
 
   return (
-    <CurrencyContext.Provider
-      value={{
-        currency,
-        rate,
-        isLoaded,
-        setCurrency,
-        toggleCurrency,
-        convertUsdToEtb,
-        convertEtbToUsd,
-        formatPrice,
-        refreshRate,
-        updateUniversalRate,
-      }}
-    >
+    <CurrencyContext.Provider value={contextValue}>
       {children}
     </CurrencyContext.Provider>
   );

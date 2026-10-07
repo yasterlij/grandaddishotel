@@ -129,9 +129,12 @@ export default function Header() {
                 flexShrink: 0,
               }}
             >
-              <img
+              <Image
                 src="/images/logo.png"
                 alt="Grand Addis Hotel Logo"
+                width={44}
+                height={44}
+                priority
                 style={{
                   width: '100%',
                   height: '100%',

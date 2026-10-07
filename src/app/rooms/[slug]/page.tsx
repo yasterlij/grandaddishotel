@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Calendar,
   Users,
@@ -199,10 +200,13 @@ export default function RoomDetailPage() {
                   height: '460px',
                 }}
               >
-                <img
-                  src={room.images[activePhotoIndex]}
+                <Image
+                  src={room.images[activePhotoIndex] || '/images/BO5A5779-scaled.jpg'}
                   alt={room.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 65vw"
+                  style={{ objectFit: 'cover' }}
                 />
 
                 {room.images.length > 1 && (
@@ -278,7 +282,16 @@ export default function RoomDetailPage() {
                       transition: 'all 0.2s',
                     }}
                   >
-                    <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                      <Image
+                        src={img}
+                        alt={`${room.name} thumbnail ${idx + 1}`}
+                        fill
+                        sizes="90px"
+                        loading="lazy"
+                        style={{ objectFit: 'cover' }}
+                      />
+                    </div>
                   </button>
                 ))}
               </div>

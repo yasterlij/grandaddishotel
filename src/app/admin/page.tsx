@@ -616,6 +616,23 @@ export default function AdminPage() {
     }
   };
 
+  const handleApproveTestimonial = async (id: string) => {
+    try {
+      const res = await fetch('/api/admin/testimonials', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'APPROVED' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify('Review approved & published');
+        loadAllData();
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   if (isCheckingAuth) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0F2A33', color: '#FFFFFF' }}>
@@ -2670,6 +2687,23 @@ export default function AdminPage() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #E8E7DF', paddingTop: '12px' }}>
+                    {t.status === 'PENDING' && (
+                      <button
+                        onClick={() => handleApproveTestimonial(t.id)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#10B981',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Approve
+                      </button>
+                    )}
                     <button
                       onClick={() => setEditTestimonialModal({ ...t })}
                       style={{

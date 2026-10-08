@@ -5,14 +5,23 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Phone, Mail, MapPin, Send, Check, Heart, ArrowRight } from 'lucide-react';
 import { HOTEL_INFO } from '@/data/hotelData';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const { isSubmitting, error, submit } = useFormSubmit();
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
+    if (!email) return;
+    const ok = await submit('/api/contact', {
+      name: 'Newsletter Subscriber',
+      email: email.trim(),
+      subject: 'Newsletter Subscription',
+      message: 'Guest requested newsletter subscription for private offers from the website footer.',
+    });
+    if (ok) {
       setSubscribed(true);
       setEmail('');
     }
@@ -130,14 +139,28 @@ export default function Footer() {
                 />
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   className="btn btn-primary"
-                  style={{ padding: '0 20px', borderRadius: '4px' }}
+                  style={{ padding: '0 20px', borderRadius: '4px', opacity: isSubmitting ? 0.6 : 1 }}
                 >
                   <Send size={15} />
                 </button>
               </>
             )}
           </form>
+          {error && (
+            <p
+              role="alert"
+              style={{
+                fontSize: '12px',
+                color: '#F87171',
+                marginTop: '10px',
+                textAlign: 'center',
+              }}
+            >
+              {error}
+            </p>
+          )}
         </div>
       </div>
 

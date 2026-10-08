@@ -20,16 +20,14 @@ import {
   ArrowRight,
   ArrowLeft,
   CreditCard,
-  Smartphone,
-  Building2,
-  Banknote,
   Lock,
 } from 'lucide-react';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import { useCurrency } from '@/context/CurrencyContext';
 import PaymentModal from '@/components/PaymentModal';
-import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
+import { PaymentProviderType } from '@/lib/payment-types';
 import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
+import { computeBookingTotals, getPromoDiscountPercent } from '@/lib/booking-pricing';
 
 function ReservationContent() {
   const searchParams = useSearchParams();
@@ -38,7 +36,7 @@ function ReservationContent() {
   const todayStr = getTodayDateStr();
   const tomorrowStr = addDays(todayStr, 1);
 
-  const queryRoomId = searchParams.get('roomId') || '2';
+  const queryRoomId = searchParams.get('roomId') || 'deluxe-room';
   const queryCheckIn = searchParams.get('checkIn') || todayStr;
   const queryCheckOut = searchParams.get('checkOut') || tomorrowStr;
   const queryAdults = Number(searchParams.get('adults')) || 2;
@@ -50,6 +48,9 @@ function ReservationContent() {
   const [checkOut, setCheckOut] = useState(queryCheckOut);
   const [adults, setAdults] = useState(queryAdults);
   const [children, setChildren] = useState(queryChildren);
+  // Stay length from the initial selection — date changes are measured against
+  // this baseline so ordinary multi-night stays are not flagged as changes.
+  const [baselineNights, setBaselineNights] = useState(() => calculateStayNights(queryCheckIn, queryCheckOut));
 
   const [addons, setAddons] = useState({
     airportShuttle: false,
@@ -68,11 +69,12 @@ function ReservationContent() {
   const [bookingRef, setBookingRef] = useState('');
   const [reservationId, setReservationId] = useState('');
   const [activeTxRef, setActiveTxRef] = useState('');
-  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('SKINA');
+  const selectedPaymentProvider: PaymentProviderType = 'SKINA';
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dateChangeFlag, setDateChangeFlag] = useState<{ isExtended: boolean; text: string; delta: number; totalNights: number } | null>(null);
+  const [bookingError, setBookingError] = useState('');
 
   const [rooms, setRooms] = useState<Room[]>(ROOMS);
 
@@ -91,24 +93,36 @@ function ReservationContent() {
     loadPostgresRooms();
   }, []);
 
-  // Initialize date change flag if query params provide multi-night stay
-  useEffect(() => {
-    const initialNights = calculateStayNights(queryCheckIn, queryCheckOut);
-    if (initialNights > 1) {
-      setDateChangeFlag({
-        isExtended: true,
-        text: `Stay scheduled for ${initialNights} nights (${formatFriendlyDate(queryCheckIn)} → ${formatFriendlyDate(queryCheckOut)}). Payment scaled automatically.`,
-        delta: initialNights - 1,
-        totalNights: initialNights,
-      });
-    }
-  }, [queryCheckIn, queryCheckOut]);
-
   const selectedRoom =
-    rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
+    rooms.find(
+      (r) =>
+        r.id === selectedRoomId ||
+        r.slug === selectedRoomId ||
+        (r.aliases || []).includes(selectedRoomId)
+    ) ||
+    rooms.find((r) => r.slug === 'deluxe-room' || (r.aliases || []).includes('deluxe-room')) ||
+    rooms[0];
 
   // Calculation - safely handle date arithmetic and stay extension
   const nights = calculateStayNights(checkIn, checkOut);
+
+  /** Update the change flag relative to the baseline (initial) stay length. */
+  const refreshDateChangeFlag = (newNights: number, nextIn: string, nextOut: string) => {
+    const delta = newNights - baselineNights;
+    if (delta === 0) {
+      setDateChangeFlag(null); // back to the originally selected length
+      return;
+    }
+    setDateChangeFlag({
+      isExtended: delta > 0,
+      text:
+        delta > 0
+          ? `Stay extended by +${delta} ${delta === 1 ? 'night' : 'nights'} (${newNights} nights total, ${formatFriendlyDate(nextIn)} → ${formatFriendlyDate(nextOut)}). Payment scaled automatically.`
+          : `Stay shortened by ${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'night' : 'nights'} (${newNights} nights total, ${formatFriendlyDate(nextIn)} → ${formatFriendlyDate(nextOut)}). Payment scaled automatically.`,
+      delta,
+      totalNights: newNights,
+    });
+  };
 
   const handleCheckInChange = (newDate: string) => {
     setCheckIn(newDate);
@@ -117,38 +131,13 @@ function ReservationContent() {
       nextOut = addDays(newDate, 1);
       setCheckOut(nextOut);
     }
-    const newNights = calculateStayNights(newDate, nextOut);
-    if (newNights > 1) {
-      setDateChangeFlag({
-        isExtended: true,
-        text: `Stay scheduled for ${newNights} nights (${formatFriendlyDate(newDate)} → ${formatFriendlyDate(nextOut)}). Total payment scaled automatically.`,
-        delta: newNights - 1,
-        totalNights: newNights,
-      });
-    }
+    refreshDateChangeFlag(calculateStayNights(newDate, nextOut), newDate, nextOut);
   };
 
   const handleCheckOutChange = (newDate: string) => {
     const validOut = (!newDate || newDate <= checkIn) ? addDays(checkIn, 1) : newDate;
     setCheckOut(validOut);
-    const newNights = calculateStayNights(checkIn, validOut);
-    const prevNights = calculateStayNights(checkIn, checkOut);
-    const diff = newNights - prevNights;
-    if (diff > 0) {
-      setDateChangeFlag({
-        isExtended: true,
-        text: `Stay extended by +${diff} ${diff === 1 ? 'night' : 'nights'} (${newNights} nights total). Payment scaled automatically.`,
-        delta: diff,
-        totalNights: newNights,
-      });
-    } else if (diff < 0) {
-      setDateChangeFlag({
-        isExtended: false,
-        text: `Stay shortened by ${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'night' : 'nights'} (${newNights} nights total). Payment scaled automatically.`,
-        delta: diff,
-        totalNights: newNights,
-      });
-    }
+    refreshDateChangeFlag(calculateStayNights(checkIn, validOut), checkIn, validOut);
   };
 
   const handleExtendNights = (deltaDays: number) => {
@@ -156,24 +145,22 @@ function ReservationContent() {
     const newNights = Math.max(1, currentNights + deltaDays);
     const newOut = addDays(checkIn, newNights);
     setCheckOut(newOut);
-    const delta = newNights - currentNights;
-    if (delta > 0) {
-      setDateChangeFlag({
-        isExtended: true,
-        text: `Stay extended by +${delta} ${delta === 1 ? 'night' : 'nights'}! Total duration is now ${newNights} nights. Payment updated automatically.`,
-        delta,
-        totalNights: newNights,
-      });
-    } else if (delta < 0) {
-      setDateChangeFlag({
-        isExtended: false,
-        text: `Stay shortened by ${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'night' : 'nights'}. Total duration is now ${newNights} nights. Payment updated automatically.`,
-        delta,
-        totalNights: newNights,
-      });
-    }
+    refreshDateChangeFlag(newNights, checkIn, newOut);
   };
 
+  // Shared pricing rules (same module the server uses to compute totals)
+  const totals = computeBookingTotals({
+    pricePerNight: selectedRoom.pricePerNight,
+    nights,
+    adults,
+    addons: addons as Record<string, boolean>,
+    discountPercent,
+  });
+  const { roomSubtotal, discountAmount, addonsTotal, tax } = totals;
+  const grandTotal = totals.grandTotal;
+  const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
+
+  // Display prices for the add-on UI (per selection, incl. nights/adults where applicable)
   const addonPrices = {
     airportShuttle: 15,
     breakfast: 12 * adults * nights,
@@ -181,28 +168,15 @@ function ReservationContent() {
     coffeeCeremony: 8 * adults,
   };
 
-  let addonsTotal = 0;
-  if (addons.airportShuttle) addonsTotal += addonPrices.airportShuttle;
-  if (addons.breakfast) addonsTotal += addonPrices.breakfast;
-  if (addons.spaTreatment) addonsTotal += addonPrices.spaTreatment;
-  if (addons.coffeeCeremony) addonsTotal += addonPrices.coffeeCeremony;
-
-  const roomSubtotal = selectedRoom.pricePerNight * nights;
-  const discountAmount = (roomSubtotal * discountPercent) / 100;
-  const subtotalAfterDiscount = roomSubtotal - discountAmount + addonsTotal;
-  const tax = Math.round(subtotalAfterDiscount * 0.15 * 100) / 100;
-  const grandTotal = Math.round((subtotalAfterDiscount + tax) * 100) / 100;
-  const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
-
   const applyPromo = () => {
-    const code = promoCode.trim().toUpperCase();
-    if (code === 'GRANDMEMBER15' || code === 'SAVE15') {
-      setDiscountPercent(15);
-      setPromoMessage('Member discount 15% applied!');
-    } else if (code === 'WEEKENDREBALANCE') {
-      setDiscountPercent(20);
-      setPromoMessage('Weekend Special: 20% discount applied!');
+    const percent = getPromoDiscountPercent(promoCode);
+    if (percent > 0) {
+      setDiscountPercent(percent);
+      setPromoMessage(
+        percent === 20 ? 'Weekend Special: 20% discount applied!' : 'Member discount 15% applied!'
+      );
     } else {
+      setDiscountPercent(0);
       setPromoMessage('Invalid promo code');
     }
   };
@@ -210,6 +184,7 @@ function ReservationContent() {
   const handleConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setBookingError('');
     try {
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -226,48 +201,31 @@ function ReservationContent() {
           guestPhone,
           specialRequests,
           addons,
-          totalAmount: grandTotal,
+          // The server validates the code and computes the total itself —
+          // totalAmount/paymentStatus are intentionally NOT sent.
+          promoCode: promoCode.trim(),
           currency: 'USD',
           paymentProvider: selectedPaymentProvider,
-          paymentStatus: 'PENDING',
-          isDateExtended: Boolean(dateChangeFlag?.isExtended || nights > 1),
-          dateChangeNote: dateChangeFlag?.text || (nights > 1 ? `Extended stay of ${nights} nights (${checkIn} to ${checkOut})` : ''),
+          isDateExtended: Boolean(dateChangeFlag),
+          dateChangeNote: dateChangeFlag?.text || '',
         }),
       });
-      const data = await res.json();
-      if (data.success && data.bookingRef) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success && data.bookingRef) {
         setBookingRef(data.bookingRef);
         setReservationId(data.reservationId || '');
         setActiveTxRef(data.txRef || '');
-
-        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
-          setPaymentStatus('PENDING');
-          setStep(3);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-          // Open interactive payment modal for Chapa, Telebirr, CBE Birr, Skina
-          setIsPaymentModalOpen(true);
-        }
+        setIsPaymentModalOpen(true);
       } else {
-        const ref = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
-        setBookingRef(ref);
-        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
-          setPaymentStatus('PENDING');
-          setStep(3);
-        } else {
-          setIsPaymentModalOpen(true);
-        }
+        // Real failure — surface the server's message; never fabricate a booking.
+        setBookingError(
+          data?.error ||
+            'We could not complete your reservation. Please try again or contact the hotel.'
+        );
       }
     } catch (err) {
       console.error('Reservation error:', err);
-      const ref = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
-      setBookingRef(ref);
-      if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
-        setPaymentStatus('PENDING');
-        setStep(3);
-      } else {
-        setIsPaymentModalOpen(true);
-      }
+      setBookingError('Network error — please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -678,7 +636,9 @@ function ReservationContent() {
                       marginBottom: '20px',
                     }}
                   >
-                    <span style={{ fontSize: '15px', fontWeight: 600 }}>Estimated Total:</span>
+                    <span style={{ fontSize: '15px', fontWeight: 600 }}>
+                      Room Subtotal <span style={{ fontSize: '11px', fontWeight: 500, color: '#838A8D' }}>(excl. VAT &amp; extras)</span>:
+                    </span>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: '22px', fontWeight: 700, color: '#E49951' }}>
                         ${selectedRoom.pricePerNight * nights}
@@ -1003,86 +963,27 @@ function ReservationContent() {
                   )}
                 </div>
 
-                {/* Payment Gateway & Method Selector */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#153D4B' }}>
-                      Select Payment Method *
-                    </label>
-                    <span style={{ fontSize: '11px', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={12} /> 256-bit Encrypted
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-                    {PAYMENT_PROVIDERS.map((prov) => {
-                      const isSelected = selectedPaymentProvider === prov.id;
-                      return (
-                        <div
-                          key={prov.id}
-                          onClick={() => setSelectedPaymentProvider(prov.id)}
-                          style={{
-                            padding: '12px 10px',
-                            borderRadius: '10px',
-                            border: isSelected ? `2px solid ${prov.color}` : '1px solid #E2E1DA',
-                            backgroundColor: isSelected ? prov.bgLight : '#FFFFFF',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          <div style={{ fontSize: '13px', fontWeight: 700, color: isSelected ? prov.color : '#153D4B' }}>
-                            {prov.name}
-                          </div>
-                          <span style={{ fontSize: '10px', color: '#838A8D' }}>
-                            {prov.badge}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Payment Provider Helper Note */}
-                  <div
-                    style={{
-                      marginTop: '12px',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      backgroundColor: '#F7F7F2',
-                      border: '1px solid #E2E1DA',
-                      fontSize: '12px',
-                      color: '#5E6E75',
-                    }}
-                  >
-                    {selectedPaymentProvider === 'SKINA' && (
-                      <div>
-                        <strong style={{ color: '#153D4B' }}>SkinaPay (Default Provider):</strong> Instant, 256-bit SSL secured card checkout accepting <strong>Visa, Mastercard, American Express, UnionPay</strong>, and Ethiopian local debit cards via SkinaPay Sandbox.
-                      </div>
-                    )}
-                    {selectedPaymentProvider === 'TELEBIRR' && (
-                      <div>
-                        <strong style={{ color: '#0072CE' }}>Telebirr Mobile Money:</strong> Fast USSD push notification sent directly to your phone (*127#) or scan QR via Telebirr SuperApp.
-                      </div>
-                    )}
-                    {selectedPaymentProvider === 'CHAPA' && (
-                      <div>
-                        <strong style={{ color: '#00A36C' }}>Chapa Premier Gateway:</strong> Online gateway supporting Telebirr, CBE Birr, Awash Bank, Amole, and cards.
-                      </div>
-                    )}
-                    {selectedPaymentProvider === 'CBE_BIRR' && (
-                      <div>
-                        <strong style={{ color: '#6E2585' }}>Commercial Bank of Ethiopia (CBE / CEB):</strong> Instant transfer to Hotel CBE Birr Shortcode <strong>882200</strong> or CBE Mobile App account <strong>1000188220011</strong>.
-                      </div>
-                    )}
-                    {selectedPaymentProvider === 'CASH_ON_ARRIVAL' && (
-                      <div>
-                        <strong style={{ color: '#E49951' }}>Front Desk Reception:</strong> Guarantee your room now with zero upfront payment. Settle at hotel check-in in Ethiopian Birr or USD.
-                      </div>
-                    )}
+                {/* Payment method note */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 16px',
+                    borderRadius: '10px',
+                    backgroundColor: '#EBF1F4',
+                    border: '1px solid #CAD9E0',
+                    marginBottom: '24px',
+                    fontSize: '12px',
+                    color: '#153D4B',
+                  }}
+                >
+                  <CreditCard size={18} color="#153D4B" />
+                  <div>
+                    <strong>Secure Card Payment</strong> — Mastercard & Local Ethiopian Debit Cards accepted.
+                    <div style={{ fontSize: '11px', color: '#5E6E75', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Lock size={11} /> 256-bit SSL Encrypted · PCI DSS Compliant · Visa/AmEx coming soon
+                    </div>
                   </div>
                 </div>
 
@@ -1124,14 +1025,29 @@ function ReservationContent() {
                 >
                   <ShieldCheck size={18} />
                   <span>
-                    {isSubmitting
-                      ? 'Processing...'
-                      : selectedPaymentProvider === 'CASH_ON_ARRIVAL'
-                      ? 'Confirm & Pay at Hotel'
-                      : `Proceed to Pay with ${selectedPaymentProvider === 'CBE_BIRR' ? 'CBE Birr' : selectedPaymentProvider}`}
+                    {isSubmitting ? 'Processing...' : 'Proceed to Secure Payment'}
                   </span>
                 </button>
               </div>
+
+              {bookingError && (
+                <div
+                  role="alert"
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    color: '#B91C1C',
+                    fontSize: '13.5px',
+                    fontWeight: 500,
+                    textAlign: 'center',
+                  }}
+                >
+                  {bookingError}
+                </div>
+              )}
             </form>
           )}
 
@@ -1262,15 +1178,6 @@ function ReservationContent() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                {paymentStatus !== 'SUCCESS' && (
-                  <button
-                    onClick={() => setIsPaymentModalOpen(true)}
-                    className="btn btn-primary"
-                    style={{ backgroundColor: '#00A36C' }}
-                  >
-                    <CreditCard size={16} /> Pay Online Now (Chapa / Telebirr / CBE / Skina)
-                  </button>
-                )}
                 <button onClick={() => window.print()} className="btn btn-outline">
                   <Printer size={16} /> Print Voucher
                 </button>

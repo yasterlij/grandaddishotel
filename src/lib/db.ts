@@ -1,4 +1,5 @@
-import { Pool, QueryResult, QueryResultRow } from 'pg';
+import { Pool } from 'pg';
+import type { QueryResult, QueryResultRow } from 'pg';
 
 const connectionString =
   process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
@@ -9,6 +10,8 @@ let pool: Pool;
 declare global {
   // eslint-disable-next-line no-var
   var _pgPool: Pool | undefined;
+  // eslint-disable-next-line no-var
+  var _pgInitPromise: Promise<void> | undefined;
 }
 
 if (!global._pgPool) {
@@ -21,7 +24,9 @@ if (!global._pgPool) {
 }
 pool = global._pgPool;
 
-let initPromise: Promise<void> | null = null;
+// Module-level reference to the shared init promise (kept on globalThis so
+// dev-mode HMR reloads don't re-run the DDL on every request).
+let initPromise: Promise<void> | null = global._pgInitPromise ?? null;
 
 export async function initDatabase(): Promise<void> {
   if (initPromise) return initPromise;
@@ -208,10 +213,17 @@ export async function initDatabase(): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_dining_menu_cat ON dining_menu (category);
       `);
     } catch (err) {
+      // Do NOT cache a failed init — otherwise every subsequent query would
+      // fail forever with "relation does not exist" until a restart. Reset the
+      // promise so the next query retries the bootstrap.
       console.error('Database initialization error:', err);
+      initPromise = null;
+      global._pgInitPromise = undefined;
+      throw err;
     }
   })();
 
+  global._pgInitPromise = initPromise;
   return initPromise;
 }
 
@@ -325,7 +337,7 @@ export async function getDbRooms(): Promise<DbRoom[]> {
       images: row.images || [],
       amenities: row.amenities || [],
       featured: row.featured !== false,
-      availableCount: Number(row.availableCount) || 1,
+      availableCount: Number(row.availableCount) || 0,
       aliases: row.aliases || [],
     }));
 
@@ -365,7 +377,8 @@ export async function getDbRoomBySlug(slug: string): Promise<DbRoom | null> {
         COUNT(r.id) FILTER (WHERE r.status = 'AVAILABLE') AS "availableCount"
       FROM room_types rt
       LEFT JOIN rooms r ON r."roomTypeId" = rt.id
-      WHERE rt.slug = $1 OR $1 = ANY(rt.aliases)
+      WHERE LOWER(rt.slug) = LOWER($1)
+        OR EXISTS (SELECT 1 FROM unnest(COALESCE(rt.aliases, ARRAY[]::TEXT[])) AS a WHERE LOWER(a) = LOWER($1))
       GROUP BY rt.id
       LIMIT 1;
     `,
@@ -390,7 +403,7 @@ export async function getDbRoomBySlug(slug: string): Promise<DbRoom | null> {
       images: row.images || [],
       amenities: row.amenities || [],
       featured: row.featured !== false,
-      availableCount: Number(row.availableCount) || 1,
+      availableCount: Number(row.availableCount) || 0,
       aliases: row.aliases || [],
     };
 

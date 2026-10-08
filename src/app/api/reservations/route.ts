@@ -1,11 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { query } from '@/lib/db';
-import { calculateStayNights } from '@/lib/dates';
+import pool, { query, getExchangeRate } from '@/lib/db';
+import { calculateStayNights, getHotelTodayDateStr, isIsoDateStr } from '@/lib/dates';
+import { requireAdmin } from '@/lib/auth';
+import { rateLimit, getClientIp, tooManyRequests } from '@/lib/rate-limit';
+import {
+  computeBookingTotals,
+  getPromoDiscountPercent,
+  ADDON_PRICES_USD,
+  type AddonUnitPrices,
+  type BookingAddons,
+} from '@/lib/booking-pricing';
+
+/** Payment providers accepted from the booking flow (mapped to DB enum). */
+const VALID_PROVIDERS: Record<string, string> = {
+  CHAPA: 'CHAPA',
+  TELEBIRR: 'TELEBIRR',
+  CBE_BIRR: 'CBE_BIRR',
+  CEB: 'CBE_BIRR',
+  CBE: 'CBE_BIRR',
+  SKINA: 'SKINA',
+  STRIPE: 'STRIPE',
+  CARD: 'SKINA',
+  CASH_ON_ARRIVAL: 'CASH_ON_ARRIVAL',
+  CASH: 'CASH_ON_ARRIVAL',
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function badRequest(error: string) {
+  return NextResponse.json({ success: false, error }, { status: 400 });
+}
+
+/** Generate a booking reference with enough entropy to avoid collisions. */
+function makeBookingRef(): string {
+  const datePrefix = new Date().toISOString().slice(0, 7).replace('-', '');
+  const suffix = crypto.randomInt(0, 2176782336).toString(36).toUpperCase().padStart(6, '0');
+  return `GAH-${datePrefix}-${suffix}`;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Basic abuse protection for the public booking endpoint.
+    const rl = rateLimit(`reservations:${getClientIp(req)}`, 10, 5 * 60 * 1000);
+    if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+
+    const body = await req.json().catch(() => ({}));
     const {
       roomId,
       roomSlug,
@@ -18,200 +58,223 @@ export async function POST(req: NextRequest) {
       guestPhone,
       specialRequests = '',
       addons = {},
-      totalAmount,
+      promoCode = '',
       currency = 'USD',
       paymentProvider = 'CASH_ON_ARRIVAL',
-      paymentStatus = 'PENDING',
+      // Audit fields written by the booking UI when the guest changes dates.
       isDateExtended = false,
       dateChangeNote = '',
     } = body;
 
-    if (!guestName || !guestEmail || !guestPhone || !checkIn || !checkOut) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required reservation fields' },
-        { status: 400 }
-      );
-    }
+    // NOTE: `totalAmount` and `paymentStatus` from the request body are
+    // deliberately IGNORED. Totals are computed server-side and new payments
+    // always start PENDING — only a verified gateway flow may mark them paid.
 
-    // 1. Resolve room_type
-    let roomTypeQuery = await query(
+    // ---------- 1. Validate input ----------
+    if (!guestName || !guestEmail || !guestPhone || !checkIn || !checkOut) {
+      return badRequest('Missing required reservation fields');
+    }
+    if (!isIsoDateStr(checkIn) || !isIsoDateStr(checkOut)) {
+      return badRequest('Check-in and check-out must be valid dates (YYYY-MM-DD)');
+    }
+    const nights = calculateStayNights(checkIn, checkOut);
+    if (nights < 1) {
+      return badRequest('Check-out date must be after the check-in date');
+    }
+    if (checkIn < getHotelTodayDateStr()) {
+      return badRequest('Check-in date cannot be in the past');
+    }
+    if (!EMAIL_RE.test(String(guestEmail).trim())) {
+      return badRequest('Please provide a valid email address');
+    }
+    const adultsCount = Math.floor(Number(adults));
+    const childrenCount = Math.floor(Number(children) || 0);
+    if (!Number.isFinite(adultsCount) || adultsCount < 1 || adultsCount > 8) {
+      return badRequest('Adults must be between 1 and 8');
+    }
+    if (!Number.isFinite(childrenCount) || childrenCount < 0 || childrenCount > 6) {
+      return badRequest('Children must be between 0 and 6');
+    }
+    const cur = currency === 'ETB' ? 'ETB' : 'USD';
+    const mappedProvider =
+      VALID_PROVIDERS[String(paymentProvider).toUpperCase()] || 'CASH_ON_ARRIVAL';
+
+    // ---------- 2. Resolve room type (no silent fallback) ----------
+    const roomTypeRes = await query(
       `SELECT * FROM room_types WHERE id = $1 OR slug = $2 LIMIT 1`,
       [roomId, roomSlug || '']
     );
-
-    if (roomTypeQuery.rows.length === 0) {
-      // Fallback to first available room type
-      roomTypeQuery = await query(`SELECT * FROM room_types LIMIT 1`);
-    }
-
-    if (roomTypeQuery.rows.length === 0) {
+    if (roomTypeRes.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'No room types available in database' },
-        { status: 400 }
+        { success: false, error: 'Room not found' },
+        { status: 404 }
       );
     }
+    const roomType = roomTypeRes.rows[0];
 
-    const roomType = roomTypeQuery.rows[0];
+    // ---------- 3. Server-authoritative pricing ----------
+    const discountPercent = getPromoDiscountPercent(promoCode);
+    const exchangeRate = cur === 'ETB' ? await getExchangeRate() : 1;
+    const addonUnitPrices: AddonUnitPrices =
+      cur === 'ETB'
+        ? {
+            airportShuttle: ADDON_PRICES_USD.airportShuttle * exchangeRate,
+            breakfastPerAdultPerNight:
+              ADDON_PRICES_USD.breakfastPerAdultPerNight * exchangeRate,
+            spaTreatment: ADDON_PRICES_USD.spaTreatment * exchangeRate,
+            coffeeCeremonyPerAdult: ADDON_PRICES_USD.coffeeCeremonyPerAdult * exchangeRate,
+          }
+        : ADDON_PRICES_USD;
 
-    // 2. Find an available physical room for this room type
-    const roomQuery = await query(
-      `SELECT id FROM rooms WHERE "roomTypeId" = $1 AND status = 'AVAILABLE' LIMIT 1`,
-      [roomType.id]
-    );
-    const physicalRoomId = roomQuery.rows.length > 0 ? roomQuery.rows[0].id : null;
+    const pricePerNight =
+      cur === 'ETB' ? Number(roomType.basePriceETB) : Number(roomType.basePriceUSD);
+    const totals = computeBookingTotals({
+      pricePerNight,
+      nights,
+      adults: adultsCount,
+      addons: addons as BookingAddons,
+      discountPercent,
+      addonUnitPrices,
+    });
 
-    // 3. Upsert guest
-    const nameParts = guestName.trim().split(' ');
+    // ---------- 4. Persist atomically (transaction) ----------
+    const nameParts = String(guestName).trim().split(' ');
     const firstName = nameParts[0] || 'Guest';
     const lastName = nameParts.slice(1).join(' ') || 'Customer';
+    const email = String(guestEmail).toLowerCase().trim();
+    const phone = String(guestPhone).trim();
 
-    let guestId: string;
-    const existingGuest = await query(
-      `SELECT id FROM guests WHERE email = $1 LIMIT 1`,
-      [guestEmail.toLowerCase().trim()]
-    );
+    const isExtendedFlag = Boolean(isDateExtended);
+    const finalNote = dateChangeNote || null;
 
-    if (existingGuest.rows.length > 0) {
-      guestId = existingGuest.rows[0].id;
-      // Update phone
-      await query(
-        `UPDATE guests SET "phoneNumber" = $1, "updatedAt" = NOW() WHERE id = $2`,
-        [guestPhone.trim(), guestId]
+    const client = await pool.connect();
+    let bookingRef = '';
+    let reservationId = '';
+    let paymentId = '';
+    let txRef = '';
+    let physicalRoomId: string | null = null;
+
+    try {
+      await client.query('BEGIN');
+
+      // 4a. Does this room type track physical rooms at all?
+      const roomCountRes = await client.query(
+        `SELECT COUNT(*)::int AS count FROM rooms WHERE "roomTypeId" = $1`,
+        [roomType.id]
       );
-    } else {
-      guestId = crypto.randomUUID();
-      await query(
+      const tracksPhysicalRooms = roomCountRes.rows[0].count > 0;
+
+      if (tracksPhysicalRooms) {
+        // Pick a physical room that is AVAILABLE and has no overlapping
+        // active reservation. SKIP LOCKED keeps concurrent bookings from
+        // blocking each other (and from grabbing the same room).
+        const roomRes = await client.query(
+          `SELECT id FROM rooms
+           WHERE "roomTypeId" = $1 AND status = 'AVAILABLE'
+             AND id NOT IN (
+               SELECT COALESCE(r."roomId", '')
+               FROM reservations r
+               WHERE r."roomTypeId" = $1
+                 AND r.status IN ('PENDING', 'CONFIRMED', 'CHECKED_IN')
+                 AND r."checkInDate" < $3::date
+                 AND r."checkOutDate" > $2::date
+             )
+           ORDER BY "roomNumber"
+           FOR UPDATE SKIP LOCKED
+           LIMIT 1`,
+          [roomType.id, checkIn, checkOut]
+        );
+        if (roomRes.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'No rooms of this type are available for the selected dates. Please choose different dates or another room type.',
+            },
+            { status: 409 }
+          );
+        }
+        physicalRoomId = roomRes.rows[0].id;
+      }
+
+      // 4b. Upsert guest atomically (avoids the unique-email race).
+      const guestRes = await client.query(
         `INSERT INTO guests (id, "firstName", "lastName", email, "phoneNumber", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
-        [
-          guestId,
-          firstName,
-          lastName,
-          guestEmail.toLowerCase().trim(),
-          guestPhone.trim(),
-        ]
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (email) DO UPDATE
+           SET "phoneNumber" = EXCLUDED."phoneNumber", "updatedAt" = NOW()
+         RETURNING id`,
+        [crypto.randomUUID(), firstName, lastName, email, phone]
       );
+      const guestId = guestRes.rows[0].id;
+
+      // 4c. Insert reservation (retry on the rare bookingRef collision).
+      for (let attempt = 0; attempt < 5; attempt++) {
+        bookingRef = makeBookingRef();
+        reservationId = crypto.randomUUID();
+        try {
+          await client.query(
+            `INSERT INTO reservations (
+              id, "bookingRef", "checkInDate", "checkOutDate",
+              "adultsCount", "childrenCount", status, currency,
+              subtotal, "taxAmount", "totalAmount", "specialRequests",
+              "guestId", "roomTypeId", "roomId",
+              "isDateExtended", "dateChangeNote",
+              "createdAt", "updatedAt"
+            ) VALUES (
+              $1, $2, $3::date, $4::date,
+              $5, $6, 'CONFIRMED', $7,
+              $8, $9, $10, $11,
+              $12, $13, $14,
+              $15, $16,
+              NOW(), NOW()
+            )`,
+            [
+              reservationId,
+              bookingRef,
+              checkIn,
+              checkOut,
+              adultsCount,
+              childrenCount,
+              cur,
+              totals.subtotal,
+              totals.tax,
+              totals.grandTotal,
+              specialRequests,
+              guestId,
+              roomType.id,
+              physicalRoomId,
+              isExtendedFlag,
+              finalNote,
+            ]
+          );
+          break;
+        } catch (err: any) {
+          if (err?.code === '23505' && attempt < 4) continue; // unique collision → retry
+          throw err;
+        }
+      }
+
+      // 4d. Payment record — always starts PENDING, never client-controlled.
+      paymentId = crypto.randomUUID();
+      txRef = `TX-${mappedProvider}-${bookingRef.replace(/[^A-Za-z0-9]/g, '')}-${Date.now()
+        .toString()
+        .slice(-4)}`;
+      await client.query(
+        `INSERT INTO payments (
+          id, "txRef", provider, status, amount, currency,
+          "reservationId", "paidAt", "createdAt", "updatedAt"
+        ) VALUES ($1, $2, $3, 'PENDING', $4, $5, $6, NULL, NOW(), NOW())`,
+        [paymentId, txRef, mappedProvider, totals.grandTotal, cur, reservationId]
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
     }
-
-    // 4. Generate unique Booking Reference
-    const datePrefix = new Date().toISOString().slice(0, 7).replace('-', '');
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const bookingRef = `GAH-${datePrefix}-${randomSuffix}`;
-
-    // 5. Calculate amounts with exact nights arithmetic
-    const nights = calculateStayNights(checkIn, checkOut);
-    const pricePerNight = currency === 'ETB' ? Number(roomType.basePriceETB) : Number(roomType.basePriceUSD);
-    const roomSubtotal = Number((pricePerNight * nights).toFixed(2));
-
-    let addonsTotal = 0;
-    if (addons && typeof addons === 'object') {
-      if (addons.airportShuttle) addonsTotal += 15;
-      if (addons.breakfast) addonsTotal += 12 * (Number(adults) || 1) * nights;
-      if (addons.spaTreatment) addonsTotal += 65;
-      if (addons.coffeeCeremony) addonsTotal += 8 * (Number(adults) || 1);
-    }
-
-    const calculatedSubtotal = Number((roomSubtotal + addonsTotal).toFixed(2));
-    const computedTax = Number((calculatedSubtotal * 0.15).toFixed(2));
-    const computedGrandTotal = Number((calculatedSubtotal + computedTax).toFixed(2));
-
-    const finalTotal = totalAmount && Number(totalAmount) > 0 ? Number(Number(totalAmount).toFixed(2)) : computedGrandTotal;
-    const finalSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : Number((finalTotal / 1.15).toFixed(2));
-    const finalTax = Number((finalTotal - finalSubtotal).toFixed(2));
-
-    const reservationId = crypto.randomUUID();
-
-    const isExtendedFlag = Boolean(isDateExtended || nights > 1);
-    const finalNote = dateChangeNote || (nights > 1 ? `Extended stay of ${nights} nights` : null);
-
-    // 6. Insert Reservation into PostgreSQL
-    await query(
-      `INSERT INTO reservations (
-        id,
-        "bookingRef",
-        "checkInDate",
-        "checkOutDate",
-        "adultsCount",
-        "childrenCount",
-        status,
-        currency,
-        subtotal,
-        "taxAmount",
-        "totalAmount",
-        "specialRequests",
-        "guestId",
-        "roomTypeId",
-        "roomId",
-        "isDateExtended",
-        "dateChangeNote",
-        "createdAt",
-        "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'CONFIRMED', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW())`,
-      [
-        reservationId,
-        bookingRef,
-        checkIn,
-        checkOut,
-        adults,
-        children,
-        currency === 'ETB' ? 'ETB' : 'USD',
-        finalSubtotal,
-        finalTax,
-        finalTotal,
-        specialRequests,
-        guestId,
-        roomType.id,
-        physicalRoomId,
-        isExtendedFlag,
-        finalNote,
-      ]
-    );
-
-    // 7. Insert Payment record into PostgreSQL
-    const validProviders: Record<string, string> = {
-      CHAPA: 'CHAPA',
-      TELEBIRR: 'TELEBIRR',
-      CBE_BIRR: 'CBE_BIRR',
-      CEB: 'CBE_BIRR',
-      CBE: 'CBE_BIRR',
-      SKINA: 'SKINA',
-      STRIPE: 'STRIPE',
-      CARD: 'SKINA',
-      CASH_ON_ARRIVAL: 'CASH_ON_ARRIVAL',
-      CASH: 'CASH_ON_ARRIVAL',
-    };
-
-    const mappedProvider =
-      validProviders[String(paymentProvider).toUpperCase()] || 'CASH_ON_ARRIVAL';
-    const isPaid = paymentStatus === 'SUCCESS';
-
-    const paymentId = crypto.randomUUID();
-    const txRef = `TX-${mappedProvider}-${bookingRef.replace(/[^A-Za-z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
-
-    await query(
-      `INSERT INTO payments (
-        id,
-        "txRef",
-        provider,
-        status,
-        amount,
-        currency,
-        "reservationId",
-        "paidAt",
-        "createdAt",
-        "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())`,
-      [
-        paymentId,
-        txRef,
-        mappedProvider,
-        isPaid ? 'SUCCESS' : 'PENDING',
-        finalTotal,
-        currency === 'ETB' ? 'ETB' : 'USD',
-        reservationId,
-        isPaid ? new Date() : null,
-      ]
-    );
 
     return NextResponse.json({
       success: true,
@@ -221,31 +284,35 @@ export async function POST(req: NextRequest) {
       paymentId,
       txRef,
       paymentProvider: mappedProvider,
-      paymentStatus: isPaid ? 'SUCCESS' : 'PENDING',
+      paymentStatus: 'PENDING',
       roomName: roomType.name,
       checkIn,
       checkOut,
       nights,
-      totalAmount: finalTotal,
-      currency,
+      totalAmount: totals.grandTotal,
+      currency: cur,
+      discountPercent,
       isDateExtended: isExtendedFlag,
       dateChangeNote: finalNote,
       guest: {
         name: `${firstName} ${lastName}`,
-        email: guestEmail,
-        phone: guestPhone,
+        email,
+        phone,
       },
     });
   } catch (error: any) {
     console.error('Error creating reservation in PostgreSQL:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Database insert error' },
+      { success: false, error: 'Could not create the reservation. Please try again.' },
       { status: 500 }
     );
   }
 }
 
 export async function GET(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(req.url);
     const bookingRef = searchParams.get('bookingRef');
@@ -311,7 +378,7 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('Error querying reservations:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Database error' },
+      { success: false, error: 'Database error' },
       { status: 500 }
     );
   }

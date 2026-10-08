@@ -5,10 +5,13 @@ export async function GET() {
   const session = await getAdminSession();
 
   if (!session) {
-    return NextResponse.json({
-      success: false,
-      authenticated: false,
-    });
+    return NextResponse.json(
+      {
+        success: false,
+        authenticated: false,
+      },
+      { status: 401 }
+    );
   }
 
   return NextResponse.json({

@@ -3,25 +3,33 @@ import { getSkinaConfig, SKINA_TEST_CARDS } from '@/lib/skina';
 import { PAYMENT_PROVIDERS } from '@/lib/payment-types';
 
 export async function GET() {
-  const skina = getSkinaConfig();
+  // Report the gateway state without crashing when the secret is absent
+  // (production fails closed elsewhere — this endpoint only describes config).
+  let skina: ReturnType<typeof getSkinaConfig> | null = null;
+  try {
+    skina = getSkinaConfig();
+  } catch {
+    skina = null;
+  }
 
   return NextResponse.json({
     success: true,
     defaultProvider: 'SKINA',
     providers: PAYMENT_PROVIDERS,
     skina: {
-      baseUrl: skina.baseUrl,
-      isSandbox: skina.isSandbox,
-      hasSecretConfigured: Boolean(skina.secretKey),
-      testCards: SKINA_TEST_CARDS,
+      baseUrl: skina?.baseUrl || '',
+      isSandbox: skina?.isSandbox ?? true,
+      hasSecretConfigured: Boolean(skina?.secretKey),
+      testCards: skina?.isSandbox ? SKINA_TEST_CARDS : [],
       acceptedBrands: [
-        'Visa (Credit & Debit)',
         'Mastercard (Credit & Debit)',
-        'American Express',
-        'UnionPay',
-        'Discover',
         'Ethiopian Local Cards (EthSwitch)',
-        'Skina Digital Wallet',
+      ],
+      unsupportedBrands: [
+        'Visa — coming soon',
+        'American Express — coming soon',
+        'UnionPay — coming soon',
+        'Discover — coming soon',
       ],
     },
   });

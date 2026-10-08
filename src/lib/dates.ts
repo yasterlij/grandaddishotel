@@ -10,6 +10,30 @@ export function getTodayDateStr(): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * "Today" in the hotel's business timezone (Addis Ababa, UTC+3), regardless of
+ * the server's local timezone. Used for check-in validation so guests are never
+ * rejected (or allowed) based on where the server happens to run.
+ */
+export function getHotelTodayDateStr(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Addis_Ababa',
+  }).format(new Date());
+}
+
+/** True when the string is a valid ISO calendar date (YYYY-MM-DD). */
+export function isIsoDateStr(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return (
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === m - 1 &&
+    date.getUTCDate() === d
+  );
+}
+
 export function addDays(dateStr: string, days: number): string {
   if (!dateStr) return '';
   const parts = dateStr.split('-').map(Number);

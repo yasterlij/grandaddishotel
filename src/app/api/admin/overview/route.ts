@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getDbStats, query } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const stats = await getDbStats();
 
@@ -28,9 +31,18 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       database: {
-        name: 'grand_addis_db',
+        // Derived from the configured connection string — never a hardcoded host.
+        name: (() => {
+          try {
+            const url = new URL(
+              process.env.DATABASE_URL || 'postgresql://localhost:5432/grand_addis_db'
+            );
+            return url.pathname.replace(/^\//, '');
+          } catch {
+            return 'postgres';
+          }
+        })(),
         status: 'CONNECTED',
-        host: 'localhost:5432',
       },
       stats,
       recent: {
@@ -43,7 +55,7 @@ export async function GET() {
   } catch (error: any) {
     console.error('Admin overview error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Database query error' },
+      { success: false, error: 'Database query error' },
       { status: 500 }
     );
   }

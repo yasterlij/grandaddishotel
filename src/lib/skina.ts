@@ -9,15 +9,25 @@ export interface SkinaConfig {
 }
 
 export function getSkinaConfig(): SkinaConfig {
-  const secretKey =
-    process.env.SIKINA_SECRET_KEY ||
-    process.env.SKINA_SECRET_KEY ||
-    'test_sk_dfd0211d5b9fe4c153bf00abad27710683f770d0e6d4220ca2f990410a3520e0';
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // The secret key comes from the environment only — never from source.
+  // (Historically a sandbox key was committed here as a fallback, which silently
+  // ran production payments against sandbox credentials.)
+  const secretKey = process.env.SIKINA_SECRET_KEY || process.env.SKINA_SECRET_KEY || '';
+
+  if (isProduction && !secretKey) {
+    throw new Error(
+      'SIKINA_SECRET_KEY is not configured — payment initialization is disabled.'
+    );
+  }
 
   const baseUrl =
     process.env.SIKINA_BASE_URL ||
     process.env.SKINA_BASE_URL ||
     'https://sandbox.sikinapay.com';
+
+  const explicitSandbox = process.env.SIKINA_SANDBOX === 'true';
 
   return {
     secretKey,
@@ -26,7 +36,13 @@ export function getSkinaConfig(): SkinaConfig {
     successRedirectUrl: process.env.SIKINA_SUCCESS_REDIRECT_URL || '/your-booking-detail',
     failedRedirectUrl: process.env.SIKINA_FAILED_REDIRECT_URL || '/rooms-reservation',
     appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:3050',
-    isSandbox: secretKey.includes('test_') || baseUrl.includes('sandbox'),
+    // Sandbox when explicitly flagged, when the key is a test key, when pointed
+    // at the sandbox host, or (dev only) when no key is configured at all.
+    isSandbox:
+      explicitSandbox ||
+      secretKey.includes('test_') ||
+      baseUrl.includes('sandbox') ||
+      (!isProduction && !secretKey),
   };
 }
 
@@ -37,6 +53,9 @@ export type CardBrand =
   | 'UnionPay'
   | 'Discover'
   | 'Local Debit Card';
+
+/** Card brands SikinaPay currently processes */
+export const SKINA_SUPPORTED_BRANDS: CardBrand[] = ['Mastercard', 'Local Debit Card'];
 
 export interface CardBrandMeta {
   brand: CardBrand;
@@ -118,16 +137,6 @@ export function formatCardNumber(value: string): string {
 
 export const SKINA_TEST_CARDS = [
   {
-    brand: 'Visa',
-    number: '4242 4242 4242 4242',
-    expiry: '12/28',
-    cvc: '888',
-    label: 'Visa Test',
-    tag: 'Global Credit/Debit',
-    color: '#1A1F71',
-    bg: '#EBF0FF',
-  },
-  {
     brand: 'Mastercard',
     number: '5555 5555 5555 4444',
     expiry: '11/27',
@@ -136,26 +145,6 @@ export const SKINA_TEST_CARDS = [
     tag: 'Global Credit/Debit',
     color: '#EB001B',
     bg: '#FFF0F0',
-  },
-  {
-    brand: 'American Express',
-    number: '3782 822463 10005',
-    expiry: '10/26',
-    cvc: '8888',
-    label: 'AmEx Test',
-    tag: 'Corporate & Travel',
-    color: '#006FCF',
-    bg: '#EEF7FF',
-  },
-  {
-    brand: 'UnionPay',
-    number: '6221 2688 8888 8888',
-    expiry: '08/29',
-    cvc: '622',
-    label: 'UnionPay Test',
-    tag: 'Intl & Regional',
-    color: '#007B80',
-    bg: '#E6F8F8',
   },
   {
     brand: 'Local Debit Card',

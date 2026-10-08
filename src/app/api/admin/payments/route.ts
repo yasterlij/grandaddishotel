@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
+import { confirmPaymentRecord, type PaymentTransitionStatus } from '@/lib/payments';
 
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const res = await query(`
       SELECT 
@@ -42,41 +46,50 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
-    const { id, status, provider } = await req.json();
+    const { id, status } = await req.json();
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Payment ID is required' }, { status: 400 });
     }
 
-    const isSuccess = status === 'SUCCESS';
-    await query(
-      `UPDATE payments SET
-        status = COALESCE($1::"PaymentStatus", status),
-        provider = COALESCE($2::"PaymentProvider", provider),
-        "paidAt" = CASE WHEN $4 = true THEN NOW() ELSE "paidAt" END,
-        "updatedAt" = NOW()
-      WHERE id = $3`,
-      [status || null, provider || null, id, isSuccess]
-    );
-
-    // If status is marked SUCCESS, also confirm the linked reservation
-    if (status === 'SUCCESS') {
-      const p = await query(`SELECT "reservationId" FROM payments WHERE id = $1`, [id]);
-      if (p.rows.length > 0 && p.rows[0].reservationId) {
-        await query(`UPDATE reservations SET status = 'CONFIRMED', "updatedAt" = NOW() WHERE id = $1`, [
-          p.rows[0].reservationId,
-        ]);
-      }
+    const allowed: PaymentTransitionStatus[] = ['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED'];
+    if (!allowed.includes(status)) {
+      return NextResponse.json(
+        { success: false, error: `Status must be one of: ${allowed.join(', ')}` },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ success: true, message: 'Payment record updated successfully' });
+    // Shared transition logic: keeps the linked reservation in sync
+    // (SUCCESS → CONFIRMED, REFUNDED → CANCELLED) and refuses to mutate
+    // payments that are already in a terminal state.
+    const { payment, reservationUpdated } = await confirmPaymentRecord({
+      paymentId: id,
+      status,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Payment record updated successfully',
+      payment,
+      reservationUpdated,
+    });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const statusCode = error?.statusCode || 500;
+    if (statusCode === 500) console.error('Error updating payment:', error);
+    return NextResponse.json(
+      { success: false, error: statusCode === 500 ? 'Failed to update payment' : error.message },
+      { status: statusCode }
+    );
   }
 }
 
 export async function DELETE(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

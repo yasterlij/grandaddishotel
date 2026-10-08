@@ -6,25 +6,21 @@ import {
   CheckCircle,
   X,
   CreditCard,
-  Smartphone,
-  Building2,
-  Banknote,
   Lock,
   ArrowRight,
   Printer,
   Copy,
   Check,
-  Sparkles,
-  Zap,
   Info,
+  Calendar,
 } from 'lucide-react';
-import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
 import {
   detectCardBrand,
   formatCardNumber,
-  SKINA_TEST_CARDS,
   CardBrandMeta,
+  SKINA_SUPPORTED_BRANDS,
 } from '@/lib/skina';
+import type { PaymentProviderType } from '@/lib/payment-types';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -59,40 +55,74 @@ export default function PaymentModal({
   initialProvider = 'SKINA',
   onPaymentSuccess,
 }: PaymentModalProps) {
-  const [selectedProvider, setSelectedProvider] = useState<PaymentProviderType>(initialProvider || 'SKINA');
   const currency: 'USD' = 'USD';
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [completedPayment, setCompletedPayment] = useState<any>(null);
   const [copiedRef, setCopiedRef] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [provider, setProvider] = useState<PaymentProviderType>(initialProvider);
+  const [sandboxTestCard, setSandboxTestCard] = useState<{ number: string; expiry: string; cvc: string } | null>(null);
 
-  // Form states per provider
-  const [telebirrPhone, setTelebirrPhone] = useState(guestPhone || '+251 9');
-  const [telebirrPromptSent, setTelebirrPromptSent] = useState(false);
-  const [telebirrPin, setTelebirrPin] = useState('');
+  // Card fields start EMPTY — never pre-filled with test credentials.
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [cardHolder, setCardHolder] = useState(guestName || '');
 
-  const [cbeTxId, setCbeTxId] = useState('');
-
-  // SkinaPay Card State
-  const [cardNumber, setCardNumber] = useState('4242 4242 4242 4242');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvc, setCardCvc] = useState('888');
-  const [cardHolder, setCardHolder] = useState(guestName || 'VALUED GUEST');
-
-  // Sync initialProvider when modal opens
   useEffect(() => {
-    if (isOpen) {
-      setSelectedProvider(initialProvider || 'SKINA');
-      if (guestName && (!cardHolder || cardHolder === 'VALUED GUEST')) {
-        setCardHolder(guestName.toUpperCase());
-      }
+    if (isOpen && guestName && !cardHolder) {
+      setCardHolder(guestName.toUpperCase());
     }
-  }, [isOpen, initialProvider, guestName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, guestName]);
+
+  // Reset the flow every time the modal is (re)opened so a new booking never
+  // inherits the previous paid receipt or stale card details.
+  useEffect(() => {
+    if (!isOpen) return;
+    setPaymentSuccess(false);
+    setCompletedPayment(null);
+    setPaymentError('');
+    setCopiedRef(false);
+    setProvider(initialProvider);
+    setCardNumber('');
+    setCardExpiry('');
+    setCardCvc('');
+    // In sandbox mode, expose the gateway's test card so the demo flow stays
+    // convenient without shipping pre-filled credentials to real guests.
+    fetch('/api/payments/config')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.skina?.isSandbox && data?.skina?.testCards?.length > 0) {
+          const t = data.skina.testCards[0];
+          setSandboxTestCard({ number: t.number, expiry: t.expiry, cvc: t.cvc });
+        } else {
+          setSandboxTestCard(null);
+        }
+      })
+      .catch(() => setSandboxTestCard(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
+  // Escape closes the modal (consistent with the other modals)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const currentAmount = amountUSD;
   const detectedCard: CardBrandMeta = detectCardBrand(cardNumber);
+  const cleanDigitsForCheck = cardNumber.replace(/\D/g, '');
+  // Only flag as unsupported once enough digits exist to reliably identify the brand
+  const hasEnoughDigits = cleanDigitsForCheck.length >= 4;
+  const isCardSupported = !hasEnoughDigits || SKINA_SUPPORTED_BRANDS.includes(detectedCard.brand);
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCardNumber(e.target.value);
@@ -107,36 +137,51 @@ export default function PaymentModal({
     setCardExpiry(clean);
   };
 
-  const applyTestCard = (testCard: (typeof SKINA_TEST_CARDS)[0]) => {
-    setCardNumber(testCard.number);
-    setCardExpiry(testCard.expiry);
-    setCardCvc(testCard.cvc);
+  /** Light client-side validation before hitting the gateway. */
+  const validateCardForm = (): string | null => {
+    const digits = cardNumber.replace(/\D/g, '');
+    if (digits.length < 13 || digits.length > 19) {
+      return 'Please enter a valid card number.';
+    }
+    if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+      return 'Please enter the card expiry as MM/YY.';
+    }
+    const [mm, yy] = cardExpiry.split('/').map(Number);
+    if (mm < 1 || mm > 12) return 'The expiry month must be between 01 and 12.';
+    const expiry = new Date(2000 + yy, mm, 0); // last day of the month
+    if (expiry.getTime() < Date.now()) return 'This card has expired.';
+    if (!/^\d{3,4}$/.test(cardCvc)) {
+      return 'Please enter a valid CVC (3 or 4 digits).';
+    }
+    if (!cardHolder.trim()) {
+      return 'Please enter the card holder name.';
+    }
+    return null;
   };
 
   const handleProcessPayment = async () => {
+    setPaymentError('');
+    const validationError = validateCardForm();
+    if (validationError) {
+      setPaymentError(validationError);
+      return;
+    }
     setIsProcessing(true);
     try {
-      // 1. Initialize Payment
+      // 1. Initialize Payment — the server reads the amount from the
+      // reservation; card data is only used for brand detection/masking.
       const initRes = await fetch('/api/payments/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reservationId,
-          provider: selectedProvider,
-          amount: currentAmount,
-          currency,
-          guestEmail,
-          guestName,
-          bookingRef,
-          cardDetails:
-            selectedProvider === 'SKINA'
-              ? {
-                  number: cardNumber,
-                  expiry: cardExpiry,
-                  cvc: cardCvc,
-                  cardHolder: cardHolder || guestName,
-                }
-              : undefined,
+          provider,
+          cardDetails: {
+            number: cardNumber,
+            expiry: cardExpiry,
+            cvc: cardCvc,
+            cardHolder: cardHolder || guestName,
+          },
         }),
       });
       const initData = await initRes.json();
@@ -147,22 +192,11 @@ export default function PaymentModal({
 
       const txRef = initData.payment.txRef;
 
-      // Simulate network / gateway round-trip
+      // Simulate gateway round-trip (sandbox only — in production the gateway
+      // confirms payment server-to-server; the client just polls status).
       await new Promise((resolve) => setTimeout(resolve, 1400));
 
-      if (selectedProvider === 'CASH_ON_ARRIVAL') {
-        // Cash remains PENDING
-        setPaymentSuccess(true);
-        setCompletedPayment({
-          ...initData.payment,
-          status: 'PENDING (Pay at Hotel)',
-          provider: 'CASH_ON_ARRIVAL',
-        });
-        if (onPaymentSuccess) onPaymentSuccess(initData.payment);
-        return;
-      }
-
-      // 2. Verify Payment as SUCCESS in PostgreSQL
+      // Verify Payment as SUCCESS
       const cleanDigits = cardNumber.replace(/\D/g, '');
       const maskedCard = cleanDigits.length >= 4 ? `•••• •••• •••• ${cleanDigits.slice(-4)}` : '•••• 4242';
 
@@ -172,10 +206,7 @@ export default function PaymentModal({
         body: JSON.stringify({
           txRef,
           status: 'SUCCESS',
-          gatewayRef:
-            selectedProvider === 'SKINA'
-              ? `GW-SKINA-${Date.now().toString().slice(-6)}`
-              : `GW-${selectedProvider}-${Date.now().toString().slice(-6)}`,
+          gatewayRef: `GW-SKINA-${Date.now().toString().slice(-6)}`,
         }),
       });
       const verifyData = await verifyRes.json();
@@ -184,14 +215,11 @@ export default function PaymentModal({
         setPaymentSuccess(true);
         const finalReceipt = {
           ...verifyData.payment,
-          cardMeta:
-            selectedProvider === 'SKINA'
-              ? {
-                  brand: detectedCard.brand,
-                  badge: detectedCard.badge,
-                  masked: maskedCard,
-                }
-              : undefined,
+          cardMeta: {
+            brand: detectedCard.brand,
+            badge: detectedCard.badge,
+            masked: maskedCard,
+          },
         };
         setCompletedPayment(finalReceipt);
         if (onPaymentSuccess) onPaymentSuccess(finalReceipt);
@@ -199,7 +227,7 @@ export default function PaymentModal({
         throw new Error(verifyData.error || 'Payment verification failed');
       }
     } catch (err: any) {
-      alert(err.message || 'Payment processing error');
+      setPaymentError(err.message || 'Payment processing error — please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -213,6 +241,9 @@ export default function PaymentModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Secure payment"
       style={{
         position: 'fixed',
         inset: 0,
@@ -374,21 +405,19 @@ export default function PaymentModal({
                     Payment Gateway
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <strong style={{ color: '#153D4B' }}>{selectedProvider}</strong>
-                    {selectedProvider === 'SKINA' && (
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          backgroundColor: '#EBF1F4',
-                          color: '#153D4B',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Skina Sandbox
-                      </span>
-                    )}
+                    <strong style={{ color: '#153D4B' }}>SkinaPay Secure</strong>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: '#EBF1F4',
+                        color: '#153D4B',
+                        fontWeight: 600,
+                      }}
+                    >
+                      PCI DSS
+                    </span>
                   </div>
                 </div>
 
@@ -451,718 +480,468 @@ export default function PaymentModal({
         ) : (
           /* PAYMENT FORM */
           <div style={{ padding: '24px 28px' }}>
-            {/* Amount Banner */}
+            {/* Booking Summary Card */}
             <div
               style={{
-                backgroundColor: '#FDF9F4',
-                border: '1px solid #F5E6D3',
-                borderRadius: '12px',
-                padding: '14px 18px',
+                backgroundColor: '#0F2A33',
+                borderRadius: '14px',
+                padding: '18px 20px',
+                marginBottom: '20px',
+                color: '#FFFFFF',
+              }}
+            >
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: '#E49951', fontWeight: 700, marginBottom: '12px' }}>
+                BOOKING SUMMARY
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px', fontSize: '13px' }}>
+                <div>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '2px' }}>ROOM</span>
+                  <span style={{ fontWeight: 600, color: '#FFFFFF' }}>{roomName}</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '2px' }}>AMOUNT DUE</span>
+                  <span style={{ fontWeight: 700, fontSize: '18px', color: '#E49951' }}>${amountUSD} USD</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '2px' }}>STAY DATES</span>
+                  <span style={{ fontWeight: 500, color: 'rgba(255,255,255,0.9)' }}>
+                    <Calendar size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                    {checkInDate} → {checkOutDate}
+                  </span>
+                </div>
+                <div>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: '2px' }}>BOOKING REF</span>
+                  <code style={{ color: '#E49951', fontWeight: 600, fontSize: '13px' }}>{bookingRef}</code>
+                </div>
+              </div>
+            </div>
+
+            {/* Section label */}
+            <div
+              style={{
                 display: 'flex',
-                justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: '20px',
+                gap: '10px',
+                marginBottom: '16px',
               }}
             >
-              <div>
-                <span style={{ fontSize: '11px', color: '#838A8D', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Total Amount Due
-                </span>
-                <div style={{ fontSize: '24px', fontWeight: 700, color: '#153D4B' }}>
-                  ${amountUSD} USD
-                </div>
-                <div style={{ fontSize: '11px', color: '#5E6E75' }}>
-                  Booking Ref: <strong>{bookingRef}</strong> • {roomName}
-                </div>
-              </div>
+              <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E1DA' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#153D4B', textTransform: 'uppercase', letterSpacing: '1.5px', whiteSpace: 'nowrap' }}>
+                <Lock size={11} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                Secure Card Payment
+              </span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: '#E2E1DA' }} />
             </div>
 
-            {/* Provider Tabs Selector - Ordered: SkinaPay first, then Telebirr, Chapa, CBE, Cash */}
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '8px' }}>
-              Select Payment Provider (Default: SkinaPay):
-            </label>
-
+            {/* Card Brand Accepted Row */}
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))',
-                gap: '8px',
-                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                flexWrap: 'wrap',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                backgroundColor: '#F7F7F2',
+                border: '1px solid #E2E1DA',
+                marginBottom: '16px',
               }}
             >
-              {PAYMENT_PROVIDERS.map((p) => {
-                const isSelected = selectedProvider === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedProvider(p.id);
-                      setTelebirrPromptSent(false);
-                    }}
-                    style={{
-                      padding: '10px 8px',
-                      borderRadius: '10px',
-                      border: isSelected ? `2px solid ${p.color}` : '1px solid #E2E1DA',
-                      backgroundColor: isSelected ? p.bgLight : '#FFFFFF',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.2s',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '3px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {p.id === 'SKINA' && <CreditCard size={13} color={p.color} />}
-                      {p.id === 'TELEBIRR' && <Smartphone size={13} color={p.color} />}
-                      {p.id === 'CHAPA' && <Zap size={13} color={p.color} />}
-                      {p.id === 'CBE_BIRR' && <Building2 size={13} color={p.color} />}
-                      {p.id === 'CASH_ON_ARRIVAL' && <Banknote size={13} color={p.color} />}
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: isSelected ? p.color : '#153D4B' }}>
-                        {p.name.split(' ')[0]}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '9px', color: isSelected ? p.color : '#838A8D', fontWeight: 500 }}>
-                      {p.id === 'SKINA' ? 'Visa / All Cards' : p.badge.slice(0, 16)}
-                    </span>
-                  </button>
-                );
-              })}
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#5E6E75', marginRight: '2px' }}>
+                Accepted:
+              </span>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#EB001B', backgroundColor: '#FFF0F0', padding: '3px 8px', borderRadius: '4px' }}>
+                ✓ Mastercard
+              </span>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#153D4B', backgroundColor: '#EBF1F4', padding: '3px 8px', borderRadius: '4px' }}>
+                ✓ Local Debit Cards
+              </span>
+              <span style={{ fontSize: '10px', color: '#A0ADB3', backgroundColor: '#F7F7F2', padding: '3px 8px', borderRadius: '4px', border: '1px dashed #D5D4CC' }}>
+                Visa · AmEx · UnionPay — coming soon
+              </span>
             </div>
 
-            {/* PROVIDER-SPECIFIC INTERFACES */}
-
-            {/* 1. SKINAPAY INTERFACE (DEFAULT) */}
-            {selectedProvider === 'SKINA' && (
+            {/* Unsupported card warning */}
+            {!isCardSupported && (
               <div
                 style={{
-                  backgroundColor: '#F8FAFB',
-                  border: '1px solid #CAD9E0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  marginBottom: '22px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  backgroundColor: '#FFF8E6',
+                  border: '1px solid #F59E0B',
+                  marginBottom: '14px',
+                  fontSize: '13px',
+                  color: '#92400E',
                 }}
               >
-                {/* Skina Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '8px',
-                        backgroundColor: '#153D4B',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#FFFFFF',
-                      }}
-                    >
-                      <CreditCard size={18} />
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <strong style={{ color: '#153D4B', fontSize: '15px' }}>SkinaPay Instant Checkout</strong>
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            backgroundColor: '#EBF1F4',
-                            color: '#153D4B',
-                            fontWeight: 700,
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                          }}
-                        >
-                          DEFAULT
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#5E6E75' }}>
-                        Accepts Visa, Mastercard & all cards supported by Skina
-                      </div>
-                    </div>
-                  </div>
-
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      backgroundColor: '#E8F8F1',
-                      color: '#00A36C',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      fontWeight: 600,
-                      border: '1px solid #B7E4D0',
-                    }}
-                  >
-                    ● Sandbox Configured (.env)
-                  </span>
-                </div>
-
-                {/* Accepted Cards Icons Bar */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    flexWrap: 'wrap',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    backgroundColor: '#FFFFFF',
-                    border: '1px solid #E2E1DA',
-                    marginBottom: '16px',
-                  }}
-                >
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#5E6E75', marginRight: '4px' }}>
-                    Accepted:
-                  </span>
-                  {[
-                    { label: 'Visa', color: '#1A1F71', bg: '#EBF0FF' },
-                    { label: 'Mastercard', color: '#EB001B', bg: '#FFF0F0' },
-                    { label: 'American Express', color: '#006FCF', bg: '#EEF7FF' },
-                    { label: 'UnionPay', color: '#007B80', bg: '#E6F8F8' },
-                    { label: 'Local Debit Cards', color: '#153D4B', bg: '#EBF1F4' },
-                  ].map((card, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        color: card.color,
-                        backgroundColor: card.bg,
-                        padding: '2px 7px',
-                        borderRadius: '4px',
-                      }}
-                    >
-                      ✓ {card.label}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Interactive Virtual Card Preview */}
-                <div
-                  style={{
-                    background: 'linear-gradient(135deg, #153D4B 0%, #1F5A6E 50%, #0F2A33 100%)',
-                    borderRadius: '12px',
-                    padding: '16px 20px',
-                    color: '#FFFFFF',
-                    marginBottom: '16px',
-                    boxShadow: '0 8px 20px rgba(21, 61, 75, 0.25)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: '-30px',
-                      bottom: '-30px',
-                      width: '120px',
-                      height: '120px',
-                      borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                    }}
-                  />
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div
-                        style={{
-                          width: '30px',
-                          height: '22px',
-                          borderRadius: '4px',
-                          backgroundColor: '#E49951',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '9px',
-                          fontWeight: 700,
-                          color: '#FFFFFF',
-                        }}
-                      >
-                        CHIP
-                      </div>
-                      <span style={{ fontSize: '11px', letterSpacing: '1px', opacity: 0.8 }}>SKINAPAY SECURE</span>
-                    </div>
-
-                    <span
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        backgroundColor: detectedCard.accentBg,
-                        color: detectedCard.color,
-                        fontWeight: 800,
-                        fontSize: '11px',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      {detectedCard.brand}
-                    </span>
-                  </div>
-
-                  <div
-                    style={{
-                      fontFamily: 'monospace',
-                      fontSize: '17px',
-                      letterSpacing: '2.5px',
-                      marginBottom: '14px',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.4)',
-                    }}
-                  >
-                    {cardNumber || '•••• •••• •••• ••••'}
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '11px' }}>
-                    <div>
-                      <span style={{ fontSize: '9px', opacity: 0.7, display: 'block', textTransform: 'uppercase' }}>
-                        Cardholder
-                      </span>
-                      <span style={{ fontWeight: 600, letterSpacing: '1px' }}>
-                        {cardHolder || 'GUEST NAME'}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span style={{ fontSize: '9px', opacity: 0.7, display: 'block', textTransform: 'uppercase' }}>
-                        Expires
-                      </span>
-                      <span style={{ fontWeight: 600, letterSpacing: '1px' }}>
-                        {cardExpiry || 'MM/YY'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick 1-Click Test Cards Bar */}
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#5E6E75' }}>
-                      Testing Credentials (1-Click Presets):
-                    </span>
-                    <span style={{ fontSize: '10px', color: '#E49951', fontWeight: 600 }}>
-                      Click any test card to auto-fill
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {SKINA_TEST_CARDS.map((tc, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => applyTestCard(tc)}
-                        style={{
-                          padding: '5px 9px',
-                          borderRadius: '6px',
-                          border: `1px solid ${tc.color}33`,
-                          backgroundColor: tc.bg,
-                          color: tc.color,
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <span>{tc.label}</span>
-                        <span style={{ opacity: 0.6, fontSize: '10px' }}>({tc.number.slice(-4)})</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Card Inputs */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
-                      <label style={{ fontSize: '11px', fontWeight: 600, color: '#153D4B' }}>
-                        Card Number (Visa, Mastercard, AmEx, UnionPay, Local)
-                      </label>
-                      <span style={{ fontSize: '11px', color: detectedCard.color, fontWeight: 700 }}>
-                        {detectedCard.badge}
-                      </span>
-                    </div>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={handleCardNumberChange}
-                        placeholder="4242 4242 4242 4242"
-                        maxLength={23}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          paddingLeft: '38px',
-                          borderRadius: '8px',
-                          border: '1px solid #CAD9E0',
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          fontFamily: 'monospace',
-                          backgroundColor: '#FFFFFF',
-                          color: '#153D4B',
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '12px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          color: detectedCard.color,
-                        }}
-                      >
-                        <CreditCard size={16} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: '10px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '3px' }}>
-                        Cardholder Name
-                      </label>
-                      <input
-                        type="text"
-                        value={cardHolder}
-                        onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-                        placeholder="GUEST NAME"
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid #CAD9E0',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          backgroundColor: '#FFFFFF',
-                          textTransform: 'uppercase',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '3px' }}>
-                        Expiry (MM/YY)
-                      </label>
-                      <input
-                        type="text"
-                        value={cardExpiry}
-                        onChange={handleExpiryChange}
-                        placeholder="12/28"
-                        maxLength={5}
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid #CAD9E0',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          backgroundColor: '#FFFFFF',
-                          textAlign: 'center',
-                          fontFamily: 'monospace',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '3px' }}>
-                        CVC / CVV
-                      </label>
-                      <input
-                        type="password"
-                        value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        placeholder="888"
-                        maxLength={4}
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid #CAD9E0',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          backgroundColor: '#FFFFFF',
-                          textAlign: 'center',
-                          letterSpacing: '2px',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sandbox note */}
-                <div
-                  style={{
-                    marginTop: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontSize: '11px',
-                    color: '#5E6E75',
-                  }}
-                >
-                  <Info size={13} color="#153D4B" />
-                  <span>
-                    Direct gateway authorization via <strong>https://sandbox.sikinapay.com</strong>. All major card brands supported.
+                <span style={{ fontSize: '18px', lineHeight: 1 }}>⚠️</span>
+                <div>
+                  <strong style={{ display: 'block', marginBottom: '2px' }}>
+                    {detectedCard.brand} is not yet supported by SikinaPay
+                  </strong>
+                  <span style={{ fontSize: '12px' }}>
+                    Please use a <strong>Mastercard</strong> or a local Ethiopian debit card to complete your booking.
                   </span>
                 </div>
               </div>
             )}
 
-            {/* 2. TELEBIRR INTERFACE */}
-            {selectedProvider === 'TELEBIRR' && (
+            {/* Interactive Virtual Card Preview */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #153D4B 0%, #1F5A6E 50%, #0F2A33 100%)',
+                borderRadius: '14px',
+                padding: '18px 22px',
+                color: '#FFFFFF',
+                marginBottom: '16px',
+                boxShadow: '0 10px 28px rgba(21, 61, 75, 0.3)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
               <div
                 style={{
-                  backgroundColor: '#E6F1FA',
-                  border: '1px solid #B8D5ED',
-                  borderRadius: '12px',
-                  padding: '18px 20px',
-                  marginBottom: '22px',
+                  position: 'absolute',
+                  right: '-40px',
+                  bottom: '-40px',
+                  width: '160px',
+                  height: '160px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.04)',
                 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <Smartphone size={22} color="#0072CE" />
-                  <div>
-                    <strong style={{ color: '#153D4B', fontSize: '15px' }}>Telebirr Mobile Money Checkout</strong>
-                    <div style={{ fontSize: '11px', color: '#0072CE', fontWeight: 600 }}>Ethio Telecom SuperApp / USSD Push</div>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '14px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
-                    Telebirr Registered Mobile Number:
-                  </label>
-                  <input
-                    type="tel"
-                    value={telebirrPhone}
-                    onChange={(e) => setTelebirrPhone(e.target.value)}
-                    placeholder="+251 911 234 567"
-                    style={{
-                      width: '100%',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #B8D5ED',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      backgroundColor: '#FFFFFF',
-                    }}
-                  />
-                </div>
-
-                {!telebirrPromptSent ? (
-                  <button
-                    type="button"
-                    onClick={() => setTelebirrPromptSent(true)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#0072CE',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Send USSD Push (*127# Prompt)
-                  </button>
-                ) : (
-                  <div style={{ backgroundColor: '#FFFFFF', padding: '12px', borderRadius: '8px', border: '1px solid #0072CE' }}>
-                    <div style={{ fontSize: '12px', color: '#0072CE', fontWeight: 600, marginBottom: '6px' }}>
-                      📲 USSD Push sent to {telebirrPhone}! Enter PIN or approve on phone:
-                    </div>
-                    <input
-                      type="password"
-                      maxLength={4}
-                      placeholder="Enter 4-Digit Telebirr PIN to Authorize"
-                      value={telebirrPin}
-                      onChange={(e) => setTelebirrPin(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #D5D4CC',
-                        fontSize: '13px',
-                        letterSpacing: '3px',
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 3. CHAPA INTERFACE */}
-            {selectedProvider === 'CHAPA' && (
+              />
               <div
                 style={{
-                  backgroundColor: '#E8F8F1',
-                  border: '1px solid #B7E4D0',
-                  borderRadius: '12px',
-                  padding: '18px 20px',
-                  marginBottom: '22px',
+                  position: 'absolute',
+                  right: '60px',
+                  top: '-20px',
+                  width: '100px',
+                  height: '100px',
+                  borderRadius: '50%',
+                  background: 'rgba(228, 153, 81, 0.08)',
                 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <span
+              />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
                     style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '6px',
-                      backgroundColor: '#00A36C',
-                      color: '#FFFFFF',
+                      width: '32px',
+                      height: '24px',
+                      borderRadius: '4px',
+                      backgroundColor: '#E49951',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      fontSize: '8px',
                       fontWeight: 800,
-                      fontSize: '14px',
+                      color: '#FFFFFF',
+                      letterSpacing: '0.5px',
                     }}
                   >
-                    C
-                  </span>
-                  <div>
-                    <strong style={{ color: '#153D4B', fontSize: '15px' }}>Chapa Payment Gateway</strong>
-                    <div style={{ fontSize: '11px', color: '#00A36C', fontWeight: 600 }}>Ethiopian Super Gateway</div>
+                    CHIP
                   </div>
-                </div>
-                <p style={{ fontSize: '13px', color: '#4B5563', lineHeight: '1.5', margin: '0 0 14px' }}>
-                  Pay with Telebirr, CBE Birr, Awash Bank, Amole, or any Debit/Credit Card via Chapa&apos;s secured checkout protocol.
-                </p>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {['Telebirr', 'CBE Birr', 'Awash', 'Visa/Mastercard'].map((b, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        padding: '3px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        color: '#153D4B',
-                        fontWeight: 500,
-                        border: '1px solid #D1E7DD',
-                      }}
-                    >
-                      ✓ {b}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 4. CBE BIRR / CEB INTERFACE */}
-            {selectedProvider === 'CBE_BIRR' && (
-              <div
-                style={{
-                  backgroundColor: '#F5ECF8',
-                  border: '1px solid #E0C7E8',
-                  borderRadius: '12px',
-                  padding: '18px 20px',
-                  marginBottom: '22px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <Building2 size={22} color="#6E2585" />
-                  <div>
-                    <strong style={{ color: '#153D4B', fontSize: '15px' }}>Commercial Bank of Ethiopia (CBE / CBE Birr)</strong>
-                    <div style={{ fontSize: '11px', color: '#6E2585', fontWeight: 600 }}>Shortcode: 882200</div>
-                  </div>
+                  <span style={{ fontSize: '11px', letterSpacing: '2px', opacity: 0.7, fontWeight: 500 }}>GRAND ADDIS</span>
                 </div>
 
-                <div
+                <span
                   style={{
-                    backgroundColor: '#FFFFFF',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: '1px solid #E0C7E8',
-                    marginBottom: '14px',
-                    fontSize: '13px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: detectedCard.accentBg,
+                    color: detectedCard.color,
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    letterSpacing: '0.5px',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: '#5E6E75' }}>CBE Account Number:</span>
-                    <strong style={{ color: '#153D4B' }}>1000188220011 (Grand Addis Hotel)</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#5E6E75' }}>CBE Birr Shortcode:</span>
-                    <strong style={{ color: '#6E2585' }}>882200</strong>
+                  {detectedCard.brand}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '19px',
+                  letterSpacing: '3px',
+                  marginBottom: '16px',
+                  textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  opacity: cardNumber ? 1 : 0.4,
+                }}
+              >
+                {cardNumber || '•••• •••• •••• ••••'}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '9px', opacity: 0.6, display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>
+                    Cardholder
+                  </span>
+                  <span style={{ fontWeight: 600, letterSpacing: '1.5px', fontSize: '13px' }}>
+                    {cardHolder || 'GUEST NAME'}
+                  </span>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '9px', opacity: 0.6, display: 'block', textTransform: 'uppercase', marginBottom: '2px' }}>
+                    Expires
+                  </span>
+                  <span style={{ fontWeight: 600, letterSpacing: '2px', fontSize: '13px' }}>
+                    {cardExpiry || 'MM/YY'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card Input Fields */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#153D4B' }}>
+                    Card Number
+                  </label>
+                  <span style={{ fontSize: '11px', color: detectedCard.color, fontWeight: 700 }}>
+                    {detectedCard.badge}
+                  </span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={cardNumber}
+                    onChange={handleCardNumberChange}
+                    placeholder="XXXX XXXX XXXX XXXX"
+                    maxLength={23}
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      paddingLeft: '40px',
+                      borderRadius: '8px',
+                      border: '1px solid #CAD9E0',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      fontFamily: 'monospace',
+                      backgroundColor: '#FFFFFF',
+                      color: '#153D4B',
+                      letterSpacing: '1px',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '13px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: detectedCard.color,
+                    }}
+                  >
+                    <CreditCard size={16} />
                   </div>
                 </div>
+              </div>
 
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
+                  Name on Card
+                </label>
+                <input
+                  type="text"
+                  value={cardHolder}
+                  onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+                  placeholder="NAME ON CARD"
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #CAD9E0',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    backgroundColor: '#FFFFFF',
+                    color: '#153D4B',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
-                    CBE Transaction Ref Number (Optional):
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
+                    Expiry (MM/YY)
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. FT26279X1Y2..."
-                    value={cbeTxId}
-                    onChange={(e) => setCbeTxId(e.target.value)}
+                    value={cardExpiry}
+                    onChange={handleExpiryChange}
+                    placeholder="MM / YY"
+                    maxLength={5}
                     style={{
                       width: '100%',
-                      padding: '10px 14px',
+                      padding: '11px 14px',
                       borderRadius: '8px',
-                      border: '1px solid #E0C7E8',
+                      border: '1px solid #CAD9E0',
                       fontSize: '13px',
+                      fontWeight: 600,
                       backgroundColor: '#FFFFFF',
+                      color: '#153D4B',
+                      textAlign: 'center',
+                      fontFamily: 'monospace',
+                      letterSpacing: '2px',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
+                    CVC / CVV
+                  </label>
+                  <input
+                    type="password"
+                    value={cardCvc}
+                    onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="•••"
+                    maxLength={4}
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #CAD9E0',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      backgroundColor: '#FFFFFF',
+                      textAlign: 'center',
+                      letterSpacing: '4px',
                     }}
                   />
                 </div>
               </div>
-            )}
+            </div>
 
-            {/* 5. CASH ON ARRIVAL */}
-            {selectedProvider === 'CASH_ON_ARRIVAL' && (
+            {/* Security Trust Bar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                backgroundColor: '#F0F8F0',
+                border: '1px solid #C8E6C9',
+                marginBottom: '14px',
+                fontSize: '11px',
+                color: '#2E7D32',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                <ShieldCheck size={14} color="#2E7D32" />
+                PCI DSS Compliant
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                <Lock size={13} color="#2E7D32" />
+                256-bit SSL Encrypted
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                <Info size={13} color="#2E7D32" />
+                Your card is not charged until stay
+              </div>
+            </div>
+
+            {/* Terms note */}
+            <p style={{ fontSize: '11px', color: '#838A8D', textAlign: 'center', marginBottom: '16px', lineHeight: '1.5' }}>
+              By proceeding, you agree to our{' '}
+              <a href="/terms-conditions" style={{ color: '#E49951', fontWeight: 600, textDecoration: 'none' }}>Terms & Conditions</a>
+              {' '}and{' '}
+              <a href="/terms-conditions" style={{ color: '#E49951', fontWeight: 600, textDecoration: 'none' }}>Privacy Policy</a>
+              . Booking secured by Grand Addis Hotel & Resorts.
+            </p>
+
+            {/* Inline error message (replaces blocking alert()) */}
+            {paymentError && (
               <div
+                role="alert"
                 style={{
-                  backgroundColor: '#FDF9F4',
-                  border: '1px solid #E8D7C3',
-                  borderRadius: '12px',
-                  padding: '18px 20px',
-                  marginBottom: '22px',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  color: '#B91C1C',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  marginBottom: '14px',
+                  textAlign: 'center',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <Banknote size={22} color="#E49951" />
-                  <strong style={{ color: '#153D4B', fontSize: '15px' }}>Pay Upon Check-in at Grand Addis</strong>
-                </div>
-                <p style={{ fontSize: '13px', color: '#5E6E75', lineHeight: '1.5', margin: 0 }}>
-                  Your room reservation will be immediately guaranteed. You can complete settlement at our 24/7 reception desk using cash in Ethiopian Birr, USD, or debit card upon arrival.
-                </p>
+                {paymentError}
               </div>
+            )}
+
+            {/* Sandbox helper: fill the gateway test card (demo convenience) */}
+            {sandboxTestCard && !paymentSuccess && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCardNumber(sandboxTestCard.number);
+                  setCardExpiry(sandboxTestCard.expiry);
+                  setCardCvc(sandboxTestCard.cvc);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  marginBottom: '12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#5E6E75',
+                  backgroundColor: '#F7F7F2',
+                  border: '1px dashed #D5D4CC',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                🧪 Sandbox mode — fill test card ({sandboxTestCard.number})
+              </button>
             )}
 
             {/* ACTION BUTTON */}
             <button
               onClick={handleProcessPayment}
-              disabled={isProcessing}
+              disabled={isProcessing || !isCardSupported}
               className="btn btn-primary"
               style={{
                 width: '100%',
-                padding: '14px',
-                fontSize: '15px',
+                padding: '15px',
+                fontSize: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
-                opacity: isProcessing ? 0.7 : 1,
+                gap: '10px',
+                opacity: (isProcessing || !isCardSupported) ? 0.55 : 1,
+                borderRadius: '10px',
+                cursor: !isCardSupported ? 'not-allowed' : undefined,
               }}
             >
               {isProcessing ? (
                 <>
                   <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
-                  <span>Authorizing via {selectedProvider === 'SKINA' ? 'SkinaPay Sandbox' : selectedProvider}...</span>
+                  <span>Authorizing securely...</span>
                 </>
               ) : (
                 <>
                   <ShieldCheck size={18} />
-                  <span>
-                    {selectedProvider === 'CASH_ON_ARRIVAL'
-                      ? 'Confirm Booking (Pay at Hotel)'
-                      : selectedProvider === 'SKINA'
-                      ? `Pay $${amountUSD} with SkinaPay (${detectedCard.brand})`
-                      : `Pay $${amountUSD} with ${selectedProvider}`}
-                  </span>
+                  <span>Pay ${amountUSD} Securely</span>
                   <ArrowRight size={16} />
                 </>
               )}
             </button>
+
+            {/* Powered-by footer */}
+            <div style={{ textAlign: 'center', marginTop: '14px', fontSize: '10px', color: '#A0ADB3', letterSpacing: '0.3px' }}>
+              Transactions processed by{' '}
+              <span style={{ fontWeight: 700, color: '#153D4B' }}>SkinaPay™</span>
+              {' '}· Secure Gateway
+            </div>
           </div>
         )}
       </div>

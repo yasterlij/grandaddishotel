@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query, invalidateCache } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function POST() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     // Quick verify & ensure initial testimonials
     const testCount = await query('SELECT count(*) FROM testimonials');
@@ -13,6 +16,7 @@ export async function POST() {
         ('t3', 'Jean-Pierre Laurent', 'Paris, France', 5, 'March 2026', 'Unbeatable value and peaceful oasis', 'Traveling for diplomatic meetings, I needed reliable high-speed internet and quiet nights. The Standard Room delivered on every level. Quiet AC, modern bathroom, and 10 minutes to Bole Airport. Outstanding value!', 'Standard Room'),
         ('t4', 'Sarah & Michael Jenkins', 'Toronto, Canada', 5, 'December 2025', 'Memorable stay for our anniversary', 'From the surprise flower petals in our room to the rejuvenating massage at the spa, everything was flawless. The location in 22 around Golagul made it so easy to get everywhere in the city.', 'Deluxe Room');
       `);
+      invalidateCache('db_testimonials');
     }
 
     return NextResponse.json({

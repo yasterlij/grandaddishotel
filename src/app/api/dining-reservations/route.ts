@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
+import { rateLimit, getClientIp, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
+    const rl = rateLimit(`dining:${getClientIp(req)}`, 5, 10 * 60 * 1000);
+    if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+
   try {
     const body = await req.json();
     const date = body.date;
@@ -50,6 +55,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const res = await query(
       `SELECT * FROM table_reservations ORDER BY created_at DESC LIMIT 50`

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { DINING_MENUS, HOTEL_INFO, MenuItem } from '@/data/hotelData';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { getTodayDateStr } from '@/lib/dates';
 
 export default function DiningPage() {
   const { formatPrice } = useCurrency();
@@ -31,6 +33,7 @@ export default function DiningPage() {
   const [resEmail, setResEmail] = useState('');
   const [resNotes, setResNotes] = useState('');
   const [tableConfirmed, setTableConfirmed] = useState(false);
+  const { isSubmitting, error, submit } = useFormSubmit();
 
   useEffect(() => {
     async function loadPostgresMenu() {
@@ -71,24 +74,16 @@ export default function DiningPage() {
 
   const handleTableSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await fetch('/api/dining-reservations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: tableDate,
-          time: tableTime,
-          partySize,
-          name: resName,
-          phone: resPhone,
-          email: resEmail,
-          notes: resNotes,
-        }),
-      });
-    } catch (err) {
-      console.error('Table reservation error:', err);
-    }
-    setTableConfirmed(true);
+    const ok = await submit('/api/dining-reservations', {
+      date: tableDate,
+      time: tableTime,
+      partySize,
+      name: resName,
+      phone: resPhone,
+      email: resEmail,
+      notes: resNotes,
+    });
+    if (ok) setTableConfirmed(true);
   };
 
   return (
@@ -394,7 +389,7 @@ export default function DiningPage() {
                   Table Reserved!
                 </h4>
                 <p style={{ fontSize: '14px', color: '#5E6E75', marginBottom: '20px' }}>
-                  Thank you, <strong>{resName}</strong>. Your table for <strong>{partySize} guests</strong> has been reserved for <strong>{tableDate || 'today'} at {tableTime}</strong>. A confirmation has been sent to {resEmail}.
+                  Thank you, <strong>{resName}</strong>. Your table request for <strong>{partySize} guests</strong> on <strong>{tableDate || 'today'} at {tableTime}</strong> has been received. Our team will confirm your reservation shortly.
                 </p>
                 <button
                   onClick={() => {
@@ -416,6 +411,7 @@ export default function DiningPage() {
                     <input
                       type="date"
                       required
+                      min={getTodayDateStr()}
                       value={tableDate}
                       onChange={(e) => setTableDate(e.target.value)}
                       style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
@@ -451,9 +447,9 @@ export default function DiningPage() {
                     onChange={(e) => setPartySize(Number(e.target.value))}
                     style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, '9+'].map((num) => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                       <option key={num} value={num}>
-                        {num} Guests
+                        {num === 9 ? '9+ Guests' : `${num} ${num === 1 ? 'Guest' : 'Guests'}`}
                       </option>
                     ))}
                   </select>
@@ -515,6 +511,25 @@ export default function DiningPage() {
                   />
                 </div>
 
+                {error && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '12px 16px',
+                      marginBottom: '14px',
+                      borderRadius: '8px',
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      color: '#B91C1C',
+                      fontSize: '13.5px',
+                      fontWeight: 500,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
@@ -525,9 +540,11 @@ export default function DiningPage() {
                   </button>
                   <button
                     type="submit"
+                    disabled={isSubmitting}
                     className="btn btn-primary"
+                    style={{ opacity: isSubmitting ? 0.6 : 1 }}
                   >
-                    Confirm Table Reservation
+                    {isSubmitting ? 'Reserving...' : 'Confirm Table Reservation'}
                   </button>
                 </div>
               </form>

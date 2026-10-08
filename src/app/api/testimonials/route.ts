@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query, invalidateCache } from '@/lib/db';
+import { rateLimit, getClientIp, tooManyRequests } from '@/lib/rate-limit';
 
 export async function GET() {
   try {
@@ -21,12 +22,15 @@ export async function GET() {
     );
   } catch (error: any) {
     console.error('Error fetching testimonials:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to load reviews.' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(`testimonials:${getClientIp(req)}`, 3, 15 * 60 * 1000);
+    if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+
     const { name, location, rating, title, comment, roomType } = await req.json();
 
     if (!name || !title || !comment) {
@@ -36,13 +40,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ratingNum = Math.floor(Number(rating) || 5);
+    if (ratingNum < 1 || ratingNum > 5) {
+      return NextResponse.json(
+        { success: false, error: 'Rating must be between 1 and 5' },
+        { status: 400 }
+      );
+    }
+
     const id = crypto.randomUUID();
     const currentDate = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
+    // New public reviews enter the moderation queue — an admin approves them
+    // from the dashboard before they appear on the site.
     await query(
       `INSERT INTO testimonials (id, name, location, rating, date, title, comment, room_type, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'APPROVED', NOW())`,
-      [id, name, location || 'Addis Ababa', rating || 5, currentDate, title, comment, roomType || 'Deluxe Room']
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING', NOW())`,
+      [id, name, location || 'Addis Ababa', ratingNum, currentDate, title, comment, roomType || 'Deluxe Room']
     );
 
     invalidateCache('db_testimonials');
@@ -50,12 +64,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       id,
-      message: 'Review saved in PostgreSQL',
+      status: 'PENDING',
+      message: 'Thank you! Your review was submitted and is awaiting moderation.',
       review: {
         id,
         name,
         location: location || 'Addis Ababa',
-        rating: rating || 5,
+        rating: ratingNum,
         date: currentDate,
         title,
         comment,
@@ -64,6 +79,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error saving testimonial:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to submit review.' }, { status: 500 });
   }
 }

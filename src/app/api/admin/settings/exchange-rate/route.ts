@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminSession } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { getExchangeRate, setExchangeRate } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  try {
-    const session = await getAdminSession();
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized admin access' }, { status: 401 });
-    }
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
+  try {
     const rate = await getExchangeRate();
     return NextResponse.json({
       success: true,
@@ -27,12 +25,10 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  try {
-    const session = await getAdminSession();
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized admin access' }, { status: 401 });
-    }
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
 
+  try {
     const body = await req.json();
     const rate = parseFloat(body.rate);
 

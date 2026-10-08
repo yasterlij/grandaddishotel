@@ -16,6 +16,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { WELLNESS_SERVICES, HOTEL_INFO, SpaTreatment } from '@/data/hotelData';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { getTodayDateStr } from '@/lib/dates';
 import { useCurrency } from '@/context/CurrencyContext';
 
 export default function WellnessPage() {
@@ -29,6 +31,7 @@ export default function WellnessPage() {
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [spaConfirmed, setSpaConfirmed] = useState(false);
+  const { isSubmitting, error, submit } = useFormSubmit();
 
   useEffect(() => {
     async function loadPostgresSpa() {
@@ -58,24 +61,16 @@ export default function WellnessPage() {
 
   const handleSpaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await fetch('/api/spa-appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          serviceId: selectedService.id,
-          serviceName: selectedService.name,
-          date: spaDate,
-          time: spaTime,
-          clientName,
-          clientPhone,
-          clientEmail,
-        }),
-      });
-    } catch (err) {
-      console.error('Spa appointment error:', err);
-    }
-    setSpaConfirmed(true);
+    const ok = await submit('/api/spa-appointments', {
+      serviceId: selectedService.id,
+      serviceName: selectedService.name,
+      date: spaDate,
+      time: spaTime,
+      clientName,
+      clientPhone,
+      clientEmail,
+    });
+    if (ok) setSpaConfirmed(true);
   };
 
   return (
@@ -200,7 +195,7 @@ export default function WellnessPage() {
               gap: '28px',
             }}
           >
-            {WELLNESS_SERVICES.map((service) => (
+            {services.map((service) => (
               <div
                 key={service.id}
                 style={{
@@ -371,7 +366,7 @@ export default function WellnessPage() {
                     onChange={(e) => setSelectedServiceId(e.target.value)}
                     style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
                   >
-                    {WELLNESS_SERVICES.map((s) => (
+                    {services.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} — {formatPrice(s.price).primary} ({s.duration})
                       </option>
@@ -387,6 +382,7 @@ export default function WellnessPage() {
                     <input
                       type="date"
                       required
+                      min={getTodayDateStr()}
                       value={spaDate}
                       onChange={(e) => setSpaDate(e.target.value)}
                       style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
@@ -455,6 +451,25 @@ export default function WellnessPage() {
                   />
                 </div>
 
+                {error && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '12px 16px',
+                      marginBottom: '14px',
+                      borderRadius: '8px',
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      color: '#B91C1C',
+                      fontSize: '13.5px',
+                      fontWeight: 500,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
@@ -465,9 +480,11 @@ export default function WellnessPage() {
                   </button>
                   <button
                     type="submit"
+                    disabled={isSubmitting}
                     className="btn btn-primary"
+                    style={{ opacity: isSubmitting ? 0.6 : 1 }}
                   >
-                    Confirm Appointment
+                    {isSubmitting ? 'Booking...' : 'Confirm Appointment'}
                   </button>
                 </div>
               </form>

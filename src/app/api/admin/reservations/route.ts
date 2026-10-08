@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { query } from '@/lib/db';
 import { calculateStayNights } from '@/lib/dates';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const res = await query(`
       SELECT 
@@ -59,6 +62,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const body = await req.json();
     const {
@@ -166,6 +171,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const body = await req.json();
     const {
@@ -197,6 +204,8 @@ export async function PUT(req: NextRequest) {
         r."roomTypeId", 
         r.currency,
         r."totalAmount",
+        r."isDateExtended",
+        r."dateChangeNote",
         rt."basePriceUSD", 
         rt."basePriceETB" 
        FROM reservations r 
@@ -257,7 +266,7 @@ export async function PUT(req: NextRequest) {
         currency = COALESCE($8, currency),
         status = COALESCE($9, status),
         "specialRequests" = COALESCE($10, "specialRequests"),
-        "roomId" = $11,
+        "roomId" = COALESCE($11, "roomId"),
         "roomTypeId" = COALESCE($12, "roomTypeId"),
         "isDateExtended" = $13,
         "dateChangeNote" = $14,
@@ -327,6 +336,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -335,9 +346,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Reservation ID is required' }, { status: 400 });
     }
 
-    // Delete linked payments first (cascade or explicit)
-    await query(`DELETE FROM payments WHERE "reservationId" = $1`, [id]);
-    await query(`DELETE FROM reservations WHERE id = $1`, [id]);
+    // Linked payments are removed automatically by the FK ON DELETE CASCADE —
+    // deleting them separately would risk a partial delete if the second
+    // statement failed.
+    const res = await query(`DELETE FROM reservations WHERE id = $1 RETURNING id`, [id]);
+
+    if (res.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Reservation not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({ success: true, message: 'Reservation deleted successfully' });
   } catch (error: any) {

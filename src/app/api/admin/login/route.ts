@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateCredentials, generateToken, AUTH_COOKIE_NAME } from '@/lib/auth';
+import { validateCredentials, generateToken, AUTH_COOKIE_NAME, SESSION_TTL_MS } from '@/lib/auth';
+import { rateLimit, getClientIp, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // Brute-force protection: 5 attempts per IP per 15 minutes.
+    const rl = rateLimit(`admin-login:${getClientIp(req)}`, 5, 15 * 60 * 1000);
+    if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+
+    const body = await req.json().catch(() => ({}));
     const { username = '', password = '', pin = '' } = body;
 
-    const identifier = username.trim() || 'admin';
-    const secret = password.trim() || pin.trim();
+    const identifier = String(username).trim();
+    const secret = String(password).trim() || String(pin).trim();
 
-    if (!secret) {
+    if (!identifier || !secret) {
       return NextResponse.json(
-        { success: false, error: 'Password or Security PIN is required' },
+        { success: false, error: 'Username and password are required' },
         { status: 400 }
       );
     }
@@ -19,6 +24,7 @@ export async function POST(req: NextRequest) {
     const isValid = validateCredentials(identifier, secret);
 
     if (!isValid) {
+      // Generic message — do not reveal which part was wrong.
       return NextResponse.json(
         {
           success: false,
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       path: '/',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: Math.floor(SESSION_TTL_MS / 1000),
       secure: process.env.NODE_ENV === 'production',
     });
 
@@ -54,7 +60,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Admin login error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Login failed' },
+      { success: false, error: 'Login failed. Please try again.' },
       { status: 500 }
     );
   }

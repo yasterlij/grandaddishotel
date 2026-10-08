@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { HOTEL_INFO } from '@/data/hotelData';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function ContactPage() {
   const [name, setName] = useState('');
@@ -22,25 +23,18 @@ export default function ContactPage() {
   const [subject, setSubject] = useState('General Inquiry');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const { isSubmitting, error, submit } = useFormSubmit();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          subject,
-          message,
-        }),
-      });
-    } catch (err) {
-      console.error('Contact message error:', err);
-    }
-    setSubmitted(true);
+    const ok = await submit('/api/contact', {
+      name,
+      email,
+      phone,
+      subject,
+      message,
+    });
+    if (ok) setSubmitted(true);
   };
 
   return (
@@ -258,8 +252,32 @@ export default function ContactPage() {
                       </div>
                     </div>
 
-                    <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%' }}>
-                      <Send size={16} /> Send Message
+                    {error && (
+                      <div
+                        role="alert"
+                        style={{
+                          padding: '12px 16px',
+                          marginBottom: '14px',
+                          borderRadius: '8px',
+                          backgroundColor: '#FEF2F2',
+                          border: '1px solid #FECACA',
+                          color: '#B91C1C',
+                          fontSize: '13.5px',
+                          fontWeight: 500,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="btn btn-primary btn-lg"
+                      style={{ width: '100%', opacity: isSubmitting ? 0.6 : 1 }}
+                    >
+                      <Send size={16} /> {isSubmitting ? 'Sending...' : 'Send Message'}
                     </button>
                   </form>
                 )}

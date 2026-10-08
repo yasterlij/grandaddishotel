@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
+import { getTodayDateStr, addDays } from '@/lib/dates';
 
 interface BookingParams {
   roomId?: string;
@@ -26,13 +27,15 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
-  
-  // Default to today and tomorrow
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+  // Default to today and tomorrow — using the shared local-date helpers so the
+  // guest's "today" is correct regardless of timezone (the previous
+  // toISOString() implementation drifted a day for users west of UTC).
+  const today = getTodayDateStr();
+  const tomorrow = addDays(today, 1);
 
   const [bookingParams, setBookingParams] = useState<BookingParams>({
-    roomId: '2', // Deluxe Room default
+    roomId: 'deluxe-room', // resolved by slug/alias in the booking UI
     checkIn: today,
     checkOut: tomorrow,
     adults: 2,

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { query } from '@/lib/db';
+import { query, invalidateCache } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const res = await query(`SELECT * FROM testimonials ORDER BY created_at DESC`);
     return NextResponse.json({ success: true, count: res.rows.length, testimonials: res.rows });
@@ -12,6 +15,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { name, location = 'Addis Ababa', rating = 5, title, comment, roomType = 'Deluxe Room', status = 'APPROVED' } = await req.json();
 
@@ -28,6 +33,7 @@ export async function POST(req: NextRequest) {
       [id, name, location, Number(rating), date, title, comment, roomType, status]
     );
 
+    invalidateCache('db_testimonials');
     return NextResponse.json({ success: true, message: 'Testimonial created successfully', id });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -35,6 +41,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { id, name, location, rating, title, comment, roomType, status } = await req.json();
 
@@ -64,6 +72,7 @@ export async function PUT(req: NextRequest) {
       ]
     );
 
+    invalidateCache('db_testimonials');
     return NextResponse.json({ success: true, message: 'Testimonial updated successfully' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -71,6 +80,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -80,6 +91,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     await query(`DELETE FROM testimonials WHERE id = $1`, [id]);
+    invalidateCache('db_testimonials');
     return NextResponse.json({ success: true, message: 'Testimonial deleted successfully' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

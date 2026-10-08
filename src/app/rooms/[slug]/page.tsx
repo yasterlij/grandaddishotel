@@ -22,6 +22,7 @@ import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
 import { useCurrency } from '@/context/CurrencyContext';
 import RoomCard from '@/components/RoomCard';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -44,7 +45,12 @@ export default function RoomDetailPage() {
   const [requestMessage, setRequestMessage] = useState('');
   const [agreedTerms, setAgreedTerms] = useState(true);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
-  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const {
+    isSubmitting: isSubmittingRequest,
+    error: requestError,
+    submit: submitRequest,
+    clearError: clearRequestError,
+  } = useFormSubmit();
 
   useEffect(() => {
     async function loadRoomFromPostgres() {
@@ -87,24 +93,13 @@ export default function RoomDetailPage() {
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmittingRequest(true);
-    try {
-      await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: requestName,
-          email: requestEmail,
-          subject: `Room Inquiry: ${room.name}`,
-          message: requestMessage || `Interested in booking ${room.name} (${room.slug})`,
-        }),
-      });
-    } catch (err) {
-      console.error('Failed to save inquiry to PostgreSQL:', err);
-    } finally {
-      setIsSubmittingRequest(false);
-      setRequestSubmitted(true);
-    }
+    const ok = await submitRequest('/api/contact', {
+      name: requestName,
+      email: requestEmail,
+      subject: `Room Inquiry: ${room.name}`,
+      message: requestMessage || `Interested in booking ${room.name} (${room.slug})`,
+    });
+    if (ok) setRequestSubmitted(true);
   };
 
   return (
@@ -753,10 +748,32 @@ export default function RoomDetailPage() {
                   </label>
                 </div>
 
+                {requestError && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '10px 14px',
+                      marginBottom: '16px',
+                      borderRadius: '6px',
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      color: '#B91C1C',
+                      fontSize: '12.5px',
+                      fontWeight: 500,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {requestError}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                   <button
                     type="button"
-                    onClick={() => setIsRequestModalOpen(false)}
+                    onClick={() => {
+                      setIsRequestModalOpen(false);
+                      clearRequestError();
+                    }}
                     className="btn btn-outline"
                     style={{ padding: '10px 18px', fontSize: '12px' }}
                   >
@@ -764,10 +781,11 @@ export default function RoomDetailPage() {
                   </button>
                   <button
                     type="submit"
+                    disabled={isSubmittingRequest}
                     className="btn btn-primary"
-                    style={{ padding: '10px 24px', fontSize: '12px' }}
+                    style={{ padding: '10px 24px', fontSize: '12px', opacity: isSubmittingRequest ? 0.6 : 1 }}
                   >
-                    <Send size={14} /> Send Request
+                    <Send size={14} /> {isSubmittingRequest ? 'Sending...' : 'Send Request'}
                   </button>
                 </div>
               </form>

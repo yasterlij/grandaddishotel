@@ -14,37 +14,32 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { HOTEL_INFO } from '@/data/hotelData';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { getTodayDateStr } from '@/lib/dates';
 
 export default function WeddingsEventsPage() {
-  const [eventType, setEventType] = useState('Wedding');
+  const [eventType, setEventType] = useState('Wedding Reception');
   const [eventDate, setEventDate] = useState('');
-  const [guestCount, setGuestCount] = useState('50-100');
+  const [guestCount, setGuestCount] = useState('30-70');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [details, setDetails] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const { isSubmitting, error, submit } = useFormSubmit();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType,
-          eventDate,
-          guestCount,
-          name,
-          email,
-          phone,
-          details,
-        }),
-      });
-    } catch (err) {
-      console.error('Event inquiry error:', err);
-    }
-    setSubmitted(true);
+    const ok = await submit('/api/events', {
+      eventType,
+      eventDate,
+      guestCount,
+      name,
+      email,
+      phone,
+      details,
+    });
+    if (ok) setSubmitted(true);
   };
 
   return (
@@ -219,6 +214,7 @@ export default function WeddingsEventsPage() {
                   <input
                     type="date"
                     required
+                    min={getTodayDateStr()}
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
                     style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
@@ -299,12 +295,32 @@ export default function WeddingsEventsPage() {
                 />
               </div>
 
+              {error && (
+                <div
+                  role="alert"
+                  style={{
+                    padding: '12px 16px',
+                    marginBottom: '16px',
+                    borderRadius: '8px',
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    color: '#B91C1C',
+                    fontSize: '13.5px',
+                    fontWeight: 500,
+                    textAlign: 'center',
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="btn btn-primary btn-lg"
-                style={{ width: '100%' }}
+                style={{ width: '100%', opacity: isSubmitting ? 0.6 : 1 }}
               >
-                <Send size={16} /> Submit Event RFP Request
+                <Send size={16} /> {isSubmitting ? 'Submitting...' : 'Submit Event RFP Request'}
               </button>
             </form>
           )}

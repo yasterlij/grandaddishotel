@@ -14,20 +14,29 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { EXPERIENCES } from '@/data/hotelData';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { getTodayDateStr } from '@/lib/dates';
 
 export default function ExperiencesPage() {
   const [selectedExp, setSelectedExp] = useState<string | null>(null);
   const [inquiryName, setInquiryName] = useState('');
   const [inquiryEmail, setInquiryEmail] = useState('');
   const [inquiryDate, setInquiryDate] = useState('');
-  const [guestsCount, setGuestsCount] = useState(2);
+  const [guestsCount, setGuestsCount] = useState<number | string>(2);
   const [inquirySent, setInquirySent] = useState(false);
+  const { isSubmitting, error, submit, clearError } = useFormSubmit();
 
   const activeExp = EXPERIENCES.find((e) => e.id === selectedExp);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInquirySent(true);
+    const ok = await submit('/api/contact', {
+      name: inquiryName,
+      email: inquiryEmail,
+      subject: `Experience Booking: ${activeExp?.title || 'Custom Experience'}`,
+      message: `Experience: ${activeExp?.title || 'Custom Experience'} | Preferred Date: ${inquiryDate} | Participants: ${guestsCount}`,
+    });
+    if (ok) setInquirySent(true);
   };
 
   return (
@@ -273,6 +282,7 @@ export default function ExperiencesPage() {
                   onClick={() => {
                     setSelectedExp(null);
                     setInquirySent(false);
+                    clearError();
                   }}
                   className="btn btn-primary"
                 >
@@ -289,6 +299,7 @@ export default function ExperiencesPage() {
                     <input
                       type="date"
                       required
+                      min={getTodayDateStr()}
                       value={inquiryDate}
                       onChange={(e) => setInquiryDate(e.target.value)}
                       style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
@@ -341,16 +352,43 @@ export default function ExperiencesPage() {
                   </div>
                 </div>
 
+                {error && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '10px 14px',
+                      marginBottom: '16px',
+                      borderRadius: '6px',
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      color: '#B91C1C',
+                      fontSize: '12.5px',
+                      fontWeight: 500,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button
                     type="button"
-                    onClick={() => setSelectedExp(null)}
+                    onClick={() => {
+                      setSelectedExp(null);
+                      clearError();
+                    }}
                     className="btn btn-outline"
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary">
-                    <Send size={14} /> Send Booking Request
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="btn btn-primary"
+                    style={{ opacity: isSubmitting ? 0.6 : 1 }}
+                  >
+                    <Send size={14} /> {isSubmitting ? 'Sending Request...' : 'Send Booking Request'}
                   </button>
                 </div>
               </form>

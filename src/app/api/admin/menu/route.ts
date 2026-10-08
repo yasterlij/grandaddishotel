@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { query } from '@/lib/db';
+import { query, invalidateCache } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const res = await query(`SELECT * FROM dining_menu ORDER BY category, price ASC`);
     return NextResponse.json({ success: true, count: res.rows.length, items: res.rows });
@@ -12,6 +15,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { name, category = 'main', price = 25, description = '', tag = null } = await req.json();
 
@@ -26,6 +31,7 @@ export async function POST(req: NextRequest) {
       [id, name, category, Number(price), description, tag || null]
     );
 
+    invalidateCache('db_menu');
     return NextResponse.json({ success: true, message: 'Dish created successfully', id });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -33,6 +39,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { id, name, category, price, description, tag } = await req.json();
 
@@ -58,6 +66,7 @@ export async function PUT(req: NextRequest) {
       ]
     );
 
+    invalidateCache('db_menu');
     return NextResponse.json({ success: true, message: 'Dish updated successfully' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -65,6 +74,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -74,6 +85,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     await query(`DELETE FROM dining_menu WHERE id = $1`, [id]);
+    invalidateCache('db_menu');
     return NextResponse.json({ success: true, message: 'Dish deleted successfully' });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

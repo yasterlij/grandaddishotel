@@ -12,6 +12,11 @@ export interface Room {
   images: string[];
   amenities: string[];
   featured?: boolean;
+  /** Present on rooms loaded from the database. */
+  aliases?: string[];
+  availableCount?: number;
+  basePriceETB?: number;
+  basePriceUSD?: number;
 }
 
 export interface MenuItem {

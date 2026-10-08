@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Send, ThumbsUp, MessageSquare, ArrowRight } from 'lucide-react';
 import { TESTIMONIALS } from '@/data/hotelData';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function TestimonialsPage() {
   const [reviews, setReviews] = useState(TESTIMONIALS);
@@ -13,6 +14,8 @@ export default function TestimonialsPage() {
   const [formRoom, setFormRoom] = useState('Deluxe Room');
   const [formRating, setFormRating] = useState(5);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedMessage, setSubmittedMessage] = useState('');
+  const { isSubmitting, error, submit } = useFormSubmit();
 
   useEffect(() => {
     fetch('/api/testimonials')
@@ -27,43 +30,30 @@ export default function TestimonialsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const res = await fetch('/api/testimonials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formName,
-          location: formLocation,
-          rating: formRating,
-          title: formTitle,
-          comment: formComment,
-          roomType: formRoom,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.review) {
-        setReviews([data.review, ...reviews]);
-      } else {
-        const newRev = {
-          id: 't-user-' + Date.now(),
-          name: formName,
-          location: formLocation,
-          rating: formRating,
-          date: 'Just now',
-          title: formTitle,
-          comment: formComment,
-          roomType: formRoom,
-        };
-        setReviews([newRev, ...reviews]);
+    const ok = await submit(
+      '/api/testimonials',
+      {
+        name: formName,
+        location: formLocation,
+        rating: formRating,
+        title: formTitle,
+        comment: formComment,
+        roomType: formRoom,
+      },
+      (data) => {
+        setSubmittedMessage(
+          data?.message || 'Thank you! Your review has been submitted and is awaiting moderation.'
+        );
+        if (data?.review && data?.status === 'APPROVED') {
+          setReviews((prev) => [data.review, ...prev]);
+        }
+        setSubmitted(true);
+        setFormName('');
+        setFormLocation('');
+        setFormTitle('');
+        setFormComment('');
       }
-    } catch (err) {
-      console.error('Error posting review:', err);
-    }
-    setSubmitted(true);
-    setFormName('');
-    setFormLocation('');
-    setFormTitle('');
-    setFormComment('');
+    );
   };
 
   return (
@@ -206,9 +196,12 @@ export default function TestimonialsPage() {
             </p>
 
             {submitted ? (
-              <div style={{ padding: '20px', backgroundColor: '#ECFDF5', color: '#10B981', borderRadius: '8px', textAlign: 'center', fontSize: '14px' }}>
-                <Check size={20} style={{ margin: '0 auto 6px' }} />
-                Thank you! Your review has been added to our guest impressions.
+              <div style={{ padding: '20px', backgroundColor: '#ECFDF5', color: '#047857', borderRadius: '8px', textAlign: 'center', fontSize: '14px', lineHeight: '1.6' }}>
+                <Check size={22} style={{ margin: '0 auto 8px', color: '#10B981' }} />
+                <strong>Thank you!</strong>
+                <p style={{ margin: '4px 0 0', color: '#065F46' }}>
+                  {submittedMessage || 'Your review has been submitted and is awaiting moderation before appearing on the site.'}
+                </p>
               </div>
             ) : (
               <form onSubmit={handleSubmit}>
@@ -257,6 +250,23 @@ export default function TestimonialsPage() {
                       <option value="Executive Suite">Grand Executive Suite</option>
                     </select>
                   </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                      Star Rating *
+                    </label>
+                    <select
+                      value={formRating}
+                      onChange={(e) => setFormRating(Number(e.target.value))}
+                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                    >
+                      <option value={5}>★★★★★ (5/5 Exceptional)</option>
+                      <option value={4}>★★★★☆ (4/5 Very Good)</option>
+                      <option value={3}>★★★☆☆ (3/5 Average)</option>
+                      <option value={2}>★★☆☆☆ (2/5 Fair)</option>
+                      <option value={1}>★☆☆☆☆ (1/5 Poor)</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
@@ -287,8 +297,32 @@ export default function TestimonialsPage() {
                   />
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                  <Send size={15} /> Submit Your Review
+                {error && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '12px 16px',
+                      marginBottom: '16px',
+                      borderRadius: '8px',
+                      backgroundColor: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      color: '#B91C1C',
+                      fontSize: '13.5px',
+                      fontWeight: 500,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn btn-primary"
+                  style={{ width: '100%', opacity: isSubmitting ? 0.6 : 1 }}
+                >
+                  <Send size={15} /> {isSubmitting ? 'Submitting...' : 'Submit Your Review'}
                 </button>
               </form>
             )}

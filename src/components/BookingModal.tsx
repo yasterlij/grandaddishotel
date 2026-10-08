@@ -9,6 +9,7 @@ import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import PaymentModal from '@/components/PaymentModal';
 import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
 import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
+import { computeBookingTotals, getPromoDiscountPercent } from '@/lib/booking-pricing';
 
 export default function BookingModal() {
   const { isOpen, closeBooking, bookingParams } = useBooking();
@@ -18,11 +19,15 @@ export default function BookingModal() {
   const tomorrowStr = addDays(todayStr, 1);
 
   const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Room & Dates, 2: Add-ons & Guest Details, 3: Confirmation
-  const [selectedRoomId, setSelectedRoomId] = useState<string>('2');
+  const [selectedRoomId, setSelectedRoomId] = useState<string>('deluxe-room');
   const [checkIn, setCheckIn] = useState<string>(todayStr);
   const [checkOut, setCheckOut] = useState<string>(tomorrowStr);
   const [adults, setAdults] = useState<number>(2);
   const [children, setChildren] = useState<number>(0);
+  // Nights selected when the modal opened — date changes are measured against
+  // this baseline so an ordinary multi-night stay is NOT flagged as an
+  // "extension" in the admin portal.
+  const [baselineNights, setBaselineNights] = useState<number>(1);
 
   // Add-ons
   const [addons, setAddons] = useState<{ [key: string]: boolean }>({
@@ -49,6 +54,7 @@ export default function BookingModal() {
   const [activeTxRef, setActiveTxRef] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dateChangeFlag, setDateChangeFlag] = useState<{ isExtended: boolean; text: string; delta: number; totalNights: number } | null>(null);
+  const [bookingError, setBookingError] = useState('');
 
   // Confirmation state
   const [bookingRef, setBookingRef] = useState('');
@@ -76,18 +82,23 @@ export default function BookingModal() {
     if (bookingParams.checkOut) setCheckOut(bookingParams.checkOut);
     if (bookingParams.adults) setAdults(bookingParams.adults);
     if (bookingParams.children !== undefined) setChildren(bookingParams.children);
-    if (bookingParams.checkIn && bookingParams.checkOut) {
-      const n = calculateStayNights(bookingParams.checkIn, bookingParams.checkOut);
-      if (n > 1) {
-        setDateChangeFlag({
-          isExtended: true,
-          text: `Extended stay of ${n} nights selected (${formatFriendlyDate(bookingParams.checkIn)} → ${formatFriendlyDate(bookingParams.checkOut)}). Payment scaled automatically.`,
-          delta: n - 1,
-          totalNights: n,
-        });
-      }
-    }
   }, [bookingParams]);
+
+  // Reset the flow every time the modal is (re)opened, so a fresh booking never
+  // inherits the previous confirmation voucher, payment state, or error.
+  useEffect(() => {
+    if (!isOpen) return;
+    setStep(1);
+    setPaymentStatus('PENDING');
+    setBookingRef('');
+    setCreatedReservationId('');
+    setActiveTxRef('');
+    setIsPaymentModalOpen(false);
+    setDateChangeFlag(null);
+    setBookingError('');
+    setBaselineNights(calculateStayNights(checkIn, checkOut));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Handle escape key
   useEffect(() => {
@@ -115,10 +126,35 @@ export default function BookingModal() {
   if (!isOpen) return null;
 
   const selectedRoom =
-    rooms.find((r) => r.id === selectedRoomId || r.slug === selectedRoomId) || rooms[0];
+    rooms.find(
+      (r) =>
+        r.id === selectedRoomId ||
+        r.slug === selectedRoomId ||
+        (r.aliases || []).includes(selectedRoomId)
+    ) ||
+    rooms.find((r) => r.slug === 'deluxe-room' || (r.aliases || []).includes('deluxe-room')) ||
+    rooms[0];
 
   // Calculate nights safely
   const nights = calculateStayNights(checkIn, checkOut);
+
+  /** Update the change flag relative to the baseline (opening) stay length. */
+  const refreshDateChangeFlag = (newNights: number, nextIn: string, nextOut: string) => {
+    const delta = newNights - baselineNights;
+    if (delta === 0) {
+      setDateChangeFlag(null); // back to the originally selected length
+      return;
+    }
+    setDateChangeFlag({
+      isExtended: delta > 0,
+      text:
+        delta > 0
+          ? `Stay extended by +${delta} ${delta === 1 ? 'night' : 'nights'} (${newNights} nights total, ${formatFriendlyDate(nextIn)} → ${formatFriendlyDate(nextOut)}). Payment scaled automatically.`
+          : `Stay shortened by ${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'night' : 'nights'} (${newNights} nights total, ${formatFriendlyDate(nextIn)} → ${formatFriendlyDate(nextOut)}). Payment scaled automatically.`,
+      delta,
+      totalNights: newNights,
+    });
+  };
 
   const handleCheckInChange = (newDate: string) => {
     setCheckIn(newDate);
@@ -127,38 +163,13 @@ export default function BookingModal() {
       nextOut = addDays(newDate, 1);
       setCheckOut(nextOut);
     }
-    const newNights = calculateStayNights(newDate, nextOut);
-    if (newNights > 1) {
-      setDateChangeFlag({
-        isExtended: true,
-        text: `Stay scheduled for ${newNights} nights (${formatFriendlyDate(newDate)} → ${formatFriendlyDate(nextOut)}). Total payment scaled automatically.`,
-        delta: newNights - 1,
-        totalNights: newNights,
-      });
-    }
+    refreshDateChangeFlag(calculateStayNights(newDate, nextOut), newDate, nextOut);
   };
 
   const handleCheckOutChange = (newDate: string) => {
     const validOut = (!newDate || newDate <= checkIn) ? addDays(checkIn, 1) : newDate;
     setCheckOut(validOut);
-    const newNights = calculateStayNights(checkIn, validOut);
-    const prevNights = calculateStayNights(checkIn, checkOut);
-    const diff = newNights - prevNights;
-    if (diff > 0) {
-      setDateChangeFlag({
-        isExtended: true,
-        text: `Stay extended by +${diff} ${diff === 1 ? 'night' : 'nights'} (${newNights} nights total). Payment scaled automatically.`,
-        delta: diff,
-        totalNights: newNights,
-      });
-    } else if (diff < 0) {
-      setDateChangeFlag({
-        isExtended: false,
-        text: `Stay shortened by ${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'night' : 'nights'} (${newNights} nights total). Payment scaled automatically.`,
-        delta: diff,
-        totalNights: newNights,
-      });
-    }
+    refreshDateChangeFlag(calculateStayNights(checkIn, validOut), checkIn, validOut);
   };
 
   const handleExtendNights = (deltaDays: number) => {
@@ -166,25 +177,22 @@ export default function BookingModal() {
     const newNights = Math.max(1, currentNights + deltaDays);
     const newOut = addDays(checkIn, newNights);
     setCheckOut(newOut);
-    const delta = newNights - currentNights;
-    if (delta > 0) {
-      setDateChangeFlag({
-        isExtended: true,
-        text: `Stay extended by +${delta} ${delta === 1 ? 'night' : 'nights'}! Total duration is now ${newNights} nights. Payment updated automatically.`,
-        delta,
-        totalNights: newNights,
-      });
-    } else if (delta < 0) {
-      setDateChangeFlag({
-        isExtended: false,
-        text: `Stay shortened by ${Math.abs(delta)} ${Math.abs(delta) === 1 ? 'night' : 'nights'}. Total duration is now ${newNights} nights. Payment updated automatically.`,
-        delta,
-        totalNights: newNights,
-      });
-    }
+    refreshDateChangeFlag(newNights, checkIn, newOut);
   };
 
-  // Addon costs
+  // Shared pricing rules (same module the server uses to compute totals)
+  const totals = computeBookingTotals({
+    pricePerNight: selectedRoom.pricePerNight,
+    nights,
+    adults,
+    addons: addons as Record<string, boolean>,
+    discountPercent,
+  });
+  const { roomSubtotal, discountAmount, addonsTotal, tax } = totals;
+  const grandTotal = totals.grandTotal;
+  const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
+
+  // Display prices for the add-on UI (per selection, incl. nights/adults where applicable)
   const addonPrices = {
     airportShuttle: 15,
     breakfast: 12 * adults * nights,
@@ -192,28 +200,15 @@ export default function BookingModal() {
     coffeeCeremony: 8 * adults,
   };
 
-  let addonsTotal = 0;
-  if (addons.airportShuttle) addonsTotal += addonPrices.airportShuttle;
-  if (addons.breakfast) addonsTotal += addonPrices.breakfast;
-  if (addons.spaTreatment) addonsTotal += addonPrices.spaTreatment;
-  if (addons.coffeeCeremony) addonsTotal += addonPrices.coffeeCeremony;
-
-  const roomSubtotal = selectedRoom.pricePerNight * nights;
-  const discountAmount = (roomSubtotal * discountPercent) / 100;
-  const subtotalAfterDiscount = roomSubtotal - discountAmount + addonsTotal;
-  const tax = Math.round(subtotalAfterDiscount * 0.15 * 100) / 100; // 15% VAT
-  const grandTotal = Math.round((subtotalAfterDiscount + tax) * 100) / 100;
-  const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
-
   const applyPromo = () => {
-    const code = promoCode.trim().toUpperCase();
-    if (code === 'GRANDMEMBER15' || code === 'SAVE15') {
-      setDiscountPercent(15);
-      setPromoMessage('Member discount of 15% applied!');
-    } else if (code === 'WEEKENDREBALANCE') {
-      setDiscountPercent(20);
-      setPromoMessage('Weekend Special: 20% discount applied!');
+    const percent = getPromoDiscountPercent(promoCode);
+    if (percent > 0) {
+      setDiscountPercent(percent);
+      setPromoMessage(
+        percent === 20 ? 'Weekend Special: 20% discount applied!' : 'Member discount of 15% applied!'
+      );
     } else {
+      setDiscountPercent(0);
       setPromoMessage('Invalid coupon code');
     }
   };
@@ -221,6 +216,7 @@ export default function BookingModal() {
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setBookingError('');
     try {
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -237,16 +233,17 @@ export default function BookingModal() {
           guestPhone,
           specialRequests,
           addons,
-          totalAmount: grandTotal,
+          // The server validates the code and computes the total itself —
+          // totalAmount/paymentStatus are intentionally NOT sent.
+          promoCode: promoCode.trim(),
           currency: 'USD',
           paymentProvider: selectedPaymentProvider,
-          paymentStatus: 'PENDING',
-          isDateExtended: Boolean(dateChangeFlag?.isExtended || nights > 1),
-          dateChangeNote: dateChangeFlag?.text || (nights > 1 ? `Extended stay of ${nights} nights (${checkIn} to ${checkOut})` : ''),
+          isDateExtended: Boolean(dateChangeFlag),
+          dateChangeNote: dateChangeFlag?.text || '',
         }),
       });
-      const data = await res.json();
-      if (data.success && data.bookingRef) {
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success && data.bookingRef) {
         setBookingRef(data.bookingRef);
         setCreatedReservationId(data.reservationId || '');
         setActiveTxRef(data.txRef || '');
@@ -258,25 +255,15 @@ export default function BookingModal() {
           setIsPaymentModalOpen(true);
         }
       } else {
-        const fallbackRef = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
-        setBookingRef(fallbackRef);
-        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
-          setPaymentStatus('PENDING');
-          setStep(3);
-        } else {
-          setIsPaymentModalOpen(true);
-        }
+        // Real failure — show the server's message; never fabricate a booking.
+        setBookingError(
+          data?.error ||
+            'We could not complete your reservation. Please try again or contact the hotel.'
+        );
       }
     } catch (err) {
       console.error('Reservation error:', err);
-      const fallbackRef = 'GAH-' + Math.floor(100000 + Math.random() * 900000);
-      setBookingRef(fallbackRef);
-      if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
-        setPaymentStatus('PENDING');
-        setStep(3);
-      } else {
-        setIsPaymentModalOpen(true);
-      }
+      setBookingError('Network error — please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -1182,6 +1169,25 @@ export default function BookingModal() {
                   </span>
                 </button>
               </div>
+
+              {bookingError && (
+                <div
+                  role="alert"
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    color: '#B91C1C',
+                    fontSize: '13.5px',
+                    fontWeight: 500,
+                    textAlign: 'center',
+                  }}
+                >
+                  {bookingError}
+                </div>
+              )}
             </form>
           )}
 

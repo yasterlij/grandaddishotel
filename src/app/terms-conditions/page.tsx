@@ -64,10 +64,17 @@ export default function TermsConditionsPage() {
             </p>
 
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: '#153D4B', marginBottom: '14px' }}>
-              5. Contact & Inquiries
+              5. Payment Terms & Card Guarantee
+            </h2>
+            <p style={{ marginBottom: '20px' }}>
+              Your credit card details entered during booking are securely processed through PCI DSS-compliant gateways and used strictly to guarantee your reservation. No unauthorized charges are applied prior to your check-in, except where specified under special non-refundable packages or in cases of unnotified no-show. We accept Mastercard, Visa, and domestic Ethiopian payment methods.
+            </p>
+
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: '#153D4B', marginBottom: '14px' }}>
+              6. Contact & Inquiries
             </h2>
             <p>
-              For any questions concerning your stay or these terms, please contact our 24/7 guest relations department at <strong>{HOTEL_INFO.phone}</strong> or by email at <strong>{HOTEL_INFO.email}</strong>.
+              For any questions concerning your stay, payment verification, or these policies, please contact our 24/7 guest relations department at <strong>{HOTEL_INFO.phone}</strong> or by email at <strong>{HOTEL_INFO.email}</strong>.
             </p>
           </div>
         </div>

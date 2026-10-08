@@ -385,18 +385,37 @@ export default function WellnessPage() {
                       min={getTodayDateStr()}
                       value={spaDate}
                       onChange={(e) => setSpaDate(e.target.value)}
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                       Preferred Time *
                     </label>
                     <select
                       value={spaTime}
                       onChange={(e) => setSpaTime(e.target.value)}
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                        cursor: 'pointer',
+                      }}
                     >
                       <option value="10:00">10:00 AM</option>
                       <option value="11:30">11:30 AM</option>
@@ -410,7 +429,7 @@ export default function WellnessPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                       Full Name *
                     </label>
                     <input
@@ -419,11 +438,20 @@ export default function WellnessPage() {
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       placeholder="Your name"
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                      }}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                       Phone *
                     </label>
                     <input
@@ -432,13 +460,22 @@ export default function WellnessPage() {
                       value={clientPhone}
                       onChange={(e) => setClientPhone(e.target.value)}
                       placeholder="+251..."
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                      }}
                     />
                   </div>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                     Email *
                   </label>
                   <input
@@ -447,7 +484,16 @@ export default function WellnessPage() {
                     value={clientEmail}
                     onChange={(e) => setClientEmail(e.target.value)}
                     placeholder="name@example.com"
-                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#F3F4F6',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '6px',
+                      padding: '11px 13px',
+                      fontSize: '13px',
+                      color: '#1F2937',
+                      outline: 'none',
+                    }}
                   />
                 </div>
 

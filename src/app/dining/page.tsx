@@ -414,18 +414,37 @@ export default function DiningPage() {
                       min={getTodayDateStr()}
                       value={tableDate}
                       onChange={(e) => setTableDate(e.target.value)}
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                      }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                       Time *
                     </label>
                     <select
                       value={tableTime}
                       onChange={(e) => setTableTime(e.target.value)}
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                        cursor: 'pointer',
+                      }}
                     >
                       <option value="07:30">07:30 (Breakfast)</option>
                       <option value="09:00">09:00 (Breakfast)</option>
@@ -439,13 +458,23 @@ export default function DiningPage() {
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                     Party Size *
                   </label>
                   <select
                     value={partySize}
                     onChange={(e) => setPartySize(Number(e.target.value))}
-                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#F3F4F6',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '6px',
+                      padding: '11px 13px',
+                      fontSize: '13px',
+                      color: '#1F2937',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                       <option key={num} value={num}>
@@ -457,7 +486,7 @@ export default function DiningPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                       Your Name *
                     </label>
                     <input
@@ -466,11 +495,20 @@ export default function DiningPage() {
                       value={resName}
                       onChange={(e) => setResName(e.target.value)}
                       placeholder="Jane Doe"
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                      }}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                       Phone *
                     </label>
                     <input
@@ -479,13 +517,22 @@ export default function DiningPage() {
                       value={resPhone}
                       onChange={(e) => setResPhone(e.target.value)}
                       placeholder="+251..."
-                      style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#F3F4F6',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '11px 13px',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        outline: 'none',
+                      }}
                     />
                   </div>
                 </div>
 
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                     Email *
                   </label>
                   <input
@@ -494,12 +541,21 @@ export default function DiningPage() {
                     value={resEmail}
                     onChange={(e) => setResEmail(e.target.value)}
                     placeholder="jane@example.com"
-                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#F3F4F6',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '6px',
+                      padding: '11px 13px',
+                      fontSize: '13px',
+                      color: '#1F2937',
+                      outline: 'none',
+                    }}
                   />
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                     Dietary Notes / Special Requests (Optional)
                   </label>
                   <textarea
@@ -507,7 +563,16 @@ export default function DiningPage() {
                     value={resNotes}
                     onChange={(e) => setResNotes(e.target.value)}
                     placeholder="Vegetarian, birthday celebration, quiet corner..."
-                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#F3F4F6',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '6px',
+                      padding: '11px 13px',
+                      fontSize: '13px',
+                      color: '#1F2937',
+                      outline: 'none',
+                    }}
                   />
                 </div>
 

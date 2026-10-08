@@ -178,7 +178,7 @@ export default function ContactPage() {
                   <form onSubmit={handleSubmit}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '6px' }}>
+                        <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                           Your Name *
                         </label>
                         <input
@@ -187,13 +187,22 @@ export default function ContactPage() {
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           placeholder="Full name"
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#F3F4F6',
+                            border: '1px solid #E5E7EB',
+                            borderRadius: '6px',
+                            padding: '11px 13px',
+                            fontSize: '13px',
+                            color: '#1F2937',
+                            outline: 'none',
+                          }}
                         />
                       </div>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                         <div>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '6px' }}>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                             Email Address *
                           </label>
                           <input
@@ -202,11 +211,20 @@ export default function ContactPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="name@example.com"
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                            style={{
+                              width: '100%',
+                              backgroundColor: '#F3F4F6',
+                              border: '1px solid #E5E7EB',
+                              borderRadius: '6px',
+                              padding: '11px 13px',
+                              fontSize: '13px',
+                              color: '#1F2937',
+                              outline: 'none',
+                            }}
                           />
                         </div>
                         <div>
-                          <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '6px' }}>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                             Phone Number
                           </label>
                           <input
@@ -214,19 +232,38 @@ export default function ContactPage() {
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="+251..."
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                            style={{
+                              width: '100%',
+                              backgroundColor: '#F3F4F6',
+                              border: '1px solid #E5E7EB',
+                              borderRadius: '6px',
+                              padding: '11px 13px',
+                              fontSize: '13px',
+                              color: '#1F2937',
+                              outline: 'none',
+                            }}
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '6px' }}>
+                        <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                           Subject
                         </label>
                         <select
                           value={subject}
                           onChange={(e) => setSubject(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#F3F4F6',
+                            border: '1px solid #E5E7EB',
+                            borderRadius: '6px',
+                            padding: '11px 13px',
+                            fontSize: '13px',
+                            color: '#1F2937',
+                            outline: 'none',
+                            cursor: 'pointer',
+                          }}
                         >
                           <option value="General Inquiry">General Inquiry</option>
                           <option value="Room Reservation">Room Reservation</option>
@@ -238,7 +275,7 @@ export default function ContactPage() {
                       </div>
 
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '6px' }}>
+                        <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                           Your Message *
                         </label>
                         <textarea
@@ -247,7 +284,16 @@ export default function ContactPage() {
                           value={message}
                           onChange={(e) => setMessage(e.target.value)}
                           placeholder="How can we assist you today?"
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#F3F4F6',
+                            border: '1px solid #E5E7EB',
+                            borderRadius: '6px',
+                            padding: '11px 13px',
+                            fontSize: '13px',
+                            color: '#1F2937',
+                            outline: 'none',
+                          }}
                         />
                       </div>
                     </div>

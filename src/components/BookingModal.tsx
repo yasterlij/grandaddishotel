@@ -903,11 +903,13 @@ export default function BookingModal() {
                         onChange={(e) => setPromoCode(e.target.value)}
                         style={{
                           flex: 1,
-                          padding: '8px 12px',
-                          borderRadius: '4px',
-                          border: '1px solid #D5D4CC',
+                          padding: '9px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #E5E7EB',
+                          backgroundColor: '#F3F4F6',
                           fontSize: '13px',
                           textTransform: 'uppercase',
+                          outline: 'none',
                         }}
                       />
                       <button
@@ -948,7 +950,7 @@ export default function BookingModal() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                         Full Name *
                       </label>
                       <input
@@ -957,13 +959,22 @@ export default function BookingModal() {
                         value={guestName}
                         onChange={(e) => setGuestName(e.target.value)}
                         placeholder="Enter your full name"
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#F3F4F6',
+                          border: '1px solid #E5E7EB',
+                          borderRadius: '6px',
+                          padding: '11px 13px',
+                          fontSize: '13px',
+                          color: '#1F2937',
+                          outline: 'none',
+                        }}
                       />
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                        <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                           Email Address *
                         </label>
                         <input
@@ -972,11 +983,20 @@ export default function BookingModal() {
                           value={guestEmail}
                           onChange={(e) => setGuestEmail(e.target.value)}
                           placeholder="name@example.com"
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#F3F4F6',
+                            border: '1px solid #E5E7EB',
+                            borderRadius: '6px',
+                            padding: '11px 13px',
+                            fontSize: '13px',
+                            color: '#1F2937',
+                            outline: 'none',
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                        <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                           Phone Number *
                         </label>
                         <input
@@ -985,13 +1005,22 @@ export default function BookingModal() {
                           value={guestPhone}
                           onChange={(e) => setGuestPhone(e.target.value)}
                           placeholder="+251..."
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#F3F4F6',
+                            border: '1px solid #E5E7EB',
+                            borderRadius: '6px',
+                            padding: '11px 13px',
+                            fontSize: '13px',
+                            color: '#1F2937',
+                            outline: 'none',
+                          }}
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1F2937', display: 'block', marginBottom: '6px' }}>
                         Special Requests (Optional)
                       </label>
                       <textarea
@@ -999,7 +1028,16 @@ export default function BookingModal() {
                         value={specialRequests}
                         onChange={(e) => setSpecialRequests(e.target.value)}
                         placeholder="Quiet room, late check-in time, dietary preferences..."
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#F3F4F6',
+                          border: '1px solid #E5E7EB',
+                          borderRadius: '6px',
+                          padding: '11px 13px',
+                          fontSize: '13px',
+                          color: '#1F2937',
+                          outline: 'none',
+                        }}
                       />
                     </div>
                   </div>

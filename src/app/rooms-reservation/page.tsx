@@ -21,12 +21,17 @@ import {
   ArrowLeft,
   CreditCard,
   Lock,
+  Trash2,
+  ChevronDown,
+  ChevronLeft,
+  Info,
 } from 'lucide-react';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import { useCurrency } from '@/context/CurrencyContext';
 import PaymentModal from '@/components/PaymentModal';
+import MastercardCardForm from '@/components/MastercardCardForm';
 import { PaymentProviderType } from '@/lib/payment-types';
-import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
+import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate, formatHotelDate } from '@/lib/dates';
 import { computeBookingTotals, getPromoDiscountPercent } from '@/lib/booking-pricing';
 
 function ReservationContent() {
@@ -59,10 +64,31 @@ function ReservationContent() {
     coffeeCeremony: false,
   });
 
+  // Guest Details & Contact fields matching standard hotel form
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [guestName, setGuestName] = useState('');
+  const [estimatedArrivalTime, setEstimatedArrivalTime] = useState('02:00 pm');
+  const [isBookingForSomeoneElse, setIsBookingForSomeoneElse] = useState(false);
+  const [countryCode, setCountryCode] = useState('+251');
+  const [contactNo, setContactNo] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+
+  // World Mastercard card form fields
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
+  const [agreeTerms, setAgreeTerms] = useState(true);
+  const [subscribeNewsletter, setSubscribeNewsletter] = useState(false);
+
+  // Promo code & Price breakdown UI toggles
+  const [showPromoInput, setShowPromoInput] = useState(false);
+  const [showPriceBreakdown, setShowPriceBreakdown] = useState(false);
+  const [sandboxTestCard, setSandboxTestCard] = useState<{ number: string; expiry: string; cvc: string } | null>(null);
+
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoMessage, setPromoMessage] = useState('');
@@ -181,11 +207,101 @@ function ReservationContent() {
     }
   };
 
-  const handleConfirm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  useEffect(() => {
+    fetch('/api/payments/config')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.skina?.isSandbox && data?.skina?.testCards?.length > 0) {
+          const t = data.skina.testCards[0];
+          setSandboxTestCard({ number: t.number, expiry: t.expiry, cvc: t.cvc });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleFirstNameChange = (val: string) => {
+    setFirstName(val);
+    const combined = `${val} ${lastName}`.trim();
+    setGuestName(combined);
+    if (!cardHolder || cardHolder === `${firstName} ${lastName}`.trim().toUpperCase()) {
+      setCardHolder(combined.toUpperCase());
+    }
+  };
+
+  const handleLastNameChange = (val: string) => {
+    setLastName(val);
+    const combined = `${firstName} ${val}`.trim();
+    setGuestName(combined);
+    if (!cardHolder || cardHolder === `${firstName} ${lastName}`.trim().toUpperCase()) {
+      setCardHolder(combined.toUpperCase());
+    }
+  };
+
+  const validateCardForm = (): string | null => {
+    const digits = cardNumber.replace(/\D/g, '');
+    if (digits.length < 13 || digits.length > 19) {
+      return 'Please enter a valid card number.';
+    }
+    if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+      return 'Please enter the card expiry as MM/YY.';
+    }
+    const [mm, yy] = cardExpiry.split('/').map(Number);
+    if (mm < 1 || mm > 12) return 'The expiry month must be between 01 and 12.';
+    const expiry = new Date(2000 + yy, mm, 0);
+    if (expiry.getTime() < Date.now()) return 'This card has expired.';
+    if (!/^\d{3,4}$/.test(cardCvc)) {
+      return 'Please enter a valid CVV (3 or 4 digits).';
+    }
+    if (!cardHolder.trim() && !firstName.trim()) {
+      return 'Please enter the Name On Card.';
+    }
+    if (!agreeTerms) {
+      return 'Please agree to our Terms and Conditions to proceed.';
+    }
+    return null;
+  };
+
+  const handleConfirm = async (e?: React.FormEvent) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     setBookingError('');
+
+    const effectiveName = (firstName && lastName)
+      ? `${firstName} ${lastName}`.trim()
+      : (guestName || firstName || lastName || '').trim();
+
+    if (!effectiveName) {
+      setBookingError('Please enter your First Name and Last Name.');
+      return;
+    }
+    if (!guestEmail || !guestEmail.includes('@')) {
+      setBookingError('Please enter a valid email address.');
+      return;
+    }
+    const effectivePhone = contactNo
+      ? `${countryCode} ${contactNo}`.trim()
+      : (guestPhone || '').trim();
+    if (!effectivePhone) {
+      setBookingError('Please enter your contact phone number.');
+      return;
+    }
+
+    const cardErr = validateCardForm();
+    if (cardErr) {
+      setBookingError(cardErr);
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
+      const fullSpecialRequests = [
+        specialRequests.trim(),
+        estimatedArrivalTime ? `Estimated arrival time: ${estimatedArrivalTime}` : '',
+        isBookingForSomeoneElse ? 'Guest is booking for someone else' : '',
+      ].filter(Boolean).join(' | ');
+
+      // 1. Create reservation in PostgreSQL database
       const res = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,13 +312,11 @@ function ReservationContent() {
           checkOut,
           adults,
           children,
-          guestName,
-          guestEmail,
-          guestPhone,
-          specialRequests,
+          guestName: effectiveName,
+          guestEmail: guestEmail.trim(),
+          guestPhone: effectivePhone,
+          specialRequests: fullSpecialRequests,
           addons,
-          // The server validates the code and computes the total itself —
-          // totalAmount/paymentStatus are intentionally NOT sent.
           promoCode: promoCode.trim(),
           currency: 'USD',
           paymentProvider: selectedPaymentProvider,
@@ -211,21 +325,61 @@ function ReservationContent() {
         }),
       });
       const data = await res.json().catch(() => null);
-      if (res.ok && data?.success && data.bookingRef) {
-        setBookingRef(data.bookingRef);
-        setReservationId(data.reservationId || '');
-        setActiveTxRef(data.txRef || '');
-        setIsPaymentModalOpen(true);
-      } else {
-        // Real failure — surface the server's message; never fabricate a booking.
-        setBookingError(
-          data?.error ||
-            'We could not complete your reservation. Please try again or contact the hotel.'
+      if (!res.ok || !data?.success || !data.bookingRef) {
+        throw new Error(
+          data?.error || 'We could not complete your reservation. Please try again or contact the hotel.'
         );
       }
-    } catch (err) {
+
+      const newBookingRef = data.bookingRef;
+      const newReservationId = data.reservationId || '';
+      setBookingRef(newBookingRef);
+      setReservationId(newReservationId);
+
+      // 2. Authorize credit card with payment gateway
+      const initRes = await fetch('/api/payments/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reservationId: newReservationId,
+          provider: 'SKINA',
+          cardDetails: {
+            number: cardNumber,
+            expiry: cardExpiry,
+            cvc: cardCvc,
+            cardHolder: cardHolder || effectiveName,
+          },
+        }),
+      });
+      const initData = await initRes.json().catch(() => null);
+      if (!initData || !initData.success) {
+        throw new Error(initData?.error || 'Credit card authorization failed. Please check your card details.');
+      }
+
+      const txRef = initData.payment?.txRef || data.txRef;
+      setActiveTxRef(txRef);
+
+      // 3. Verify Payment
+      const verifyRes = await fetch('/api/payments/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          txRef,
+          status: 'SUCCESS',
+          gatewayRef: `GW-MC-${Date.now().toString().slice(-6)}`,
+        }),
+      });
+      const verifyData = await verifyRes.json().catch(() => null);
+      if (verifyData && verifyData.success) {
+        setPaymentStatus('SUCCESS');
+        setStep(3);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        throw new Error(verifyData?.error || 'Payment verification could not be confirmed.');
+      }
+    } catch (err: any) {
       console.error('Reservation error:', err);
-      setBookingError('Network error — please check your connection and try again.');
+      setBookingError(err?.message || 'Network error — please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -660,121 +814,14 @@ function ReservationContent() {
           )}
 
           {step === 2 && (
-            <form onSubmit={handleConfirm} style={{ maxWidth: '820px', margin: '0 auto' }}>
-              {/* Interactive Stay Duration & Date Modification Bar */}
-              <div
-                style={{
-                  backgroundColor: '#FDF9F4',
-                  border: '1px solid #E8D7C3',
-                  borderRadius: '12px',
-                  padding: '18px 24px',
-                  marginBottom: '24px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '14px',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#E49951', fontWeight: 700 }}>
-                      RESERVATION DURATION & STAY DATES
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        backgroundColor: '#153D4B',
-                        color: '#FFFFFF',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                      }}
-                    >
-                      {nights} {nights === 1 ? 'Night' : 'Nights'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '16px', fontWeight: 600, color: '#153D4B', marginTop: '4px' }}>
-                    📅 {formatFriendlyDate(checkIn)} → {formatFriendlyDate(checkOut)}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#5E6E75', marginTop: '2px' }}>
-                    Selected Room: <strong>{selectedRoom.name}</strong> (${selectedRoom.pricePerNight}/night) • Room Subtotal: <strong>${roomSubtotal} USD</strong>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B' }}>Modify Stay:</span>
-                  <button
-                    type="button"
-                    disabled={nights <= 1}
-                    onClick={() => handleExtendNights(-1)}
-                    title="Shorten stay by 1 night"
-                    style={{
-                      padding: '7px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid #D5D4CC',
-                      backgroundColor: '#FFFFFF',
-                      color: nights <= 1 ? '#A0AEC0' : '#153D4B',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      cursor: nights <= 1 ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    −1 Night
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExtendNights(1)}
-                    title="Extend stay by 1 night (payment updates automatically)"
-                    style={{
-                      padding: '7px 14px',
-                      borderRadius: '6px',
-                      border: '1px solid #E49951',
-                      backgroundColor: '#FEF3C7',
-                      color: '#B45309',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    +1 Night
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExtendNights(2)}
-                    title="Extend stay by 2 nights"
-                    style={{
-                      padding: '7px 14px',
-                      borderRadius: '6px',
-                      border: '1px solid #E49951',
-                      backgroundColor: '#FEF3C7',
-                      color: '#B45309',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    +2 Nights
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleExtendNights(3)}
-                    title="Extend stay by 3 nights"
-                    style={{
-                      padding: '7px 14px',
-                      borderRadius: '6px',
-                      border: '1px solid #E49951',
-                      backgroundColor: '#FEF3C7',
-                      color: '#B45309',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    +3 Nights
-                  </button>
-                </div>
-              </div>
+            <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+              <style>{`
+                @media (max-width: 960px) {
+                  .reservation-checkout-layout {
+                    grid-template-columns: 1fr !important;
+                  }
+                }
+              `}</style>
 
               {/* Date Extension / Adjustment Alert Flag Banner */}
               {dateChangeFlag && (
@@ -788,7 +835,7 @@ function ReservationContent() {
                     color: dateChangeFlag.isExtended ? '#92400E' : '#1E40AF',
                     padding: '14px 18px',
                     borderRadius: '10px',
-                    marginBottom: '24px',
+                    marginBottom: '20px',
                     fontSize: '13px',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                   }}
@@ -816,239 +863,788 @@ function ReservationContent() {
                 </div>
               )}
 
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '12px',
-                  border: '1px solid #E2E1DA',
-                  padding: '32px',
-                  marginBottom: '28px',
-                }}
-              >
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', color: '#153D4B', marginBottom: '20px' }}>
-                  Guest Details & Contact Information
-                </h3>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={guestName}
-                      onChange={(e) => setGuestName(e.target.value)}
-                      placeholder="Jane Doe"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
-                      Email Address *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={guestEmail}
-                      onChange={(e) => setGuestEmail(e.target.value)}
-                      placeholder="jane@example.com"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
-                      Phone / Mobile *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={guestPhone}
-                      onChange={(e) => setGuestPhone(e.target.value)}
-                      placeholder="+251 9..."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '4px' }}>
-                    Special Requests (Optional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={specialRequests}
-                    onChange={(e) => setSpecialRequests(e.target.value)}
-                    placeholder="Estimated check-in time, quiet room, extra pillows..."
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
-                  />
-                </div>
-
-                {/* Optional Add-ons */}
-                <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#153D4B', marginBottom: '12px' }}>
-                  Add-on Experiences & Services
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-                  <label
-                    style={{
-                      display: 'flex',
-                      gap: '10px',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E1DA',
-                      backgroundColor: addons.airportShuttle ? '#FDF9F4' : '#FFFFFF',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={addons.airportShuttle}
-                      onChange={(e) => setAddons({ ...addons, airportShuttle: e.target.checked })}
-                    />
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Airport Shuttle (+$15)</div>
-                      <div style={{ fontSize: '11px', color: '#838A8D' }}>Chauffeured pickup from Bole Airport</div>
-                    </div>
-                  </label>
-
-                  <label
-                    style={{
-                      display: 'flex',
-                      gap: '10px',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: '1px solid #E2E1DA',
-                      backgroundColor: addons.breakfast ? '#FDF9F4' : '#FFFFFF',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={addons.breakfast}
-                      onChange={(e) => setAddons({ ...addons, breakfast: e.target.checked })}
-                    />
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Daily Breakfast (+${addonPrices.breakfast})</div>
-                      <div style={{ fontSize: '11px', color: '#838A8D' }}>Full international & Ethiopian buffet</div>
-                    </div>
-                  </label>
-                </div>
-
-                {/* Promo Code */}
-                <div style={{ backgroundColor: '#F7F7F2', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '6px' }}>
-                    PROMO CODE
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="e.g. GRANDMEMBER15"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: '4px', border: '1px solid #D5D4CC', fontSize: '13px' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={applyPromo}
-                      style={{ padding: '8px 16px', backgroundColor: '#153D4B', color: '#FFFFFF', borderRadius: '4px', fontSize: '12px' }}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {promoMessage && (
-                    <div style={{ fontSize: '12px', marginTop: '6px', color: discountPercent > 0 ? '#10B981' : '#EF4444' }}>
-                      {promoMessage}
-                    </div>
-                  )}
-                </div>
-
-                {/* Payment method note */}
+              <form onSubmit={handleConfirm} noValidate>
                 <div
+                  className="reservation-checkout-layout"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    backgroundColor: '#EBF1F4',
-                    border: '1px solid #CAD9E0',
-                    marginBottom: '24px',
-                    fontSize: '12px',
-                    color: '#153D4B',
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(360px, 1fr)',
+                    gap: '24px',
+                    alignItems: 'start',
                   }}
                 >
-                  <CreditCard size={18} color="#153D4B" />
-                  <div>
-                    <strong>Secure Card Payment</strong> — Mastercard & Local Ethiopian Debit Cards accepted.
-                    <div style={{ fontSize: '11px', color: '#5E6E75', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={11} /> 256-bit SSL Encrypted · PCI DSS Compliant · Visa/AmEx coming soon
-                    </div>
-                  </div>
-                </div>
+                  {/* LEFT COLUMN: Guest & Contact Details Cards */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Card 1: Room & Stay & Guest Details */}
+                    <div
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '10px',
+                        border: '1px solid #E5E7EB',
+                        padding: '24px 28px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <h2
+                        style={{
+                          fontSize: '22px',
+                          fontWeight: 700,
+                          color: '#881337',
+                          margin: '0 0 18px',
+                          letterSpacing: '-0.3px',
+                        }}
+                      >
+                        {selectedRoom.name}
+                      </h2>
 
-                {/* Final Total Summary */}
-                <div style={{ borderTop: '1px solid #ECEBE5', paddingTop: '18px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
-                    <div>
-                      <span style={{ fontSize: '13px', color: '#5E6E75', fontWeight: 600 }}>Total Amount Due (includes 15% VAT):</span>
-                      <div style={{ fontSize: '11px', color: '#10B981', marginTop: '2px' }}>
-                        ✓ Calculated for {nights} {nights === 1 ? 'night' : 'nights'} ({formatFriendlyDate(checkIn)} → {formatFriendlyDate(checkOut)})
+                      {/* Check In / Check Out dates */}
+                      <div style={{ display: 'flex', gap: '48px', marginBottom: '22px', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: '11px', color: '#881337', fontWeight: 600, marginBottom: '3px' }}>
+                            Check In
+                          </div>
+                          <div style={{ fontSize: '14.5px', fontWeight: 700, color: '#111827' }}>
+                            {formatHotelDate(checkIn)}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', color: '#881337', fontWeight: 600, marginBottom: '3px' }}>
+                            Check Out
+                          </div>
+                          <div style={{ fontSize: '14.5px', fontWeight: 700, color: '#111827' }}>
+                            {formatHotelDate(checkOut)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Guest Details * */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>
+                          Guest Details <span style={{ color: '#DC2626' }}>*</span>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1.2fr) minmax(80px, 0.7fr)',
+                            gap: '12px',
+                          }}
+                        >
+                          <div>
+                            <input
+                              type="text"
+                              placeholder="First Name"
+                              value={firstName}
+                              onChange={(e) => handleFirstNameChange(e.target.value)}
+                              style={{
+                                width: '100%',
+                                backgroundColor: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '6px',
+                                padding: '11px 13px',
+                                fontSize: '13px',
+                                color: '#1F2937',
+                                outline: 'none',
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <input
+                              type="text"
+                              placeholder="Last Name"
+                              value={lastName}
+                              onChange={(e) => handleLastNameChange(e.target.value)}
+                              style={{
+                                width: '100%',
+                                backgroundColor: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '6px',
+                                padding: '11px 13px',
+                                fontSize: '13px',
+                                color: '#1F2937',
+                                outline: 'none',
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ position: 'relative' }}>
+                            <select
+                              value={adults}
+                              onChange={(e) => setAdults(Number(e.target.value))}
+                              style={{
+                                width: '100%',
+                                backgroundColor: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '6px',
+                                padding: '11px 28px 11px 13px',
+                                fontSize: '13px',
+                                fontWeight: 500,
+                                color: '#1F2937',
+                                appearance: 'none',
+                                cursor: 'pointer',
+                                outline: 'none',
+                              }}
+                            >
+                              <option value={1}>1</option>
+                              <option value={2}>2</option>
+                              <option value={3}>3</option>
+                              <option value={4}>4</option>
+                              <option value={5}>5</option>
+                              <option value={6}>6</option>
+                            </select>
+                            <ChevronDown
+                              size={14}
+                              color="#6B7280"
+                              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Special Request & Estimated Arrival */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#881337', marginBottom: '6px' }}>
+                            Special Request
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Special Request"
+                            value={specialRequests}
+                            onChange={(e) => setSpecialRequests(e.target.value)}
+                            style={{
+                              width: '100%',
+                              backgroundColor: '#F3F4F6',
+                              border: '1px solid #E5E7EB',
+                              borderRadius: '6px',
+                              padding: '11px 13px',
+                              fontSize: '13px',
+                              color: '#1F2937',
+                              outline: 'none',
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px' }}>
+                            <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#881337' }}>
+                              Estimated arrival time
+                            </label>
+                            <span title="Helps us ensure your room is ready">
+                              <Info size={13} color="#9CA3AF" style={{ cursor: 'pointer' }} />
+                            </span>
+                          </div>
+                          <div style={{ position: 'relative' }}>
+                            <select
+                              value={estimatedArrivalTime}
+                              onChange={(e) => setEstimatedArrivalTime(e.target.value)}
+                              style={{
+                                width: '100%',
+                                backgroundColor: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '6px',
+                                padding: '11px 28px 11px 13px',
+                                fontSize: '13px',
+                                color: '#1F2937',
+                                appearance: 'none',
+                                cursor: 'pointer',
+                                outline: 'none',
+                              }}
+                            >
+                              <option value="10:00 am">10:00 am</option>
+                              <option value="11:00 am">11:00 am</option>
+                              <option value="12:00 pm">12:00 pm</option>
+                              <option value="01:00 pm">01:00 pm</option>
+                              <option value="02:00 pm">02:00 pm</option>
+                              <option value="03:00 pm">03:00 pm</option>
+                              <option value="04:00 pm">04:00 pm</option>
+                              <option value="05:00 pm">05:00 pm</option>
+                              <option value="06:00 pm">06:00 pm</option>
+                              <option value="07:00 pm">07:00 pm</option>
+                              <option value="08:00 pm">08:00 pm</option>
+                              <option value="09:00 pm">09:00 pm</option>
+                              <option value="10:00 pm">10:00 pm</option>
+                              <option value="11:00 pm">11:00 pm</option>
+                              <option value="Late Arrival">Late Arrival (after midnight)</option>
+                            </select>
+                            <ChevronDown
+                              size={14}
+                              color="#6B7280"
+                              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stay duration adjustments (+1 / -1 night) */}
+                      <div
+                        style={{
+                          marginTop: '18px',
+                          paddingTop: '14px',
+                          borderTop: '1px dashed #E5E7EB',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                        }}
+                      >
+                        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                          Stay: <strong style={{ color: '#111827' }}>{nights} {nights === 1 ? 'Night' : 'Nights'}</strong> (${selectedRoom.pricePerNight}/night)
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            disabled={nights <= 1}
+                            onClick={() => handleExtendNights(-1)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              border: '1px solid #D1D5DB',
+                              backgroundColor: '#FFFFFF',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: nights <= 1 ? '#9CA3AF' : '#374151',
+                              cursor: nights <= 1 ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            −1 Night
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExtendNights(1)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              border: '1px solid #D4A359',
+                              backgroundColor: '#FEF3C7',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: '#92400E',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            +1 Night
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExtendNights(2)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              border: '1px solid #D4A359',
+                              backgroundColor: '#FEF3C7',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: '#92400E',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            +2 Nights
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ fontSize: '28px', fontWeight: 700, color: '#E49951' }}>
-                      ${grandTotal} USD
+
+                    {/* Card 2: Contact Details */}
+                    <div
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '10px',
+                        border: '1px solid #E5E7EB',
+                        padding: '24px 28px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 700,
+                          color: '#881337',
+                          margin: '0 0 14px',
+                        }}
+                      >
+                        Contact Details
+                      </h3>
+
+                      {/* Toggle: I am booking for someone else */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={isBookingForSomeoneElse}
+                          onClick={() => setIsBookingForSomeoneElse(!isBookingForSomeoneElse)}
+                          style={{
+                            width: '38px',
+                            height: '20px',
+                            backgroundColor: isBookingForSomeoneElse ? '#D4A359' : '#9CA3AF',
+                            borderRadius: '999px',
+                            padding: '2px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            position: 'relative',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            transition: 'background-color 0.2s',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              backgroundColor: '#FFFFFF',
+                              borderRadius: '50%',
+                              transform: isBookingForSomeoneElse ? 'translateX(18px)' : 'translateX(0)',
+                              transition: 'transform 0.2s',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                            }}
+                          />
+                        </button>
+                        <span style={{ fontSize: '13px', color: '#881337', fontWeight: 600 }}>
+                          I am booking for someone else
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: '14px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#881337', marginBottom: '6px' }}>
+                            Country code <span style={{ color: '#DC2626' }}>*</span>
+                          </label>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <div style={{ position: 'relative' }}>
+                              <select
+                                value={countryCode}
+                                onChange={(e) => {
+                                  setCountryCode(e.target.value);
+                                  setGuestPhone(`${e.target.value} ${contactNo}`);
+                                }}
+                                style={{
+                                  backgroundColor: '#F3F4F6',
+                                  border: '1px solid #E5E7EB',
+                                  borderRadius: '6px',
+                                  padding: '11px 22px 11px 10px',
+                                  fontSize: '12.5px',
+                                  fontWeight: 600,
+                                  color: '#1F2937',
+                                  appearance: 'none',
+                                  cursor: 'pointer',
+                                  outline: 'none',
+                                }}
+                              >
+                                <option value="+251">🇪🇹 +251</option>
+                                <option value="+1">🇺🇸 +1</option>
+                                <option value="+44">🇬🇧 +44</option>
+                                <option value="+971">🇦🇪 +971</option>
+                                <option value="+49">🇩🇪 +49</option>
+                                <option value="+33">🇫🇷 +33</option>
+                                <option value="+86">🇨🇳 +86</option>
+                                <option value="+254">🇰🇪 +254</option>
+                              </select>
+                              <ChevronDown
+                                size={12}
+                                color="#6B7280"
+                                style={{ position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                              />
+                            </div>
+                            <input
+                              type="tel"
+                              placeholder="Contact no"
+                              value={contactNo}
+                              onChange={(e) => {
+                                setContactNo(e.target.value);
+                                setGuestPhone(`${countryCode} ${e.target.value}`);
+                              }}
+                              style={{
+                                flex: 1,
+                                backgroundColor: '#F3F4F6',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '6px',
+                                padding: '11px 13px',
+                                fontSize: '13px',
+                                color: '#1F2937',
+                                outline: 'none',
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 600, color: '#881337', marginBottom: '6px' }}>
+                            Email <span style={{ color: '#DC2626' }}>*</span>
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="example@email.com"
+                            value={guestEmail}
+                            onChange={(e) => setGuestEmail(e.target.value)}
+                            style={{
+                              width: '100%',
+                              backgroundColor: '#F3F4F6',
+                              border: '1px solid #E5E7EB',
+                              borderRadius: '6px',
+                              padding: '11px 13px',
+                              fontSize: '13px',
+                              color: '#1F2937',
+                              outline: 'none',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Optional Add-on Experiences & Services */}
+                    <div
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: '10px',
+                        border: '1px solid #E5E7EB',
+                        padding: '20px 28px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', marginBottom: '12px' }}>
+                        Enhance Your Stay (Optional Add-ons)
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 14px',
+                            borderRadius: '6px',
+                            border: '1px solid #E5E7EB',
+                            backgroundColor: addons.airportShuttle ? '#FEF9F0' : '#F9FAFB',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={addons.airportShuttle}
+                            onChange={(e) => setAddons({ ...addons, airportShuttle: e.target.checked })}
+                            style={{ accentColor: '#D4A359' }}
+                          />
+                          <div>
+                            <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#1F2937' }}>Airport Shuttle (+$15)</div>
+                            <div style={{ fontSize: '10.5px', color: '#6B7280' }}>Chauffeured Bole Airport pickup</div>
+                          </div>
+                        </label>
+
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 14px',
+                            borderRadius: '6px',
+                            border: '1px solid #E5E7EB',
+                            backgroundColor: addons.breakfast ? '#FEF9F0' : '#F9FAFB',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={addons.breakfast}
+                            onChange={(e) => setAddons({ ...addons, breakfast: e.target.checked })}
+                            style={{ accentColor: '#D4A359' }}
+                          />
+                          <div>
+                            <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#1F2937' }}>Daily Breakfast (+${addonPrices.breakfast})</div>
+                            <div style={{ fontSize: '10.5px', color: '#6B7280' }}>Buffet with Ethiopian & continental items</div>
+                          </div>
+                        </label>
+                      </div>
                     </div>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#838A8D', display: 'flex', gap: '14px', flexWrap: 'wrap', paddingTop: '6px' }}>
-                    <span>Room: ${roomSubtotal} ({nights} {nights === 1 ? 'night' : 'nights'})</span>
-                    {discountAmount > 0 && <span style={{ color: '#10B981' }}>Discount ({discountPercent}%): -${discountAmount.toFixed(2)}</span>}
-                    {addonsTotal > 0 && <span>Add-ons: +${addonsTotal}</span>}
-                    <span>Taxes (15% VAT): +${tax}</span>
+
+                  {/* RIGHT COLUMN: Booking Details Summary & World Mastercard Card Form Card */}
+                  <div
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: '1px solid #E5E7EB',
+                      padding: '24px 24px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      position: 'sticky',
+                      top: '110px',
+                    }}
+                  >
+                    {/* Header row: Booking Details and Book more button */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: 0 }}>
+                        Booking Details
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '6px',
+                          border: '1px solid #D4A359',
+                          backgroundColor: '#F6C374',
+                          color: '#451A03',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        }}
+                      >
+                        <span>‹</span> Book more
+                      </button>
+                    </div>
+
+                    {/* Room Name & Trash Icon */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>
+                        {selectedRoom.name}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        title="Change room"
+                        style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    {/* Inclusions subtitle */}
+                    <div style={{ fontSize: '12px', color: '#D4A359', fontWeight: 500, margin: '2px 0 14px' }}>
+                      Bed and Breakfast
+                    </div>
+
+                    {/* 4-Item Stay Bar */}
+                    <div
+                      style={{
+                        backgroundColor: '#F9FAFB',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px',
+                        marginBottom: '14px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#881337', fontWeight: 600 }}>Check In</div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#111827' }}>{formatHotelDate(checkIn)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#881337', fontWeight: 600 }}>Check Out</div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#111827' }}>{formatHotelDate(checkOut)}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', fontWeight: 700, color: '#111827' }}>
+                        <span>{adults}</span>
+                        <span style={{ fontSize: '13px' }}>👤</span>
+                      </div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>
+                        USD {roomSubtotal}
+                      </div>
+                    </div>
+
+                    {/* Total with price breakdown toggle */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        paddingBottom: '12px',
+                        borderBottom: '1px solid #E5E7EB',
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#111827' }}>Total</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowPriceBreakdown(!showPriceBreakdown)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '11px',
+                            color: '#D4A359',
+                            cursor: 'pointer',
+                            padding: 0,
+                          }}
+                        >
+                          {showPriceBreakdown ? '( Hide breakdown )' : '( Price breakdown )'}
+                        </button>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>
+                          USD {grandTotal}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Collapsible price breakdown */}
+                    {showPriceBreakdown && (
+                      <div
+                        style={{
+                          backgroundColor: '#F9FAFB',
+                          borderRadius: '6px',
+                          padding: '10px 12px',
+                          marginBottom: '14px',
+                          fontSize: '11.5px',
+                          color: '#4B5563',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span>Room ({nights} nights)</span>
+                          <span>${roomSubtotal} USD</span>
+                        </div>
+                        {discountAmount > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', marginBottom: '4px' }}>
+                            <span>Promo Discount ({discountPercent}%)</span>
+                            <span>-${discountAmount.toFixed(2)} USD</span>
+                          </div>
+                        )}
+                        {addonsTotal > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span>Add-ons</span>
+                            <span>+${addonsTotal} USD</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span>Taxes & VAT (15%)</span>
+                          <span>+${tax} USD</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#111827', borderTop: '1px solid #E5E7EB', paddingTop: '4px', marginTop: '4px' }}>
+                          <span>Total Due</span>
+                          <span>${grandTotal} USD</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Promo code line */}
+                    <div style={{ paddingBottom: '14px', borderBottom: '1px solid #E5E7EB', marginBottom: '14px' }}>
+                      <div style={{ fontSize: '12px', color: '#374151' }}>
+                        Do you have a promo code?{' '}
+                        <button
+                          type="button"
+                          onClick={() => setShowPromoInput(!showPromoInput)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#D4A359',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            padding: 0,
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Click here
+                        </button>
+                      </div>
+
+                      {showPromoInput && (
+                        <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            placeholder="e.g. GRANDMEMBER15"
+                            value={promoCode}
+                            onChange={(e) => setPromoCode(e.target.value)}
+                            style={{
+                              flex: 1,
+                              backgroundColor: '#F3F4F6',
+                              border: '1px solid #E5E7EB',
+                              borderRadius: '6px',
+                              padding: '8px 10px',
+                              fontSize: '12px',
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={applyPromo}
+                            style={{
+                              padding: '8px 14px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      )}
+                      {promoMessage && (
+                        <div style={{ fontSize: '11px', marginTop: '6px', color: discountPercent > 0 ? '#10B981' : '#EF4444' }}>
+                          {promoMessage}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Price Summary */}
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#881337', marginBottom: '8px' }}>
+                        Price Summary
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>Total</span>
+                        <span style={{ fontSize: '15px', fontWeight: 800, color: '#111827' }}>USD {grandTotal}</span>
+                      </div>
+                    </div>
+
+                    {/* Sandbox helper link */}
+                    {sandboxTestCard && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCardNumber(sandboxTestCard.number);
+                          setCardExpiry(sandboxTestCard.expiry);
+                          setCardCvc(sandboxTestCard.cvc);
+                          if (!cardHolder) setCardHolder('GUEST TESTER');
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '7px',
+                          marginBottom: '12px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#6B7280',
+                          backgroundColor: '#F9FAFB',
+                          border: '1px dashed #D1D5DB',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🧪 Sandbox: Fill Test Mastercard ({sandboxTestCard.number})
+                      </button>
+                    )}
+
+                    {/* Standard World Mastercard card input form */}
+                    <MastercardCardForm
+                      cardHolder={cardHolder}
+                      setCardHolder={setCardHolder}
+                      cardNumber={cardNumber}
+                      setCardNumber={setCardNumber}
+                      cardExpiry={cardExpiry}
+                      setCardExpiry={setCardExpiry}
+                      cardCvc={cardCvc}
+                      setCardCvc={setCardCvc}
+                      agreeTerms={agreeTerms}
+                      setAgreeTerms={setAgreeTerms}
+                      subscribeNewsletter={subscribeNewsletter}
+                      setSubscribeNewsletter={setSubscribeNewsletter}
+                      isProcessing={isSubmitting}
+                      onSubmit={handleConfirm}
+                      submitButtonText="Confirm Booking"
+                      errorMessage={bookingError}
+                      showButton={true}
+                    />
                   </div>
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="btn btn-outline"
-                >
-                  <ArrowLeft size={16} /> Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="btn btn-primary"
-                  style={{ padding: '14px 36px' }}
-                >
-                  <ShieldCheck size={18} />
-                  <span>
-                    {isSubmitting ? 'Processing...' : 'Proceed to Secure Payment'}
-                  </span>
-                </button>
-              </div>
-
-              {bookingError && (
-                <div
-                  role="alert"
-                  style={{
-                    marginTop: '16px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    backgroundColor: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    color: '#B91C1C',
-                    fontSize: '13.5px',
-                    fontWeight: 500,
-                    textAlign: 'center',
-                  }}
-                >
-                  {bookingError}
-                </div>
-              )}
-            </form>
+              </form>
+            </div>
           )}
 
           {step === 3 && (

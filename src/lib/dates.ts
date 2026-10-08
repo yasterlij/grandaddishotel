@@ -73,3 +73,19 @@ export function formatFriendlyDate(dateStr: string): string {
     return dateStr;
   }
 }
+
+/** Formats date as '08 Oct 2026' exactly matching hotel booking engines */
+export function formatHotelDate(dateStr: string): string {
+  if (!dateStr) return '';
+  try {
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length !== 3) return dateStr;
+    const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12, 0, 0));
+    const day = String(parts[2]).padStart(2, '0');
+    const month = date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+    const year = parts[0];
+    return `${day} ${month} ${year}`;
+  } catch {
+    return dateStr;
+  }
+}

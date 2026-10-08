@@ -21,6 +21,7 @@ import {
   SKINA_SUPPORTED_BRANDS,
 } from '@/lib/skina';
 import type { PaymentProviderType } from '@/lib/payment-types';
+import MastercardCardForm from '@/components/MastercardCardForm';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -695,189 +696,6 @@ export default function PaymentModal({
               </div>
             </div>
 
-            {/* Card Input Fields */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 600, color: '#153D4B' }}>
-                    Card Number
-                  </label>
-                  <span style={{ fontSize: '11px', color: detectedCard.color, fontWeight: 700 }}>
-                    {detectedCard.badge}
-                  </span>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={cardNumber}
-                    onChange={handleCardNumberChange}
-                    placeholder="XXXX XXXX XXXX XXXX"
-                    maxLength={23}
-                    style={{
-                      width: '100%',
-                      padding: '11px 14px',
-                      paddingLeft: '40px',
-                      borderRadius: '8px',
-                      border: '1px solid #CAD9E0',
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      fontFamily: 'monospace',
-                      backgroundColor: '#FFFFFF',
-                      color: '#153D4B',
-                      letterSpacing: '1px',
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '13px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: detectedCard.color,
-                    }}
-                  >
-                    <CreditCard size={16} />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
-                  Name on Card
-                </label>
-                <input
-                  type="text"
-                  value={cardHolder}
-                  onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
-                  placeholder="NAME ON CARD"
-                  style={{
-                    width: '100%',
-                    padding: '11px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #CAD9E0',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    backgroundColor: '#FFFFFF',
-                    color: '#153D4B',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
-                    Expiry (MM/YY)
-                  </label>
-                  <input
-                    type="text"
-                    value={cardExpiry}
-                    onChange={handleExpiryChange}
-                    placeholder="MM / YY"
-                    maxLength={5}
-                    style={{
-                      width: '100%',
-                      padding: '11px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #CAD9E0',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      backgroundColor: '#FFFFFF',
-                      color: '#153D4B',
-                      textAlign: 'center',
-                      fontFamily: 'monospace',
-                      letterSpacing: '2px',
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#153D4B', marginBottom: '4px' }}>
-                    CVC / CVV
-                  </label>
-                  <input
-                    type="password"
-                    value={cardCvc}
-                    onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    placeholder="•••"
-                    maxLength={4}
-                    style={{
-                      width: '100%',
-                      padding: '11px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #CAD9E0',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      backgroundColor: '#FFFFFF',
-                      textAlign: 'center',
-                      letterSpacing: '4px',
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Security Trust Bar */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '8px',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                backgroundColor: '#F0F8F0',
-                border: '1px solid #C8E6C9',
-                marginBottom: '14px',
-                fontSize: '11px',
-                color: '#2E7D32',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                <ShieldCheck size={14} color="#2E7D32" />
-                PCI DSS Compliant
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                <Lock size={13} color="#2E7D32" />
-                256-bit SSL Encrypted
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                <Info size={13} color="#2E7D32" />
-                Your card is not charged until stay
-              </div>
-            </div>
-
-            {/* Terms note */}
-            <p style={{ fontSize: '11px', color: '#838A8D', textAlign: 'center', marginBottom: '16px', lineHeight: '1.5' }}>
-              By proceeding, you agree to our{' '}
-              <a href="/terms-conditions" style={{ color: '#E49951', fontWeight: 600, textDecoration: 'none' }}>Terms & Conditions</a>
-              {' '}and{' '}
-              <a href="/terms-conditions" style={{ color: '#E49951', fontWeight: 600, textDecoration: 'none' }}>Privacy Policy</a>
-              . Booking secured by Grand Addis Hotel & Resorts.
-            </p>
-
-            {/* Inline error message (replaces blocking alert()) */}
-            {paymentError && (
-              <div
-                role="alert"
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  backgroundColor: '#FEF2F2',
-                  border: '1px solid #FECACA',
-                  color: '#B91C1C',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  marginBottom: '14px',
-                  textAlign: 'center',
-                }}
-              >
-                {paymentError}
-              </div>
-            )}
-
             {/* Sandbox helper: fill the gateway test card (demo convenience) */}
             {sandboxTestCard && !paymentSuccess && (
               <button
@@ -889,14 +707,14 @@ export default function PaymentModal({
                 }}
                 style={{
                   width: '100%',
-                  padding: '10px',
-                  marginBottom: '12px',
-                  fontSize: '12px',
+                  padding: '9px',
+                  marginBottom: '14px',
+                  fontSize: '11.5px',
                   fontWeight: 600,
                   color: '#5E6E75',
                   backgroundColor: '#F7F7F2',
                   border: '1px dashed #D5D4CC',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   cursor: 'pointer',
                 }}
               >
@@ -904,37 +722,23 @@ export default function PaymentModal({
               </button>
             )}
 
-            {/* ACTION BUTTON */}
-            <button
-              onClick={handleProcessPayment}
-              disabled={isProcessing || !isCardSupported}
-              className="btn btn-primary"
-              style={{
-                width: '100%',
-                padding: '15px',
-                fontSize: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                opacity: (isProcessing || !isCardSupported) ? 0.55 : 1,
-                borderRadius: '10px',
-                cursor: !isCardSupported ? 'not-allowed' : undefined,
-              }}
-            >
-              {isProcessing ? (
-                <>
-                  <span style={{ animation: 'spin 1s linear infinite' }}>⏳</span>
-                  <span>Authorizing securely...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck size={18} />
-                  <span>Pay ${amountUSD} Securely</span>
-                  <ArrowRight size={16} />
-                </>
-              )}
-            </button>
+            {/* Standard World Mastercard card input form from reference */}
+            <MastercardCardForm
+              cardHolder={cardHolder}
+              setCardHolder={setCardHolder}
+              cardNumber={cardNumber}
+              setCardNumber={setCardNumber}
+              cardExpiry={cardExpiry}
+              setCardExpiry={setCardExpiry}
+              cardCvc={cardCvc}
+              setCardCvc={setCardCvc}
+              agreeTerms={true}
+              isProcessing={isProcessing}
+              onSubmit={handleProcessPayment}
+              submitButtonText={`Pay $${amountUSD} Securely`}
+              errorMessage={paymentError}
+              showButton={true}
+            />
 
             {/* Powered-by footer */}
             <div style={{ textAlign: 'center', marginTop: '14px', fontSize: '10px', color: '#A0ADB3', letterSpacing: '0.3px' }}>

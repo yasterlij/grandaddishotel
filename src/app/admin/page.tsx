@@ -677,19 +677,20 @@ export default function AdminPage() {
           <div style={{ textAlign: 'center', marginBottom: '28px' }}>
             <div
               style={{
-                width: '64px',
-                height: '64px',
+                width: '72px',
+                height: '72px',
                 margin: '0 auto 16px',
                 borderRadius: '50%',
-                backgroundColor: '#FFFFFF',
-                padding: '6px',
-                boxShadow: '0 4px 20px rgba(228, 153, 81, 0.3)',
+                backgroundColor: '#082026',
+                border: '2px solid rgba(228, 153, 81, 0.6)',
+                overflow: 'hidden',
+                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <img src="/images/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src="/images/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '3px', color: '#E49951', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
               GRAND ADDIS HOTEL & RESORT

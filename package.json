@@ -8,6 +8,7 @@
     "dev:https": "next dev -p 3050 --experimental-https",
     "build": "next build",
     "start": "next start",
+    "test": "node scripts/test-endpoints.mjs",
     "db:seed": "node scripts/seed-db.mjs",
     "prisma:emit": "prisma contract emit",
     "prisma:sign": "prisma db sign --yes",

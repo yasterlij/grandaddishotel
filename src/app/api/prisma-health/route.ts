@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/prisma/db';
+import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
+  const unauthorized = await requireAdmin();
+  if (unauthorized) return unauthorized;
   try {
     const roomTypes = await db.orm.public.RoomTypes.all();
     const rooms = await db.orm.public.Rooms.all();

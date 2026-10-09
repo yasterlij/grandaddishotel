@@ -28,11 +28,9 @@ import {
 } from 'lucide-react';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
 import { useCurrency } from '@/context/CurrencyContext';
-import PaymentModal from '@/components/PaymentModal';
-import MastercardCardForm from '@/components/MastercardCardForm';
 import { PaymentProviderType } from '@/lib/payment-types';
 import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate, formatHotelDate } from '@/lib/dates';
-import { computeBookingTotals, getPromoDiscountPercent } from '@/lib/booking-pricing';
+import { computeBookingTotals } from '@/lib/booking-pricing';
 
 function ReservationContent() {
   const searchParams = useSearchParams();
@@ -57,12 +55,12 @@ function ReservationContent() {
   // this baseline so ordinary multi-night stays are not flagged as changes.
   const [baselineNights, setBaselineNights] = useState(() => calculateStayNights(queryCheckIn, queryCheckOut));
 
-  const [addons, setAddons] = useState({
+  const addons = {
     airportShuttle: false,
-    breakfast: true,
+    breakfast: false,
     spaTreatment: false,
     coffeeCeremony: false,
-  });
+  };
 
   // Guest Details & Contact fields matching standard hotel form
   const [firstName, setFirstName] = useState('');
@@ -76,28 +74,16 @@ function ReservationContent() {
   const [guestPhone, setGuestPhone] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
 
-  // World Mastercard card form fields
-  const [cardHolder, setCardHolder] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvc, setCardCvc] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [subscribeNewsletter, setSubscribeNewsletter] = useState(false);
 
-  // Promo code & Price breakdown UI toggles
-  const [showPromoInput, setShowPromoInput] = useState(false);
+  // Price breakdown UI toggle
   const [showPriceBreakdown, setShowPriceBreakdown] = useState(false);
-  const [sandboxTestCard, setSandboxTestCard] = useState<{ number: string; expiry: string; cvc: string } | null>(null);
-
-  const [promoCode, setPromoCode] = useState('');
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [promoMessage, setPromoMessage] = useState('');
   const [bookingRef, setBookingRef] = useState('');
   const [reservationId, setReservationId] = useState('');
   const [activeTxRef, setActiveTxRef] = useState('');
-  const selectedPaymentProvider: PaymentProviderType = 'SKINA';
+  const selectedPaymentProvider: PaymentProviderType = 'CASH_ON_ARRIVAL';
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dateChangeFlag, setDateChangeFlag] = useState<{ isExtended: boolean; text: string; delta: number; totalNights: number } | null>(null);
   const [bookingError, setBookingError] = useState('');
@@ -175,6 +161,7 @@ function ReservationContent() {
   };
 
   // Shared pricing rules (same module the server uses to compute totals)
+  const discountPercent = 0;
   const totals = computeBookingTotals({
     pricePerNight: selectedRoom.pricePerNight,
     nights,
@@ -182,83 +169,18 @@ function ReservationContent() {
     addons: addons as Record<string, boolean>,
     discountPercent,
   });
-  const { roomSubtotal, discountAmount, addonsTotal, tax } = totals;
+  const { roomSubtotal, discountAmount, tax } = totals;
   const grandTotal = totals.grandTotal;
   const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
 
-  // Display prices for the add-on UI (per selection, incl. nights/adults where applicable)
-  const addonPrices = {
-    airportShuttle: 15,
-    breakfast: 12 * adults * nights,
-    spaTreatment: 65,
-    coffeeCeremony: 8 * adults,
-  };
-
-  const applyPromo = () => {
-    const percent = getPromoDiscountPercent(promoCode);
-    if (percent > 0) {
-      setDiscountPercent(percent);
-      setPromoMessage(
-        percent === 20 ? 'Weekend Special: 20% discount applied!' : 'Member discount 15% applied!'
-      );
-    } else {
-      setDiscountPercent(0);
-      setPromoMessage('Invalid promo code');
-    }
-  };
-
-  useEffect(() => {
-    fetch('/api/payments/config')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.skina?.isSandbox && data?.skina?.testCards?.length > 0) {
-          const t = data.skina.testCards[0];
-          setSandboxTestCard({ number: t.number, expiry: t.expiry, cvc: t.cvc });
-        }
-      })
-      .catch(() => {});
-  }, []);
-
   const handleFirstNameChange = (val: string) => {
     setFirstName(val);
-    const combined = `${val} ${lastName}`.trim();
-    setGuestName(combined);
-    if (!cardHolder || cardHolder === `${firstName} ${lastName}`.trim().toUpperCase()) {
-      setCardHolder(combined.toUpperCase());
-    }
+    setGuestName(`${val} ${lastName}`.trim());
   };
 
   const handleLastNameChange = (val: string) => {
     setLastName(val);
-    const combined = `${firstName} ${val}`.trim();
-    setGuestName(combined);
-    if (!cardHolder || cardHolder === `${firstName} ${lastName}`.trim().toUpperCase()) {
-      setCardHolder(combined.toUpperCase());
-    }
-  };
-
-  const validateCardForm = (): string | null => {
-    const digits = cardNumber.replace(/\D/g, '');
-    if (digits.length < 13 || digits.length > 19) {
-      return 'Please enter a valid card number.';
-    }
-    if (!/^\d{2}\/\d{2}$/.test(cardExpiry)) {
-      return 'Please enter the card expiry as MM/YY.';
-    }
-    const [mm, yy] = cardExpiry.split('/').map(Number);
-    if (mm < 1 || mm > 12) return 'The expiry month must be between 01 and 12.';
-    const expiry = new Date(2000 + yy, mm, 0);
-    if (expiry.getTime() < Date.now()) return 'This card has expired.';
-    if (!/^\d{3,4}$/.test(cardCvc)) {
-      return 'Please enter a valid CVV (3 or 4 digits).';
-    }
-    if (!cardHolder.trim() && !firstName.trim()) {
-      return 'Please enter the Name On Card.';
-    }
-    if (!agreeTerms) {
-      return 'Please agree to our Terms and Conditions to proceed.';
-    }
-    return null;
+    setGuestName(`${firstName} ${val}`.trim());
   };
 
   const handleConfirm = async (e?: React.FormEvent) => {
@@ -286,10 +208,8 @@ function ReservationContent() {
       setBookingError('Please enter your contact phone number.');
       return;
     }
-
-    const cardErr = validateCardForm();
-    if (cardErr) {
-      setBookingError(cardErr);
+    if (!agreeTerms) {
+      setBookingError('Please agree to our Terms and Conditions to proceed.');
       return;
     }
 
@@ -301,7 +221,7 @@ function ReservationContent() {
         isBookingForSomeoneElse ? 'Guest is booking for someone else' : '',
       ].filter(Boolean).join(' | ');
 
-      // 1. Create reservation in PostgreSQL database
+      // Create reservation in PostgreSQL database (direct booking without upfront payment)
       const res = await fetch('/api/reservations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -317,9 +237,8 @@ function ReservationContent() {
           guestPhone: effectivePhone,
           specialRequests: fullSpecialRequests,
           addons,
-          promoCode: promoCode.trim(),
           currency: 'USD',
-          paymentProvider: selectedPaymentProvider,
+          paymentProvider: 'CASH_ON_ARRIVAL',
           isDateExtended: Boolean(dateChangeFlag),
           dateChangeNote: dateChangeFlag?.text || '',
         }),
@@ -335,64 +254,16 @@ function ReservationContent() {
       const newReservationId = data.reservationId || '';
       setBookingRef(newBookingRef);
       setReservationId(newReservationId);
-
-      // 2. Authorize credit card with payment gateway
-      const initRes = await fetch('/api/payments/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reservationId: newReservationId,
-          provider: 'SKINA',
-          cardDetails: {
-            number: cardNumber,
-            expiry: cardExpiry,
-            cvc: cardCvc,
-            cardHolder: cardHolder || effectiveName,
-          },
-        }),
-      });
-      const initData = await initRes.json().catch(() => null);
-      if (!initData || !initData.success) {
-        throw new Error(initData?.error || 'Credit card authorization failed. Please check your card details.');
-      }
-
-      const txRef = initData.payment?.txRef || data.txRef;
-      setActiveTxRef(txRef);
-
-      // 3. Verify Payment
-      const verifyRes = await fetch('/api/payments/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          txRef,
-          status: 'SUCCESS',
-          gatewayRef: `GW-MC-${Date.now().toString().slice(-6)}`,
-        }),
-      });
-      const verifyData = await verifyRes.json().catch(() => null);
-      if (verifyData && verifyData.success) {
-        setPaymentStatus('SUCCESS');
-        setStep(3);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        throw new Error(verifyData?.error || 'Payment verification could not be confirmed.');
-      }
+      setActiveTxRef(data.txRef || `REF-${newBookingRef}`);
+      setPaymentStatus('PENDING');
+      setStep(3);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Reservation error:', err);
       setBookingError(err?.message || 'Network error — please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handlePaymentSuccess = (paymentData: any) => {
-    setPaymentStatus('SUCCESS');
-    if (paymentData?.txRef) {
-      setActiveTxRef(paymentData.txRef);
-    }
-    setIsPaymentModalOpen(false);
-    setStep(3);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -1167,6 +1038,9 @@ function ReservationContent() {
                       >
                         Contact Details
                       </h3>
+                      <p style={{ fontSize: '11.5px', color: '#6B7280', margin: '-6px 0 16px', lineHeight: 1.5 }}>
+                        Use a reachable phone number and arrival time so our team can prepare your room before you arrive.
+                      </p>
 
                       {/* Toggle: I am booking for someone else */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
@@ -1293,69 +1167,6 @@ function ReservationContent() {
                       </div>
                     </div>
 
-                    {/* Card 3: Optional Add-on Experiences & Services */}
-                    <div
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: '10px',
-                        border: '1px solid #E5E7EB',
-                        padding: '20px 28px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                      }}
-                    >
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', marginBottom: '12px' }}>
-                        Enhance Your Stay (Optional Add-ons)
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-                        <label
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '10px 14px',
-                            borderRadius: '6px',
-                            border: '1px solid #E5E7EB',
-                            backgroundColor: addons.airportShuttle ? '#FEF9F0' : '#F9FAFB',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={addons.airportShuttle}
-                            onChange={(e) => setAddons({ ...addons, airportShuttle: e.target.checked })}
-                            style={{ accentColor: '#D4A359' }}
-                          />
-                          <div>
-                            <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#1F2937' }}>Airport Shuttle (+$15)</div>
-                            <div style={{ fontSize: '10.5px', color: '#6B7280' }}>Chauffeured Bole Airport pickup</div>
-                          </div>
-                        </label>
-
-                        <label
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '10px 14px',
-                            borderRadius: '6px',
-                            border: '1px solid #E5E7EB',
-                            backgroundColor: addons.breakfast ? '#FEF9F0' : '#F9FAFB',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={addons.breakfast}
-                            onChange={(e) => setAddons({ ...addons, breakfast: e.target.checked })}
-                            style={{ accentColor: '#D4A359' }}
-                          />
-                          <div>
-                            <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#1F2937' }}>Daily Breakfast (+${addonPrices.breakfast})</div>
-                            <div style={{ fontSize: '10.5px', color: '#6B7280' }}>Buffet with Ethiopian & continental items</div>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
                   </div>
 
                   {/* RIGHT COLUMN: Booking Details Summary & World Mastercard Card Form Card */}
@@ -1504,12 +1315,6 @@ function ReservationContent() {
                             <span>-${discountAmount.toFixed(2)} USD</span>
                           </div>
                         )}
-                        {addonsTotal > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <span>Add-ons</span>
-                            <span>+${addonsTotal} USD</span>
-                          </div>
-                        )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                           <span>Taxes & VAT (15%)</span>
                           <span>+${tax} USD</span>
@@ -1520,68 +1325,6 @@ function ReservationContent() {
                         </div>
                       </div>
                     )}
-
-                    {/* Promo code line */}
-                    <div style={{ paddingBottom: '14px', borderBottom: '1px solid #E5E7EB', marginBottom: '14px' }}>
-                      <div style={{ fontSize: '12px', color: '#374151' }}>
-                        Do you have a promo code?{' '}
-                        <button
-                          type="button"
-                          onClick={() => setShowPromoInput(!showPromoInput)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#D4A359',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            padding: 0,
-                            textDecoration: 'underline',
-                          }}
-                        >
-                          Click here
-                        </button>
-                      </div>
-
-                      {showPromoInput && (
-                        <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
-                          <input
-                            type="text"
-                            placeholder="e.g. GRANDMEMBER15"
-                            value={promoCode}
-                            onChange={(e) => setPromoCode(e.target.value)}
-                            style={{
-                              flex: 1,
-                              backgroundColor: '#F3F4F6',
-                              border: '1px solid #E5E7EB',
-                              borderRadius: '6px',
-                              padding: '8px 10px',
-                              fontSize: '12px',
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={applyPromo}
-                            style={{
-                              padding: '8px 14px',
-                              backgroundColor: '#153D4B',
-                              color: '#FFFFFF',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Apply
-                          </button>
-                        </div>
-                      )}
-                      {promoMessage && (
-                        <div style={{ fontSize: '11px', marginTop: '6px', color: discountPercent > 0 ? '#10B981' : '#EF4444' }}>
-                          {promoMessage}
-                        </div>
-                      )}
-                    </div>
 
                     {/* Price Summary */}
                     <div style={{ marginBottom: '16px' }}>
@@ -1594,53 +1337,181 @@ function ReservationContent() {
                       </div>
                     </div>
 
-                    {/* Sandbox helper link */}
-                    {sandboxTestCard && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCardNumber(sandboxTestCard.number);
-                          setCardExpiry(sandboxTestCard.expiry);
-                          setCardCvc(sandboxTestCard.cvc);
-                          if (!cardHolder) setCardHolder('GUEST TESTER');
-                        }}
+                    {/* No Payment Required / Pay at Hotel Guarantee Card */}
+                    <div
+                      style={{
+                        backgroundColor: '#F8F9FA',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '10px',
+                        padding: '16px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <div
                         style={{
-                          width: '100%',
-                          padding: '7px',
-                          marginBottom: '12px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          color: '#6B7280',
-                          backgroundColor: '#F9FAFB',
-                          border: '1px dashed #D1D5DB',
-                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          color: '#059669',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        <ShieldCheck size={18} />
+                        <span>No Advance Payment Required</span>
+                      </div>
+                      <p style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.5, margin: '0 0 10px 0' }}>
+                        Your room is guaranteed immediately. You will pay upon arrival at Grand Addis Hotel front desk.
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11.5px', color: '#374151' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Check size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                          <span>Pay upon check-in in ETB or USD (Cash or Card)</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Check size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                          <span>Free cancellation up to 24h before arrival</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Check size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                          <span>Instant digital voucher dispatched to your email</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Terms & Conditions Checkboxes */}
+                    <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '8px',
+                          fontSize: '11.5px',
+                          color: '#4B5563',
                           cursor: 'pointer',
                         }}
                       >
-                        🧪 Sandbox: Fill Test Mastercard ({sandboxTestCard.number})
-                      </button>
+                        <input
+                          type="checkbox"
+                          checked={agreeTerms}
+                          onChange={(e) => setAgreeTerms(e.target.checked)}
+                          style={{
+                            accentColor: '#D4A359',
+                            marginTop: '2px',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <span>
+                          By booking, you agree to our{' '}
+                          <Link
+                            href="/terms-conditions"
+                            target="_blank"
+                            style={{ color: '#D4A359', textDecoration: 'underline', fontWeight: 500 }}
+                          >
+                            Terms and Conditions
+                          </Link>{' '}
+                          and hotel cancellation policies.
+                        </span>
+                      </label>
+
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '11px',
+                          color: '#4B5563',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={subscribeNewsletter}
+                          onChange={(e) => setSubscribeNewsletter(e.target.checked)}
+                          style={{
+                            accentColor: '#D4A359',
+                            cursor: 'pointer',
+                          }}
+                        />
+                        <span>Subscribe to Grand Addis Hotel newsletter for exclusive offers</span>
+                      </label>
+                    </div>
+
+                    {/* Error banner */}
+                    {bookingError && (
+                      <div
+                        role="alert"
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '6px',
+                          backgroundColor: '#FEF2F2',
+                          border: '1px solid #FECACA',
+                          color: '#B91C1C',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          marginBottom: '14px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {bookingError}
+                      </div>
                     )}
 
-                    {/* Standard World Mastercard card input form */}
-                    <MastercardCardForm
-                      cardHolder={cardHolder}
-                      setCardHolder={setCardHolder}
-                      cardNumber={cardNumber}
-                      setCardNumber={setCardNumber}
-                      cardExpiry={cardExpiry}
-                      setCardExpiry={setCardExpiry}
-                      cardCvc={cardCvc}
-                      setCardCvc={setCardCvc}
-                      agreeTerms={agreeTerms}
-                      setAgreeTerms={setAgreeTerms}
-                      subscribeNewsletter={subscribeNewsletter}
-                      setSubscribeNewsletter={setSubscribeNewsletter}
-                      isProcessing={isSubmitting}
-                      onSubmit={handleConfirm}
-                      submitButtonText="Confirm Booking"
-                      errorMessage={bookingError}
-                      showButton={true}
-                    />
+                    {/* Action Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleConfirm()}
+                      disabled={isSubmitting}
+                      style={{
+                        width: '100%',
+                        padding: '14px 20px',
+                        backgroundColor: '#D4A359',
+                        backgroundImage: 'linear-gradient(180deg, #D9A75C 0%, #C69248 100%)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        letterSpacing: '0.3px',
+                        cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 4px 14px rgba(212, 163, 89, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        opacity: isSubmitting ? 0.7 : 1,
+                        transition: 'all 0.15s ease-in-out',
+                      }}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
+                          <span>Confirming Reservation...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={18} />
+                          <span>Complete Booking (No Payment Required)</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        marginTop: '10px',
+                        fontSize: '11px',
+                        color: '#6B7280',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Lock size={12} style={{ color: '#059669' }} />
+                      <span>Instant Confirmation • Pay at Hotel Front Desk</span>
+                    </div>
                   </div>
                 </div>
               </form>
@@ -1654,8 +1525,8 @@ function ReservationContent() {
                   width: '64px',
                   height: '64px',
                   borderRadius: '50%',
-                  backgroundColor: paymentStatus === 'SUCCESS' ? '#ECFDF5' : '#FFFBEB',
-                  color: paymentStatus === 'SUCCESS' ? '#10B981' : '#F59E0B',
+                  backgroundColor: '#ECFDF5',
+                  color: '#10B981',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1665,10 +1536,10 @@ function ReservationContent() {
                 <Check size={32} />
               </div>
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', color: '#153D4B', marginBottom: '8px' }}>
-                {paymentStatus === 'SUCCESS' ? 'Reservation & Payment Confirmed!' : 'Reservation Confirmed!'}
+                Your Reservation is Confirmed!
               </h2>
               <p style={{ color: '#5E6E75', fontSize: '15px', marginBottom: '28px' }}>
-                Thank you, <strong>{guestName}</strong>. Your stay at Grand Addis Hotel has been registered in our database.
+                Thank you, <strong>{guestName || `${firstName} ${lastName}`}</strong>. Your stay at Grand Addis Hotel has been registered and confirmed.
               </p>
 
               {/* Confirmation voucher */}
@@ -1700,11 +1571,11 @@ function ReservationContent() {
                         borderRadius: '4px',
                         fontSize: '12px',
                         fontWeight: 600,
-                        backgroundColor: paymentStatus === 'SUCCESS' ? '#DEF7EC' : '#FEF3C7',
-                        color: paymentStatus === 'SUCCESS' ? '#03543F' : '#92400E',
+                        backgroundColor: '#DEF7EC',
+                        color: '#03543F',
                       }}
                     >
-                      {paymentStatus === 'SUCCESS' ? '✓ PAID & VERIFIED' : '⏳ PAY ON ARRIVAL'}
+                      ✓ CONFIRMED (PAY ON ARRIVAL)
                     </span>
                   </div>
                 </div>
@@ -1733,7 +1604,7 @@ function ReservationContent() {
                           : `Extended Stay Confirmed (${nights} Nights Total)`}
                       </strong>
                       <div style={{ fontSize: '11px', color: (dateChangeFlag && !dateChangeFlag.isExtended) ? '#2563EB' : '#B45309', fontWeight: 500, marginTop: '2px' }}>
-                        {dateChangeFlag?.text || `Dates confirmed (${checkIn} to ${checkOut}). Total payment adjusted to $${grandTotal} USD.`}
+                        {dateChangeFlag?.text || `Dates confirmed (${checkIn} to ${checkOut}). Total adjusted to $${grandTotal} USD.`}
                       </div>
                     </div>
                   </div>
@@ -1749,13 +1620,13 @@ function ReservationContent() {
                     <strong>{nights} Nights ({checkIn} to {checkOut})</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#838A8D', display: 'block' }}>Payment Provider:</span>
-                    <strong style={{ color: '#153D4B' }}>{selectedPaymentProvider}</strong>
+                    <span style={{ color: '#838A8D', display: 'block' }}>Payment:</span>
+                    <strong style={{ color: '#153D4B' }}>Pay on Arrival (Hotel Front Desk)</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#838A8D', display: 'block' }}>Transaction Reference:</span>
+                    <span style={{ color: '#838A8D', display: 'block' }}>Reference:</span>
                     <code style={{ fontSize: '11px', color: '#E49951', fontWeight: 600 }}>
-                      {activeTxRef || `TX-${selectedPaymentProvider}-${bookingRef.slice(-4)}`}
+                      {bookingRef}
                     </code>
                   </div>
                   <div>
@@ -1763,7 +1634,7 @@ function ReservationContent() {
                     <strong>{adults} Adults, {children} Children</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#838A8D', display: 'block' }}>Total Amount:</span>
+                    <span style={{ color: '#838A8D', display: 'block' }}>Total Due At Check-In:</span>
                     <strong style={{ color: '#E49951' }}>${grandTotal} USD</strong>
                   </div>
                 </div>
@@ -1785,24 +1656,6 @@ function ReservationContent() {
           )}
         </div>
       </section>
-
-      {/* Payment Processing Modal */}
-      <PaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        bookingRef={bookingRef}
-        reservationId={reservationId}
-        amountUSD={grandTotal}
-        amountETB={grandTotalETB}
-        guestName={guestName}
-        guestEmail={guestEmail}
-        guestPhone={guestPhone}
-        roomName={selectedRoom.name}
-        checkInDate={checkIn}
-        checkOutDate={checkOut}
-        initialProvider={selectedPaymentProvider}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
     </div>
   );
 }

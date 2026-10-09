@@ -179,21 +179,26 @@ export default function Footer() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
               <div
                 style={{
-                  width: '42px',
-                  height: '42px',
+                  width: '54px',
+                  height: '54px',
                   borderRadius: '50%',
                   overflow: 'hidden',
-                  backgroundColor: '#FFFFFF',
-                  padding: '2px',
+                  backgroundColor: '#082026',
+                  border: '2px solid rgba(228, 153, 81, 0.7)',
+                  boxShadow: '0 3px 12px rgba(0,0,0,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
                 }}
               >
                 <Image
                   src="/images/logo.png"
                   alt="Logo"
-                  width={42}
-                  height={42}
+                  width={54}
+                  height={54}
                   loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
               <div>
@@ -316,7 +321,7 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Col 3: Experiences & Services */}
+          {/* Col 3: Experiences & Explore */}
           <div>
             <h4
               style={{
@@ -328,27 +333,12 @@ export default function Footer() {
                 marginBottom: '18px',
               }}
             >
-              Experiences & Dining
+              Explore & Experiences
             </h4>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: '#A2B5BD' }}>
               <li>
-                <Link href="/dining" style={{ color: 'inherit' }}>
-                  Restaurant & Bar Menus
-                </Link>
-              </li>
-              <li>
-                <Link href="/wellness" style={{ color: 'inherit' }}>
-                  Wellness, Spa & Sauna
-                </Link>
-              </li>
-              <li>
                 <Link href="/experiences" style={{ color: 'inherit' }}>
                   Ethiopian Coffee Ceremony
-                </Link>
-              </li>
-              <li>
-                <Link href="/weddings-events" style={{ color: 'inherit' }}>
-                  Weddings & Corporate Events
                 </Link>
               </li>
               <li>
@@ -357,8 +347,18 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/promotions-offer" style={{ color: 'inherit' }}>
-                  Promotions & Member Offers
+                <Link href="/about-us" style={{ color: 'inherit' }}>
+                  About Grand Addis
+                </Link>
+              </li>
+              <li>
+                <Link href="/testimonials" style={{ color: 'inherit' }}>
+                  Guest Testimonials
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" style={{ color: 'inherit' }}>
+                  Location & Directions
                 </Link>
               </li>
             </ul>
@@ -427,9 +427,6 @@ export default function Footer() {
           <div style={{ display: 'flex', gap: '20px' }}>
             <Link href="/terms-conditions" style={{ color: 'inherit' }}>
               Terms & Conditions
-            </Link>
-            <Link href="/faqs" style={{ color: 'inherit' }}>
-              FAQs
             </Link>
             <Link href="/contact" style={{ color: 'inherit' }}>
               Contact

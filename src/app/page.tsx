@@ -10,8 +10,6 @@ import {
   Sparkles,
   ArrowRight,
   Coffee,
-  Utensils,
-  Flower2,
   ShieldCheck,
   MapPin,
   ExternalLink,
@@ -234,7 +232,7 @@ export default function HomePage() {
                   marginBottom: '32px',
                 }}
               >
-                Whether you are visiting for diplomatic engagements, conferences, or cultural exploration, enjoy effortless access to Bole International Airport (just 10 minutes away), world-class dining, and rejuvenating wellness facilities.
+                Whether you are visiting for diplomatic engagements, conferences, or cultural exploration, enjoy effortless access to Bole International Airport (just 10 minutes away), warm hospitality, and refined luxury accommodations.
               </p>
 
               {/* Highlights List */}
@@ -333,59 +331,7 @@ export default function HomePage() {
               textAlign: 'left',
             }}
           >
-            {/* Pillar 1: Refresh */}
-            <div
-              style={{
-                backgroundColor: 'var(--surface-dark-card)',
-                borderRadius: '12px',
-                padding: '36px 30px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                transition: 'all 0.3s',
-              }}
-              className="pillar-card"
-            >
-              <div
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(228, 153, 81, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#E49951',
-                  marginBottom: '22px',
-                }}
-              >
-                <Flower2 size={26} />
-              </div>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#E49951', fontWeight: 600 }}>
-                WELLNESS & SPA
-              </span>
-              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: '#FFFFFF', margin: '8px 0 14px' }}>
-                Refresh
-              </h3>
-              <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-on-dark-muted)', marginBottom: '22px' }}>
-                Thermal steam rituals, eucalyptus saunas, and botanical massages administered by expert therapists to dissolve travel fatigue.
-              </p>
-              <Link
-                href="/wellness"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#E49951',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                }}
-              >
-                Explore Spa Services <ChevronRight size={15} />
-              </Link>
-            </div>
-
-            {/* Pillar 2: Relax */}
+            {/* Pillar 1: Relax */}
             <div
               style={{
                 backgroundColor: 'var(--surface-dark-card)',
@@ -415,7 +361,7 @@ export default function HomePage() {
                 ACCOMMODATIONS
               </span>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: '#FFFFFF', margin: '8px 0 14px' }}>
-                Relax
+                Relax & Unwind
               </h3>
               <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-on-dark-muted)', marginBottom: '22px' }}>
                 Serene guest rooms and suites furnished with orthopedic bedding, soundproof insulation, climate control, and rain showers.
@@ -437,7 +383,7 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Pillar 3: Renew */}
+            {/* Pillar 2: Culture & Heritage */}
             <div
               style={{
                 backgroundColor: 'var(--surface-dark-card)',
@@ -461,19 +407,19 @@ export default function HomePage() {
                   marginBottom: '22px',
                 }}
               >
-                <Utensils size={26} />
+                <Coffee size={26} />
               </div>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#E49951', fontWeight: 600 }}>
-                DINING & TASTE
+                CULTURE & TRADITION
               </span>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: '#FFFFFF', margin: '8px 0 14px' }}>
-                Renew
+                Authentic Experiences
               </h3>
               <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-on-dark-muted)', marginBottom: '22px' }}>
-                Unforgettable culinary delights spanning authentic Ethiopian feasts, international gastronomy, and clay pot Buna ceremonies.
+                Immerse yourself in our daily Ethiopian Buna coffee ceremonies, cultural discoveries, and warm Addis Ababa hospitality.
               </p>
               <Link
-                href="/dining"
+                href="/experiences"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -485,7 +431,59 @@ export default function HomePage() {
                   letterSpacing: '1px',
                 }}
               >
-                Discover Dining Menus <ChevronRight size={15} />
+                Discover Experiences <ChevronRight size={15} />
+              </Link>
+            </div>
+
+            {/* Pillar 3: Prime Location */}
+            <div
+              style={{
+                backgroundColor: 'var(--surface-dark-card)',
+                borderRadius: '12px',
+                padding: '36px 30px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                transition: 'all 0.3s',
+              }}
+              className="pillar-card"
+            >
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(228, 153, 81, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#E49951',
+                  marginBottom: '22px',
+                }}
+              >
+                <MapPin size={26} />
+              </div>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#E49951', fontWeight: 600 }}>
+                PRIME LOCATION
+              </span>
+              <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: '#FFFFFF', margin: '8px 0 14px' }}>
+                Heart of Addis
+              </h3>
+              <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-on-dark-muted)', marginBottom: '22px' }}>
+                Located at 22 Around Golagul, just 10 minutes from Bole International Airport with seamless access to diplomatic centers.
+              </p>
+              <Link
+                href="/contact"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#E49951',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px',
+                }}
+              >
+                Get Directions <ChevronRight size={15} />
               </Link>
             </div>
           </div>
@@ -541,12 +539,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= DINING & EXPERIENCES BANNER ================= */}
+      {/* ================= HOSPITALITY & EXPERIENCES BANNER ================= */}
       <section
         style={{
           position: 'relative',
           padding: '120px 0',
-          backgroundImage: `url('/images/BO5A5957-scaled.jpg')`,
+          backgroundImage: `url('/images/BO5A5779-scaled.jpg')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',
@@ -574,7 +572,7 @@ export default function HomePage() {
                 marginBottom: '12px',
               }}
             >
-              FINEST RESTAURANTS & BARS
+              BESPOKE HOSPITALITY
             </span>
             <h2
               style={{
@@ -584,7 +582,7 @@ export default function HomePage() {
                 marginBottom: '20px',
               }}
             >
-              Unforgettable Culinary Experience
+              Authentic Ethiopian Hospitality
             </h2>
             <p
               style={{
@@ -594,17 +592,17 @@ export default function HomePage() {
                 marginBottom: '32px',
               }}
             >
-              Enjoy a rich selection of dining options from around the world alongside rich Ethiopian culinary classics. From early morning breakfast buffets to candlelit dinners and crafted cocktails in our lounge.
+              Experience the genuine warmth and cultural heritage of Addis Ababa. From complimentary airport shuttle transfers to our daily traditional Buna ceremonies, we make your stay in Ethiopia unforgettable.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-              <Link href="/dining" className="btn btn-primary">
-                <Utensils size={16} />
-                <span>Explore Full Menu</span>
-              </Link>
-              <Link href="/experiences" className="btn btn-outline-white">
+              <Link href="/experiences" className="btn btn-primary">
                 <Coffee size={16} />
-                <span>Coffee Ceremony</span>
+                <span>Cultural Experiences</span>
+              </Link>
+              <Link href="/rooms" className="btn btn-outline-white">
+                <Sparkles size={16} />
+                <span>Explore Rooms</span>
               </Link>
             </div>
           </div>

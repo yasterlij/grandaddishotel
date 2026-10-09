@@ -211,6 +211,7 @@ export async function initDatabase(): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_table_res_date ON table_reservations (date);
         CREATE INDEX IF NOT EXISTS idx_spa_app_date ON spa_appointments (date);
         CREATE INDEX IF NOT EXISTS idx_dining_menu_cat ON dining_menu (category);
+        CREATE INDEX IF NOT EXISTS idx_reservations_roomtype_status_dates ON reservations ("roomTypeId", status, "checkInDate", "checkOutDate");
       `);
     } catch (err) {
       // Do NOT cache a failed init — otherwise every subsequent query would

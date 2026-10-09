@@ -6,10 +6,9 @@ import { X, Check, Calendar, Users, DollarSign, ShieldCheck, Printer, ArrowLeft,
 import { useBooking } from '@/context/BookingContext';
 import { useCurrency } from '@/context/CurrencyContext';
 import { ROOMS, HOTEL_INFO, Room } from '@/data/hotelData';
-import PaymentModal from '@/components/PaymentModal';
-import { PAYMENT_PROVIDERS, PaymentProviderType } from '@/lib/payment-types';
+import { PaymentProviderType } from '@/lib/payment-types';
 import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
-import { computeBookingTotals, getPromoDiscountPercent } from '@/lib/booking-pricing';
+import { computeBookingTotals } from '@/lib/booking-pricing';
 
 export default function BookingModal() {
   const { isOpen, closeBooking, bookingParams } = useBooking();
@@ -18,7 +17,7 @@ export default function BookingModal() {
   const todayStr = getTodayDateStr();
   const tomorrowStr = addDays(todayStr, 1);
 
-  const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Room & Dates, 2: Add-ons & Guest Details, 3: Confirmation
+  const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Room & Dates, 2: Guest Details, 3: Confirmation
   const [selectedRoomId, setSelectedRoomId] = useState<string>('deluxe-room');
   const [checkIn, setCheckIn] = useState<string>(todayStr);
   const [checkOut, setCheckOut] = useState<string>(tomorrowStr);
@@ -29,27 +28,23 @@ export default function BookingModal() {
   // "extension" in the admin portal.
   const [baselineNights, setBaselineNights] = useState<number>(1);
 
-  // Add-ons
-  const [addons, setAddons] = useState<{ [key: string]: boolean }>({
+  const addons = {
     airportShuttle: false,
-    breakfast: true,
+    breakfast: false,
     spaTreatment: false,
     coffeeCeremony: false,
-  });
+  };
 
   // Guest Details
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
-  const [promoCode, setPromoCode] = useState('');
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [promoMessage, setPromoMessage] = useState('');
+  const discountPercent = 0;
 
-  // Payment State
-  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<PaymentProviderType>('SKINA');
+  // Reservation State (No Advance Payment Required)
+  const selectedPaymentProvider: PaymentProviderType = 'CASH_ON_ARRIVAL';
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'SUCCESS'>('PENDING');
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [createdReservationId, setCreatedReservationId] = useState('');
   const [activeTxRef, setActiveTxRef] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,7 +88,6 @@ export default function BookingModal() {
     setBookingRef('');
     setCreatedReservationId('');
     setActiveTxRef('');
-    setIsPaymentModalOpen(false);
     setDateChangeFlag(null);
     setBookingError('');
     setBaselineNights(calculateStayNights(checkIn, checkOut));
@@ -188,30 +182,9 @@ export default function BookingModal() {
     addons: addons as Record<string, boolean>,
     discountPercent,
   });
-  const { roomSubtotal, discountAmount, addonsTotal, tax } = totals;
+  const { roomSubtotal, discountAmount, tax } = totals;
   const grandTotal = totals.grandTotal;
   const grandTotalETB = Math.round(grandTotal * rate); // Dynamic Universal Forex rate (USD -> ETB)
-
-  // Display prices for the add-on UI (per selection, incl. nights/adults where applicable)
-  const addonPrices = {
-    airportShuttle: 15,
-    breakfast: 12 * adults * nights,
-    spaTreatment: 65,
-    coffeeCeremony: 8 * adults,
-  };
-
-  const applyPromo = () => {
-    const percent = getPromoDiscountPercent(promoCode);
-    if (percent > 0) {
-      setDiscountPercent(percent);
-      setPromoMessage(
-        percent === 20 ? 'Weekend Special: 20% discount applied!' : 'Member discount of 15% applied!'
-      );
-    } else {
-      setDiscountPercent(0);
-      setPromoMessage('Invalid coupon code');
-    }
-  };
 
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,11 +206,8 @@ export default function BookingModal() {
           guestPhone,
           specialRequests,
           addons,
-          // The server validates the code and computes the total itself —
-          // totalAmount/paymentStatus are intentionally NOT sent.
-          promoCode: promoCode.trim(),
           currency: 'USD',
-          paymentProvider: selectedPaymentProvider,
+          paymentProvider: 'CASH_ON_ARRIVAL',
           isDateExtended: Boolean(dateChangeFlag),
           dateChangeNote: dateChangeFlag?.text || '',
         }),
@@ -246,16 +216,10 @@ export default function BookingModal() {
       if (res.ok && data?.success && data.bookingRef) {
         setBookingRef(data.bookingRef);
         setCreatedReservationId(data.reservationId || '');
-        setActiveTxRef(data.txRef || '');
-
-        if (selectedPaymentProvider === 'CASH_ON_ARRIVAL') {
-          setPaymentStatus('PENDING');
-          setStep(3);
-        } else {
-          setIsPaymentModalOpen(true);
-        }
+        setActiveTxRef(data.txRef || `REF-${data.bookingRef}`);
+        setPaymentStatus('PENDING');
+        setStep(3);
       } else {
-        // Real failure — show the server's message; never fabricate a booking.
         setBookingError(
           data?.error ||
             'We could not complete your reservation. Please try again or contact the hotel.'
@@ -267,15 +231,6 @@ export default function BookingModal() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handlePaymentSuccess = (paymentData: any) => {
-    setPaymentStatus('SUCCESS');
-    if (paymentData?.txRef) {
-      setActiveTxRef(paymentData.txRef);
-    }
-    setIsPaymentModalOpen(false);
-    setStep(3);
   };
 
   return (
@@ -333,20 +288,24 @@ export default function BookingModal() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
+                width: '50px',
+                height: '50px',
                 borderRadius: '50%',
-                backgroundColor: '#FFFFFF',
-                padding: '2px',
+                backgroundColor: '#082026',
+                border: '2px solid rgba(228, 153, 81, 0.7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 overflow: 'hidden',
+                flexShrink: 0,
               }}
             >
               <Image
                 src="/images/logo.png"
                 alt="Logo"
-                width={38}
-                height={38}
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                width={50}
+                height={50}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>
             <div>
@@ -772,181 +731,14 @@ export default function BookingModal() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '28px' }}>
-                
-                {/* Left: Add-ons & Promo */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '28px' }}>
                 <div>
-                  <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: '#153D4B', marginBottom: '14px' }}>
-                    Enhance Your Stay (Optional Add-ons)
-                  </h4>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E1DA',
-                        backgroundColor: addons.airportShuttle ? '#FDF9F4' : '#FFFFFF',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={addons.airportShuttle}
-                        onChange={(e) => setAddons({ ...addons, airportShuttle: e.target.checked })}
-                        style={{ marginTop: '4px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '14px' }}>
-                          <span>Airport VIP Pick-up / Drop-off</span>
-                          <span style={{ color: '#E49951' }}>+$15</span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#5E6E75' }}>Direct private shuttle from/to Addis Ababa Bole Airport.</p>
-                      </div>
-                    </label>
-
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E1DA',
-                        backgroundColor: addons.breakfast ? '#FDF9F4' : '#FFFFFF',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={addons.breakfast}
-                        onChange={(e) => setAddons({ ...addons, breakfast: e.target.checked })}
-                        style={{ marginTop: '4px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '14px' }}>
-                          <span>Daily Breakfast Buffet</span>
-                          <span style={{ color: '#E49951' }}>+${addonPrices.breakfast}</span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#5E6E75' }}>Full international & traditional Ethiopian breakfast buffet.</p>
-                      </div>
-                    </label>
-
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E1DA',
-                        backgroundColor: addons.spaTreatment ? '#FDF9F4' : '#FFFFFF',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={addons.spaTreatment}
-                        onChange={(e) => setAddons({ ...addons, spaTreatment: e.target.checked })}
-                        style={{ marginTop: '4px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '14px' }}>
-                          <span>Aromatherapy Spa Massage</span>
-                          <span style={{ color: '#E49951' }}>+$65</span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#5E6E75' }}>60-min restorative botanical massage session.</p>
-                      </div>
-                    </label>
-
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #E2E1DA',
-                        backgroundColor: addons.coffeeCeremony ? '#FDF9F4' : '#FFFFFF',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={addons.coffeeCeremony}
-                        onChange={(e) => setAddons({ ...addons, coffeeCeremony: e.target.checked })}
-                        style={{ marginTop: '4px' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: '14px' }}>
-                          <span>Traditional Coffee Ceremony</span>
-                          <span style={{ color: '#E49951' }}>+${addonPrices.coffeeCeremony}</span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#5E6E75' }}>Authentic cultural coffee tasting & ceremony.</p>
-                      </div>
-                    </label>
-                  </div>
-
-                  {/* Promo Code */}
-                  <div style={{ backgroundColor: '#F7F7F2', padding: '16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 600, color: '#153D4B', display: 'block', marginBottom: '8px' }}>
-                      PROMO CODE
-                    </label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="e.g. GRANDMEMBER15"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: '9px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #E5E7EB',
-                          backgroundColor: '#F3F4F6',
-                          fontSize: '13px',
-                          textTransform: 'uppercase',
-                          outline: 'none',
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={applyPromo}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#153D4B',
-                          color: '#FFFFFF',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Apply
-                      </button>
-                    </div>
-                    {promoMessage && (
-                      <p
-                        style={{
-                          fontSize: '11px',
-                          marginTop: '6px',
-                          color: discountPercent > 0 ? '#10B981' : '#EF4444',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {promoMessage}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right: Guest Info & Summary */}
-                <div>
-                  <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: '#153D4B', marginBottom: '14px' }}>
+                  <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', color: '#153D4B', marginBottom: '8px' }}>
                     Guest Information
                   </h4>
+                  <p style={{ fontSize: '12px', color: '#5E6E75', margin: '0 0 16px', lineHeight: 1.5 }}>
+                    Share the guest&apos;s contact details so we can confirm the reservation and send your voucher quickly.
+                  </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
                     <div>
@@ -1059,13 +851,6 @@ export default function BookingModal() {
                       </div>
                     )}
 
-                    {addonsTotal > 0 && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#5E6E75', marginBottom: '6px' }}>
-                        <span>Add-on Services:</span>
-                        <span>+${addonsTotal}</span>
-                      </div>
-                    )}
-
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#5E6E75', marginBottom: '6px' }}>
                       <span>Taxes & Hotel Fees (15% VAT):</span>
                       <span>+${tax}</span>
@@ -1093,75 +878,26 @@ export default function BookingModal() {
                 </div>
               </div>
 
-              {/* Payment Gateway & Method Selector */}
+              {/* Payment Guarantee (No Advance Payment Required) */}
               <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #ECEBE5' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#153D4B' }}>
-                    Select Payment Method *
-                  </label>
-                  <span style={{ fontSize: '11px', color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Lock size={12} /> 256-bit Encrypted
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-                  {PAYMENT_PROVIDERS.map((prov) => {
-                    const isSelected = selectedPaymentProvider === prov.id;
-                    return (
-                      <div
-                        key={prov.id}
-                        onClick={() => setSelectedPaymentProvider(prov.id)}
-                        style={{
-                          padding: '10px 8px',
-                          borderRadius: '8px',
-                          border: isSelected ? `2px solid ${prov.color}` : '1px solid #E2E1DA',
-                          backgroundColor: isSelected ? prov.bgLight : '#FFFFFF',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                          gap: '2px',
-                        }}
-                      >
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: isSelected ? prov.color : '#153D4B' }}>
-                          {prov.name}
-                        </div>
-                        <span style={{ fontSize: '10px', color: '#838A8D' }}>
-                          {prov.badge}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Helper Note */}
                 <div
                   style={{
-                    padding: '10px 14px',
-                    borderRadius: '6px',
-                    backgroundColor: '#F7F7F2',
+                    padding: '14px 18px',
+                    borderRadius: '10px',
+                    backgroundColor: '#F8F9FA',
                     border: '1px solid #E2E1DA',
-                    fontSize: '11px',
-                    color: '#5E6E75',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
                   }}
                 >
-                  {selectedPaymentProvider === 'SKINA' && (
-                    <span><strong>SkinaPay (Default):</strong> Secure instant checkout accepting <strong>Visa, Mastercard, American Express, UnionPay</strong>, and local Ethiopian debit cards.</span>
-                  )}
-                  {selectedPaymentProvider === 'TELEBIRR' && (
-                    <span><strong>Telebirr:</strong> Fast USSD push prompt to phone (*127#) or scan QR via Telebirr SuperApp.</span>
-                  )}
-                  {selectedPaymentProvider === 'CHAPA' && (
-                    <span><strong>Chapa:</strong> Online gateway supporting Telebirr, CBE Birr, Awash Bank, and Visa/Mastercard.</span>
-                  )}
-                  {selectedPaymentProvider === 'CBE_BIRR' && (
-                    <span><strong>Commercial Bank of Ethiopia (CBE / CEB):</strong> Pay via CBE Birr shortcode <strong>882200</strong> or CBE Mobile App.</span>
-                  )}
-                  {selectedPaymentProvider === 'CASH_ON_ARRIVAL' && (
-                    <span><strong>Cash / Pay at Hotel:</strong> Guarantee room now, pay upon arrival at Grand Addis Front Desk in ETB or USD.</span>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontWeight: 700, fontSize: '13px' }}>
+                    <ShieldCheck size={18} />
+                    <span>No Advance Payment Required</span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#5E6E75', margin: 0, lineHeight: 1.5 }}>
+                    Your room is guaranteed immediately. You will pay upon arrival at Grand Addis Hotel front desk (Cash in ETB or USD, or Card).
+                  </p>
                 </div>
               </div>
 
@@ -1199,11 +935,7 @@ export default function BookingModal() {
                 >
                   <ShieldCheck size={16} />
                   <span>
-                    {isSubmitting
-                      ? 'Processing...'
-                      : selectedPaymentProvider === 'CASH_ON_ARRIVAL'
-                      ? 'Confirm Reservation'
-                      : `Proceed to Pay (${selectedPaymentProvider === 'CBE_BIRR' ? 'CBE Birr' : selectedPaymentProvider})`}
+                    {isSubmitting ? 'Confirming...' : 'Confirm Reservation'}
                   </span>
                 </button>
               </div>
@@ -1335,12 +1067,12 @@ export default function BookingModal() {
                   </div>
                   <div>
                     <span style={{ color: '#838A8D' }}>Payment Method:</span>
-                    <strong style={{ display: 'block', color: '#153D4B' }}>{selectedPaymentProvider}</strong>
+                    <strong style={{ display: 'block', color: '#153D4B' }}>Pay on Arrival (At Hotel)</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#838A8D' }}>Transaction Ref:</span>
+                    <span style={{ color: '#838A8D' }}>Booking Reference:</span>
                     <code style={{ fontSize: '11px', color: '#E49951', fontWeight: 600 }}>
-                      {activeTxRef || `TX-${selectedPaymentProvider}-${bookingRef.slice(-4)}`}
+                      {bookingRef}
                     </code>
                   </div>
                   <div>
@@ -1348,7 +1080,7 @@ export default function BookingModal() {
                     <strong style={{ display: 'block', color: '#153D4B' }}>{checkIn} (from 14:00)</strong>
                   </div>
                   <div>
-                    <span style={{ color: '#838A8D' }}>Total Amount:</span>
+                    <span style={{ color: '#838A8D' }}>Amount Due:</span>
                     <strong style={{ display: 'block', color: '#E49951' }}>${grandTotal} USD</strong>
                   </div>
                 </div>
@@ -1359,15 +1091,6 @@ export default function BookingModal() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
-                {paymentStatus !== 'SUCCESS' && (
-                  <button
-                    onClick={() => setIsPaymentModalOpen(true)}
-                    className="btn btn-primary"
-                    style={{ backgroundColor: '#00A36C', gap: '8px' }}
-                  >
-                    <CreditCard size={16} /> Pay Online Now (Chapa / Telebirr / CBE / Skina)
-                  </button>
-                )}
                 <button
                   onClick={() => window.print()}
                   className="btn btn-outline"
@@ -1384,24 +1107,6 @@ export default function BookingModal() {
               </div>
             </div>
           )}
-
-          {/* Payment Modal */}
-          <PaymentModal
-            isOpen={isPaymentModalOpen}
-            onClose={() => setIsPaymentModalOpen(false)}
-            bookingRef={bookingRef}
-            reservationId={createdReservationId}
-            amountUSD={grandTotal}
-            amountETB={grandTotalETB}
-            guestName={guestName}
-            guestEmail={guestEmail}
-            guestPhone={guestPhone}
-            roomName={selectedRoom.name}
-            checkInDate={checkIn}
-            checkOutDate={checkOut}
-            initialProvider={selectedPaymentProvider}
-            onPaymentSuccess={handlePaymentSuccess}
-          />
 
         </div>
 

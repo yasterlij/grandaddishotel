@@ -67,12 +67,13 @@ export default function Header() {
           <div
             style={{
               position: 'relative',
-              width: '46px',
-              height: '46px',
+              width: '58px',
+              height: '58px',
               borderRadius: '50%',
               overflow: 'hidden',
-              backgroundColor: '#FFFFFF',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+              backgroundColor: '#082026',
+              border: '2px solid rgba(228, 153, 81, 0.7)',
+              boxShadow: '0 3px 12px rgba(0,0,0,0.25)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -82,13 +83,13 @@ export default function Header() {
             <Image
               src="/images/logo.png"
               alt="Grand Addis Hotel Logo"
-              width={46}
-              height={46}
+              width={58}
+              height={58}
               priority
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'contain',
+                objectFit: 'cover',
               }}
             />
           </div>

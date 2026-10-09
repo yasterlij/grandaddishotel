@@ -141,7 +141,7 @@ export async function confirmPaymentRecord({
       if (isPaid) {
         const res = await client.query(
           `UPDATE reservations
-           SET status = 'CONFIRMED', "updatedAt" = NOW()
+           SET status = 'CONFIRMED', "expiresAt" = NULL, "updatedAt" = NOW()
            WHERE id = $1 AND status IN ('PENDING')
            RETURNING id`,
           [payment.reservationId]

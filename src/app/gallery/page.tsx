@@ -15,9 +15,6 @@ export default function GalleryPage() {
   const categories = [
     { id: 'all', label: 'All Photos' },
     { id: 'rooms', label: 'Rooms & Suites' },
-    { id: 'dining', label: 'Restaurants & Bar' },
-    { id: 'wellness', label: 'Wellness & Spa' },
-    { id: 'events', label: 'Conferences & Events' },
     { id: 'hotel', label: 'Hotel & Grounds' },
   ];
 

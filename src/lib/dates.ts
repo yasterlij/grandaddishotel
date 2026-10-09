@@ -46,14 +46,14 @@ export function addDays(dateStr: string, days: number): string {
 }
 
 export function calculateStayNights(checkIn: string, checkOut: string): number {
-  if (!checkIn || !checkOut) return 1;
+  if (!checkIn || !checkOut) return 0;
   const p1 = checkIn.split('-').map(Number);
   const p2 = checkOut.split('-').map(Number);
-  if (p1.length !== 3 || p2.length !== 3) return 1;
+  if (p1.length !== 3 || p2.length !== 3) return 0;
   const utc1 = Date.UTC(p1[0], p1[1] - 1, p1[2]);
   const utc2 = Date.UTC(p2[0], p2[1] - 1, p2[2]);
   const diffDays = Math.round((utc2 - utc1) / (1000 * 60 * 60 * 24));
-  return diffDays > 0 ? diffDays : 1;
+  return Math.max(0, diffDays);
 }
 
 export function formatFriendlyDate(dateStr: string): string {

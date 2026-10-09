@@ -77,6 +77,9 @@ export async function POST(req: NextRequest) {
     if (!isIsoDateStr(checkIn) || !isIsoDateStr(checkOut)) {
       return badRequest('Check-in and check-out must be valid dates (YYYY-MM-DD)');
     }
+    if (checkIn >= checkOut) {
+      return badRequest('Check-out date must be after the check-in date');
+    }
     const nights = calculateStayNights(checkIn, checkOut);
     if (nights < 1) {
       return badRequest('Check-out date must be after the check-in date');
@@ -148,6 +151,8 @@ export async function POST(req: NextRequest) {
     const finalNote = dateChangeNote || null;
 
     const client = await pool.connect();
+    const initialReservationStatus =
+      mappedProvider === 'CASH_ON_ARRIVAL' ? 'CONFIRMED' : 'PENDING';
     let bookingRef = '';
     let reservationId = '';
     let paymentId = '';
@@ -175,7 +180,10 @@ export async function POST(req: NextRequest) {
                SELECT COALESCE(r."roomId", '')
                FROM reservations r
                WHERE r."roomTypeId" = $1
-                 AND r.status IN ('PENDING', 'CONFIRMED', 'CHECKED_IN')
+                 AND (
+                   r.status IN ('CONFIRMED', 'CHECKED_IN')
+                   OR (r.status = 'PENDING' AND (r."expiresAt" IS NULL OR r."expiresAt" > NOW()))
+                 )
                  AND r."checkInDate" < $3::date
                  AND r."checkOutDate" > $2::date
              )
@@ -208,6 +216,11 @@ export async function POST(req: NextRequest) {
       );
       const guestId = guestRes.rows[0].id;
 
+      const expiresAt =
+        initialReservationStatus === 'PENDING'
+          ? new Date(Date.now() + 30 * 60 * 1000)
+          : null;
+
       // 4c. Insert reservation (retry on the rare bookingRef collision).
       for (let attempt = 0; attempt < 5; attempt++) {
         bookingRef = makeBookingRef();
@@ -220,13 +233,15 @@ export async function POST(req: NextRequest) {
               subtotal, "taxAmount", "totalAmount", "specialRequests",
               "guestId", "roomTypeId", "roomId",
               "isDateExtended", "dateChangeNote",
+              "expiresAt",
               "createdAt", "updatedAt"
             ) VALUES (
               $1, $2, $3::date, $4::date,
-              $5, $6, 'CONFIRMED', $7,
-              $8, $9, $10, $11,
-              $12, $13, $14,
-              $15, $16,
+              $5, $6, $7::"ReservationStatus", $8,
+              $9, $10, $11, $12,
+              $13, $14, $15,
+              $16, $17,
+              $18,
               NOW(), NOW()
             )`,
             [
@@ -236,6 +251,7 @@ export async function POST(req: NextRequest) {
               checkOut,
               adultsCount,
               childrenCount,
+              initialReservationStatus,
               cur,
               totals.subtotal,
               totals.tax,
@@ -246,6 +262,7 @@ export async function POST(req: NextRequest) {
               physicalRoomId,
               isExtendedFlag,
               finalNote,
+              expiresAt,
             ]
           );
           break;
@@ -285,6 +302,8 @@ export async function POST(req: NextRequest) {
       txRef,
       paymentProvider: mappedProvider,
       paymentStatus: 'PENDING',
+      reservationStatus: initialReservationStatus,
+      status: initialReservationStatus,
       roomName: roomType.name,
       checkIn,
       checkOut,

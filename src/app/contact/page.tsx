@@ -80,7 +80,7 @@ export default function ContactPage() {
               <span className="section-subtitle">24/7 GUEST SUPPORT</span>
               <h2 className="section-title">We’re Here For You</h2>
               <p style={{ fontSize: '15px', lineHeight: '1.8', color: '#5E6E75', marginBottom: '32px' }}>
-                Whether you need assistance with room reservations, airport shuttle transfers, dining inquiries, or private event planning, our team is always at your disposal.
+                Whether you need assistance with room reservations, airport shuttle transfers, local city guides, or bespoke concierge requests, our team is always at your disposal.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '40px' }}>

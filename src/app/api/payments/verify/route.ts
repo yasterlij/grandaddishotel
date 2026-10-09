@@ -27,7 +27,13 @@ export async function POST(req: NextRequest) {
     const rl = rateLimit(`payments-verify:${getClientIp(req)}`, 20, 5 * 60 * 1000);
     if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
-    const body = await req.json().catch(() => ({}));
+    const rawBody = await req.text();
+    let body: any = {};
+    try {
+      body = rawBody ? JSON.parse(rawBody) : {};
+    } catch {
+      body = {};
+    }
     const { paymentId, txRef, gatewayRef, status } = body;
 
     if (!paymentId && !txRef) {
@@ -46,7 +52,6 @@ export async function POST(req: NextRequest) {
       // Production: require admin session or a signed webhook.
       const signature = req.headers.get('x-skina-signature');
       const webhookSecret = process.env.SIKINA_WEBHOOK_SECRET || '';
-      const rawBody = JSON.stringify(body);
       const expectedSignature = webhookSecret
         ? crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex')
         : null;

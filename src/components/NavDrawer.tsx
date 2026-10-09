@@ -38,15 +38,10 @@ export default function NavDrawer() {
   const links = [
     { label: 'Home', href: '/' },
     { label: 'Our Rooms & Suites', href: '/rooms' },
-    { label: 'Dining & Lounge', href: '/dining' },
-    { label: 'Wellness & Spa', href: '/wellness' },
     { label: 'Experiences & Tours', href: '/experiences' },
-    { label: 'Weddings & Events', href: '/weddings-events' },
     { label: 'Photo Gallery', href: '/gallery' },
-    { label: 'Promotions & Offers', href: '/promotions-offer' },
     { label: 'About Grand Addis', href: '/about-us' },
     { label: 'Guest Testimonials', href: '/testimonials' },
-    { label: 'Frequently Asked Questions', href: '/faqs' },
     { label: 'Contact Us', href: '/contact' },
   ];
 
@@ -94,20 +89,24 @@ export default function NavDrawer() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '40px',
-                height: '40px',
+                width: '52px',
+                height: '52px',
                 borderRadius: '50%',
                 overflow: 'hidden',
-                backgroundColor: '#FFFFFF',
-                padding: '2px',
+                backgroundColor: '#082026',
+                border: '2px solid rgba(228, 153, 81, 0.7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               <Image
                 src="/images/logo.png"
                 alt="Logo"
-                width={40}
-                height={40}
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                width={52}
+                height={52}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>
             <div>

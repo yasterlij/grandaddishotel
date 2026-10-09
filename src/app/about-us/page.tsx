@@ -77,7 +77,7 @@ export default function AboutPage() {
                 At Grand Addis Hotel, we believe hospitality is more than comfortable rooms—it is about creating an authentic sense of belonging. Nestled in 22 Around Golagul, we provide a peaceful sanctuary amidst the vibrant pulse of Addis Ababa.
               </p>
               <p style={{ fontSize: '15px', lineHeight: '1.8', color: '#5E6E75', marginBottom: '32px' }}>
-                Immerse yourself in understated elegance, top-notch service, expertly crafted cocktails, exquisite international and Ethiopian cuisine, and soothing wellness therapies.
+                Immerse yourself in understated elegance, top-notch concierge service, authentic Ethiopian coffee ceremonies, and supreme comfort in the heart of Addis Ababa.
               </p>
 
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>

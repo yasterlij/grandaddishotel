@@ -91,7 +91,7 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [adminUser, setAdminUser] = useState<any>(null);
-  const [loginUsername, setLoginUsername] = useState('admin');
+  const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -736,7 +736,7 @@ export default function AdminPage() {
                   required
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
-                  placeholder="e.g. admin"
+                  placeholder="Enter your username or email"
                   style={{
                     width: '100%',
                     padding: '12px 14px 12px 40px',
@@ -805,23 +805,6 @@ export default function AdminPage() {
               {isLoggingIn ? 'Verifying Credentials...' : 'Sign In to Dashboard'}
             </button>
           </form>
-
-          {/* Credentials Reminder */}
-          <div
-            style={{
-              marginTop: '24px',
-              padding: '12px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(228, 153, 81, 0.1)',
-              border: '1px solid rgba(228, 153, 81, 0.25)',
-              fontSize: '12px',
-              color: '#D1DEE3',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontWeight: 600, color: '#E49951', marginBottom: '2px' }}>Default Credentials:</div>
-            <div>Username: <strong style={{ color: '#FFFFFF' }}>admin</strong> · Password: <strong style={{ color: '#FFFFFF' }}>GrandAddis2026!</strong> (or PIN <strong style={{ color: '#FFFFFF' }}>2026</strong>)</div>
-          </div>
 
           <div style={{ textAlign: 'center', marginTop: '20px' }}>
             <Link href="/" style={{ fontSize: '12px', color: '#A2B5BD', textDecoration: 'none' }}>

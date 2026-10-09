@@ -207,15 +207,25 @@ export async function POST(req: NextRequest) {
       }
 
       // 4b. Upsert guest atomically (avoids the unique-email race).
+      const generatedGuestId = crypto.randomUUID();
       const guestRes = await client.query(
         `INSERT INTO guests (id, "firstName", "lastName", email, "phoneNumber", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (email) DO UPDATE
            SET "phoneNumber" = EXCLUDED."phoneNumber", "updatedAt" = NOW()
          RETURNING id`,
-        [crypto.randomUUID(), firstName, lastName, email, phone]
+        [generatedGuestId, firstName, lastName, email, phone]
       );
-      const guestId = guestRes.rows[0].id;
+
+      let guestId = guestRes.rows?.[0]?.id;
+      if (!guestId) {
+        // Fallback for MySQL where INSERT does not return rows
+        const lookup = await client.query(
+          `SELECT id FROM guests WHERE email = $1 LIMIT 1`,
+          [email]
+        );
+        guestId = lookup.rows?.[0]?.id || generatedGuestId;
+      }
 
       const expiresAt =
         initialReservationStatus === 'PENDING'
@@ -321,9 +331,9 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error creating reservation in PostgreSQL:', error);
+    console.error('Error creating reservation:', error);
     return NextResponse.json(
-      { success: false, error: 'Could not create the reservation. Please try again.' },
+      { success: false, error: error?.message || 'Could not create the reservation. Please try again.' },
       { status: 500 }
     );
   }

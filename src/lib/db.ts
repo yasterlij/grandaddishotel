@@ -257,6 +257,9 @@ function translateQueryForMysql(sql: string, params?: any[]): { sql: string; par
   // Remove PostgreSQL RETURNING clause
   translated = translated.replace(/\s+RETURNING\s+["a-zA-Z0-9_,\s]+/gi, '');
 
+  // Remove SKIP LOCKED for MariaDB compatibility
+  translated = translated.replace(/\s+SKIP\s+LOCKED/gi, '');
+
   // Convert $1, $2, $3 to ?
   translated = translated.replace(/\$\d+/g, '?');
 

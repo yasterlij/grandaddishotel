@@ -8,13 +8,18 @@ const globalForPrisma = globalThis as unknown as {
   prismaDb: ReturnType<typeof postgres<Contract>> | undefined;
 };
 
-export const db =
-  globalForPrisma.prismaDb ??
-  postgres<Contract>({
-    contractJson,
-    url: process.env['DATABASE_URL'] || 'postgresql://tamrat@localhost:5432/grand_addis_db',
-  });
+const rawUrl = process.env['DATABASE_URL'] || '';
+const isPostgresUrl = rawUrl.startsWith('postgres://') || rawUrl.startsWith('postgresql://');
 
-if (process.env.NODE_ENV !== 'production') {
+export const db: ReturnType<typeof postgres<Contract>> | null =
+  globalForPrisma.prismaDb ??
+  (isPostgresUrl
+    ? postgres<Contract>({
+        contractJson,
+        url: rawUrl,
+      })
+    : null);
+
+if (process.env.NODE_ENV !== 'production' && db) {
   globalForPrisma.prismaDb = db;
 }

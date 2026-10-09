@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/prisma/db';
 import { requireAdmin } from '@/lib/auth';
+import { isMysql, getDbStats } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const unauthorized = await requireAdmin();
   if (unauthorized) return unauthorized;
+
+  if (!db || isMysql) {
+    const stats = await getDbStats();
+    return NextResponse.json({
+      success: true,
+      engine: 'MySQL / MariaDB Connection Pool',
+      database: 'grand_addis_db',
+      stats,
+    });
+  }
+
   try {
     const roomTypes = await db.orm.public.RoomTypes.all();
     const rooms = await db.orm.public.Rooms.all();

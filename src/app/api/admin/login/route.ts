@@ -46,6 +46,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const isHttps =
+      req.nextUrl.protocol === 'https:' ||
+      req.headers.get('x-forwarded-proto') === 'https';
+
     // Set secure HTTP-only cookie
     response.cookies.set({
       name: AUTH_COOKIE_NAME,
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
       path: '/',
       sameSite: 'lax',
       maxAge: Math.floor(SESSION_TTL_MS / 1000),
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
     });
 
     return response;

@@ -17,7 +17,7 @@ npm install --legacy-peer-deps
 
 # 2. Build the optimized Next.js production bundle
 echo "▶ Step 2: Compiling Next.js application bundle..."
-npm run build
+npx next build --webpack
 
 # 3. Create tmp directory and trigger Phusion Passenger reload
 echo "▶ Step 3: Triggering application process restart..."

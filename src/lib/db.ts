@@ -7,7 +7,9 @@ const connectionString =
   process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
 
 export const isMysql =
-  connectionString.startsWith('mysql://') || connectionString.startsWith('mysql:');
+  Boolean(process.env.DB_HOST) ||
+  connectionString.startsWith('mysql://') ||
+  connectionString.startsWith('mysql:');
 
 // Ensure single pool instance across Next.js reloads
 declare global {
@@ -24,14 +26,29 @@ let mysqlPool: MysqlPool;
 
 if (isMysql) {
   if (!global._mysqlPool) {
-    global._mysqlPool = mysql.createPool({
-      uri: connectionString,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      timezone: '+00:00',
-      dateStrings: true,
-    });
+    const mysqlConfig = process.env.DB_HOST
+      ? {
+          host: process.env.DB_HOST,
+          port: parseInt(process.env.DB_PORT || '3306', 10),
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
+          waitForConnections: true,
+          connectionLimit: 10,
+          queueLimit: 0,
+          timezone: '+00:00',
+          dateStrings: true,
+        }
+      : {
+          uri: connectionString,
+          waitForConnections: true,
+          connectionLimit: 10,
+          queueLimit: 0,
+          timezone: '+00:00',
+          dateStrings: true,
+        };
+
+    global._mysqlPool = mysql.createPool(mysqlConfig);
   }
   mysqlPool = global._mysqlPool;
 } else {

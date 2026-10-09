@@ -38,10 +38,21 @@ async function seedMysql() {
 
   let connection;
   try {
-    connection = await mysql.createConnection({
-      uri: connectionString,
-      multipleStatements: true,
-    });
+    const connConfig = process.env.DB_HOST
+      ? {
+          host: process.env.DB_HOST,
+          port: parseInt(process.env.DB_PORT || '3306', 10),
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          database: process.env.DB_NAME,
+          multipleStatements: true,
+        }
+      : {
+          uri: connectionString,
+          multipleStatements: true,
+        };
+
+    connection = await mysql.createConnection(connConfig);
 
     console.log('Executing MySQL DDL and Seed Data...');
     await connection.query(sanitizedSql);

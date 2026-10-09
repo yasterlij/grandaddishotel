@@ -4,8 +4,9 @@ import { rateLimit, getClientIp, tooManyRequests } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
-    // Brute-force protection: 5 attempts per IP per 15 minutes.
-    const rl = rateLimit(`admin-login:${getClientIp(req)}`, 5, 15 * 60 * 1000);
+    // Brute-force protection: 5 attempts per IP per 15 minutes in production (higher in dev/testing).
+    const maxAttempts = process.env.NODE_ENV === 'production' ? 5 : 50;
+    const rl = rateLimit(`admin-login:${getClientIp(req)}`, maxAttempts, 15 * 60 * 1000);
     if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
     const body = await req.json().catch(() => ({}));

@@ -42,7 +42,8 @@ function makeBookingRef(): string {
 export async function POST(req: NextRequest) {
   try {
     // Basic abuse protection for the public booking endpoint.
-    const rl = rateLimit(`reservations:${getClientIp(req)}`, 10, 5 * 60 * 1000);
+    const maxBookings = process.env.NODE_ENV === 'production' ? 10 : 100;
+    const rl = rateLimit(`reservations:${getClientIp(req)}`, maxBookings, 5 * 60 * 1000);
     if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
 
     const body = await req.json().catch(() => ({}));

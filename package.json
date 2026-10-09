@@ -8,8 +8,10 @@
     "dev:https": "next dev -p 3050 --experimental-https",
     "build": "next build",
     "start": "next start",
+    "start:server": "node server.js",
     "test": "node scripts/test-endpoints.mjs",
     "db:seed": "node scripts/seed-db.mjs",
+    "db:seed:mysql": "node scripts/seed-mysql.mjs",
     "prisma:emit": "prisma contract emit",
     "prisma:sign": "prisma db sign --yes",
     "prisma:infer": "prisma contract infer --db $DATABASE_URL --output ./src/prisma/contract.prisma --yes"
@@ -19,6 +21,7 @@
     "@prisma/orm-postgres": "^8.0.0-rc.14",
     "dotenv": "^18.0.6",
     "lucide-react": "^1.52.0",
+    "mysql2": "^3.24.5",
     "next": "16.3.8",
     "pg": "^8.23.1",
     "react": "19.2.8",

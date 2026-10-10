@@ -94,7 +94,8 @@ export const ROOMS: Room[] = [
       'Daily Housekeeping',
       'Electronic In-Room Safe'
     ],
-    featured: true
+    featured: true,
+    aliases: ['standard-room', 'standard-double-room', 'rt-standard-double', '1']
   },
   {
     id: '2',
@@ -124,7 +125,8 @@ export const ROOMS: Room[] = [
       'Bathrobes & Luxury Toiletries',
       'In-Room Safe & 24/7 Room Service'
     ],
-    featured: true
+    featured: true,
+    aliases: ['deluxe-room', 'deluxe-king-room', 'rt-deluxe-king', '2']
   },
   {
     id: '3',
@@ -153,7 +155,8 @@ export const ROOMS: Room[] = [
       'Coffee & Tea Making Facilities',
       'Electronic Safe'
     ],
-    featured: true
+    featured: true,
+    aliases: ['twin-room', 'twin-deluxe-room', 'rt-twin-deluxe', '3']
   },
   {
     id: '4',
@@ -182,7 +185,38 @@ export const ROOMS: Room[] = [
       'Evening Turn-down Service with Chocolates',
       'Priority Concierge & Tour Bookings'
     ],
-    featured: true
+    featured: true,
+    aliases: ['executive-suite', 'grand-executive-suite', 'rt-executive-suite', '4']
+  },
+  {
+    id: '5',
+    slug: 'presidential-suite',
+    name: 'Grand Addis Presidential Suite',
+    category: 'Suites',
+    pricePerNight: 300,
+    capacity: 4,
+    size: '96 m²',
+    bedType: 'Palatial King Master + Guest Suite',
+    view: '360° Private Rooftop Terrace View',
+    description: 'The pinnacle of luxury in Addis Ababa. Palatial top-floor residence with grand dining room, kitchen, private butler service, jacuzzi, and 360-degree terrace overlooking the capital.',
+    images: [
+      '/hotel_images/1760816135.webp',
+      '/images/BO5A5992-scaled.jpg',
+      '/images/BO5A5976-scaled.jpg',
+      '/images/BO5A5805-scaled.jpg'
+    ],
+    amenities: [
+      'Master King Bed + Guest Suite',
+      '360° Private Rooftop Terrace',
+      'Jacuzzi Spa & Sauna',
+      'Private Dining Room & Kitchenette',
+      'Dedicated 24/7 Butler Service',
+      'Complimentary Limousine Airport Transfer',
+      'Full Stocked Mini-bar',
+      'Chef Tasting Experience'
+    ],
+    featured: true,
+    aliases: ['presidential-suite', 'grand-presidential-suite', 'rt-presidential-suite', '5']
   }
 ];
 

@@ -196,6 +196,100 @@ export async function initDatabase(): Promise<void> {
             "updated_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
           );
         `);
+
+        // Ensure room_types exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS room_types (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "slug" VARCHAR(191) NOT NULL UNIQUE,
+            "name" VARCHAR(255) NOT NULL,
+            "description" TEXT NOT NULL,
+            "baseCapacity" INT NOT NULL DEFAULT 2,
+            "maxCapacity" INT NOT NULL DEFAULT 3,
+            "amenities" JSON DEFAULT NULL,
+            "images" JSON DEFAULT NULL,
+            "basePriceETB" DECIMAL(10,2) NOT NULL DEFAULT 5800.00,
+            "basePriceUSD" DECIMAL(10,2) NOT NULL DEFAULT 50.00,
+            "size" VARCHAR(50) DEFAULT '32 m²',
+            "bedType" VARCHAR(100) DEFAULT 'King Bed',
+            "view" VARCHAR(100) DEFAULT 'City View',
+            "category" VARCHAR(100) DEFAULT 'Hotel Rooms',
+            "featured" TINYINT(1) DEFAULT 1,
+            "aliases" JSON DEFAULT NULL,
+            "createdAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+            "updatedAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure rooms exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS rooms (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "roomNumber" VARCHAR(50) NOT NULL UNIQUE,
+            "floor" INT NOT NULL DEFAULT 1,
+            "status" VARCHAR(50) NOT NULL DEFAULT 'AVAILABLE',
+            "roomTypeId" VARCHAR(191) NOT NULL,
+            "createdAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+            "updatedAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure guests exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS guests (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "firstName" VARCHAR(100) NOT NULL,
+            "lastName" VARCHAR(100) NOT NULL,
+            "email" VARCHAR(191) NOT NULL UNIQUE,
+            "phoneNumber" VARCHAR(100) NOT NULL,
+            "nationalIdOrPass" VARCHAR(100) DEFAULT NULL,
+            "createdAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+            "updatedAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure reservations exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS reservations (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "bookingRef" VARCHAR(100) NOT NULL UNIQUE,
+            "checkInDate" DATE NOT NULL,
+            "checkOutDate" DATE NOT NULL,
+            "adultsCount" INT NOT NULL DEFAULT 1,
+            "childrenCount" INT NOT NULL DEFAULT 0,
+            "status" VARCHAR(50) NOT NULL DEFAULT 'CONFIRMED',
+            "expiresAt" DATETIME(3) DEFAULT NULL,
+            "currency" VARCHAR(10) NOT NULL DEFAULT 'USD',
+            "subtotal" DECIMAL(10,2) NOT NULL,
+            "taxAmount" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            "totalAmount" DECIMAL(10,2) NOT NULL,
+            "specialRequests" TEXT DEFAULT NULL,
+            "guestId" VARCHAR(191) NOT NULL,
+            "roomTypeId" VARCHAR(191) NOT NULL,
+            "roomId" VARCHAR(191) DEFAULT NULL,
+            "isDateExtended" TINYINT(1) DEFAULT 0,
+            "dateChangeNote" TEXT DEFAULT NULL,
+            "createdAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+            "updatedAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure payments exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS payments (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "amount" DECIMAL(10,2) NOT NULL,
+            "currency" VARCHAR(10) NOT NULL DEFAULT 'USD',
+            "provider" VARCHAR(50) NOT NULL DEFAULT 'CASH_ON_ARRIVAL',
+            "status" VARCHAR(50) NOT NULL DEFAULT 'SUCCESS',
+            "txRef" VARCHAR(191) NOT NULL UNIQUE,
+            "gatewayRef" VARCHAR(191) DEFAULT NULL,
+            "reservationId" VARCHAR(191) NOT NULL,
+            "paidAt" DATETIME(3) DEFAULT NULL,
+            "createdAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+            "updatedAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+          );
+        `);
       } else {
         // PostgreSQL DDL bootstrap
         await pgPool.query(`
@@ -434,9 +528,164 @@ export async function query<T extends QueryResultRow = any>(
   return rawQuery<T>(text, params);
 }
 
+export const DEFAULT_ROOM_TYPES = [
+  {
+    id: 'rt-standard-double',
+    slug: 'standard-double-room',
+    name: 'Standard Double Room',
+    category: 'Hotel Rooms',
+    size: '28 m²',
+    bedType: 'Queen Bed',
+    view: 'City View',
+    basePriceETB: 5800,
+    basePriceUSD: 50,
+    baseCapacity: 2,
+    maxCapacity: 2,
+    description: 'Refined comfort for business and leisure travelers. Features comfortable queen bed, ergonomic desk, blackout drapes, and modern en-suite marble bathroom.',
+    amenities: ['Queen Bed', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Tea & Ethiopian Coffee Maker', '24/7 Room Service', 'Daily Housekeeping', 'Electronic Safe'],
+    images: ['/images/vikbooking/bo5a5902.jpg', '/images/vikbooking/big_bo5a5894.jpg', '/images/vikbooking/big_bo5a5900.jpg', '/hotel_images/1760816082.webp'],
+    aliases: ['standard-room', 'double-rooms', 'standard', '1'],
+  },
+  {
+    id: 'rt-twin-deluxe',
+    slug: 'twin-deluxe-room',
+    name: 'Twin Deluxe Room',
+    category: 'Hotel Rooms',
+    size: '34 m²',
+    bedType: 'Two Double Beds',
+    view: 'City View Balcony',
+    basePriceETB: 7200,
+    basePriceUSD: 62,
+    baseCapacity: 2,
+    maxCapacity: 3,
+    description: 'Two plush double beds ideal for colleagues, friends, or small families visiting Addis Ababa. Includes private balcony, modern workspace, and city views.',
+    amenities: ['2 Double Beds', 'City View Balcony', 'High-speed Wi-Fi', 'Spacious Marble Bathroom', 'Complimentary Breakfast', 'Electric Kettle', 'In-Room Safe'],
+    images: ['/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/images/vikbooking/big_bo5a5852.jpg', '/hotel_images/1760816141.webp'],
+    aliases: ['twin-room', 'twin-deluxe', '3'],
+  },
+  {
+    id: 'rt-deluxe-king',
+    slug: 'deluxe-king-room',
+    name: 'Deluxe King Room',
+    category: 'Hotel Rooms',
+    size: '36 m²',
+    bedType: 'King Size Bed',
+    view: 'Panoramic City & Mountain View',
+    basePriceETB: 8500,
+    basePriceUSD: 75,
+    baseCapacity: 2,
+    maxCapacity: 3,
+    description: 'Spacious luxury room featuring a plush king-sized bed, panoramic balcony with skyline view of Addis Ababa, marble bathroom with deep soaking tub and rainfall shower, and ergonomic work desk.',
+    amenities: ['King Bed', 'Private Balcony', 'High-speed Wi-Fi', 'Rainfall Shower & Soaking Tub', 'Smart 55" 4K TV', 'Mini-bar & Refreshment Station', 'Complimentary Breakfast', '24/7 Room Service'],
+    images: ['/images/vikbooking/bo5a5878.jpg', '/images/vikbooking/big_bo5a5868.jpg', '/images/BO5A5826-scaled.jpg', '/hotel_images/1760816140.webp'],
+    aliases: ['deluxe-room', 'deluxe-king', '2'],
+  },
+  {
+    id: 'rt-executive-suite',
+    slug: 'executive-suite',
+    name: 'Executive Suite with Balcony',
+    category: 'Suites',
+    size: '52 m²',
+    bedType: 'Master King Bed + Daybed',
+    view: 'Corner Skyline View',
+    basePriceETB: 14000,
+    basePriceUSD: 120,
+    baseCapacity: 2,
+    maxCapacity: 4,
+    description: 'An elevated luxury sanctuary with separated living room, master bedroom, executive lounge access, espresso bar, and scenic mountain and city views over the Bole district.',
+    amenities: ['King Bed', 'Separate Living Room', 'Executive Lounge Access', 'Espresso Machine', 'Panoramic Balcony', 'Bathtub & Jacuzzi', 'VIP Airport Shuttle', 'Breakfast Buffet Included'],
+    images: ['/images/BO5A5992-scaled.jpg', '/images/BO5A5989-scaled.jpg', '/images/BO5A5976-scaled.jpg', '/hotel_images/1760816139.webp'],
+    aliases: ['grand-executive-suite', 'executive', '4'],
+  },
+  {
+    id: 'rt-presidential-suite',
+    slug: 'presidential-suite',
+    name: 'Grand Addis Presidential Suite',
+    category: 'Suites',
+    size: '96 m²',
+    bedType: 'Palatial King Master + Guest Suite',
+    view: '360° Private Rooftop Terrace View',
+    basePriceETB: 35000,
+    basePriceUSD: 300,
+    baseCapacity: 4,
+    maxCapacity: 6,
+    description: 'The pinnacle of luxury in Addis Ababa. Palatial top-floor residence with grand dining room, kitchen, private butler service, jacuzzi, and 360-degree terrace overlooking the capital.',
+    amenities: ['Master King Bed + Guest Suite', '360° Private Rooftop Terrace', 'Jacuzzi Spa & Sauna', 'Private Dining Room & Kitchenette', 'Dedicated 24/7 Butler Service', 'Complimentary Limousine Airport Transfer', 'Full Stocked Mini-bar', 'Chef Tasting Experience'],
+    images: ['/hotel_images/1760816135.webp', '/images/BO5A5992-scaled.jpg', '/images/BO5A5976-scaled.jpg', '/images/BO5A5805-scaled.jpg'],
+    aliases: ['grand-presidential-suite', 'presidential', '5'],
+  },
+];
+
+export const DEFAULT_PHYSICAL_ROOMS = [
+  { id: 'rm-101', roomNumber: '101', floor: 1, roomTypeId: 'rt-standard-double' },
+  { id: 'rm-102', roomNumber: '102', floor: 1, roomTypeId: 'rt-standard-double' },
+  { id: 'rm-103', roomNumber: '103', floor: 1, roomTypeId: 'rt-standard-double' },
+  { id: 'rm-104', roomNumber: '104', floor: 1, roomTypeId: 'rt-standard-double' },
+  { id: 'rm-105', roomNumber: '105', floor: 1, roomTypeId: 'rt-standard-double' },
+  { id: 'rm-201', roomNumber: '201', floor: 2, roomTypeId: 'rt-twin-deluxe' },
+  { id: 'rm-202', roomNumber: '202', floor: 2, roomTypeId: 'rt-twin-deluxe' },
+  { id: 'rm-203', roomNumber: '203', floor: 2, roomTypeId: 'rt-twin-deluxe' },
+  { id: 'rm-204', roomNumber: '204', floor: 2, roomTypeId: 'rt-twin-deluxe' },
+  { id: 'rm-205', roomNumber: '205', floor: 2, roomTypeId: 'rt-twin-deluxe' },
+  { id: 'rm-301', roomNumber: '301', floor: 3, roomTypeId: 'rt-deluxe-king' },
+  { id: 'rm-302', roomNumber: '302', floor: 3, roomTypeId: 'rt-deluxe-king' },
+  { id: 'rm-303', roomNumber: '303', floor: 3, roomTypeId: 'rt-deluxe-king' },
+  { id: 'rm-304', roomNumber: '304', floor: 3, roomTypeId: 'rt-deluxe-king' },
+  { id: 'rm-305', roomNumber: '305', floor: 3, roomTypeId: 'rt-deluxe-king' },
+  { id: 'rm-401', roomNumber: '401', floor: 4, roomTypeId: 'rt-executive-suite' },
+  { id: 'rm-402', roomNumber: '402', floor: 4, roomTypeId: 'rt-executive-suite' },
+  { id: 'rm-403', roomNumber: '403', floor: 4, roomTypeId: 'rt-executive-suite' },
+  { id: 'rm-501', roomNumber: '501', floor: 5, roomTypeId: 'rt-presidential-suite' },
+];
+
 async function autoSeedDefaultsIfEmpty(): Promise<void> {
+  // 1. Room Types Auto-seed
   try {
-    // 1. Gallery Images Auto-seed
+    const rtCountRes = await rawQuery(`SELECT COUNT(*) as count FROM room_types`);
+    const rtCount = parseInt(rtCountRes.rows[0]?.count || '0', 10);
+    if (rtCount === 0) {
+      for (const r of DEFAULT_ROOM_TYPES) {
+        const amenitiesVal = isMysql ? JSON.stringify(r.amenities) : r.amenities;
+        const imagesVal = isMysql ? JSON.stringify(r.images) : r.images;
+        const aliasesVal = isMysql ? JSON.stringify(r.aliases) : r.aliases;
+        await rawQuery(
+          `INSERT INTO room_types (
+            id, slug, name, description, "baseCapacity", "maxCapacity", amenities, images,
+            "basePriceETB", "basePriceUSD", size, "bedType", view, category, featured, aliases, "updatedAt"
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, $15, NOW()
+          )`,
+          [
+            r.id, r.slug, r.name, r.description, r.baseCapacity, r.maxCapacity,
+            amenitiesVal, imagesVal, r.basePriceETB, r.basePriceUSD, r.size,
+            r.bedType, r.view, r.category, aliasesVal
+          ]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('Auto-seed room_types notice:', err);
+  }
+
+  // 2. Physical Rooms Inventory Auto-seed
+  try {
+    const rmCountRes = await rawQuery(`SELECT COUNT(*) as count FROM rooms`);
+    const rmCount = parseInt(rmCountRes.rows[0]?.count || '0', 10);
+    if (rmCount === 0) {
+      for (const rm of DEFAULT_PHYSICAL_ROOMS) {
+        await rawQuery(
+          `INSERT INTO rooms (id, "roomNumber", floor, status, "roomTypeId", "updatedAt")
+           VALUES ($1, $2, $3, 'AVAILABLE', $4, NOW())`,
+          [rm.id, rm.roomNumber, rm.floor, rm.roomTypeId]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('Auto-seed rooms notice:', err);
+  }
+
+  // 3. Gallery Images Auto-seed
+  try {
     const galCountRes = await rawQuery(`SELECT COUNT(*) as count FROM gallery_images`);
     const galCount = parseInt(galCountRes.rows[0]?.count || '0', 10);
     if (galCount === 0) {
@@ -449,8 +698,12 @@ async function autoSeedDefaultsIfEmpty(): Promise<void> {
         );
       }
     }
+  } catch (err) {
+    console.warn('Auto-seed gallery notice:', err);
+  }
 
-    // 2. Experiences Auto-seed
+  // 4. Experiences Auto-seed
+  try {
     const expCountRes = await rawQuery(`SELECT COUNT(*) as count FROM experiences`);
     const expCount = parseInt(expCountRes.rows[0]?.count || '0', 10);
     if (expCount === 0) {
@@ -464,7 +717,7 @@ async function autoSeedDefaultsIfEmpty(): Promise<void> {
       }
     }
   } catch (err) {
-    console.warn('Auto-seed notice:', err);
+    console.warn('Auto-seed experiences notice:', err);
   }
 }
 
@@ -537,12 +790,126 @@ function parseJsonArray(val: any): string[] {
   return [];
 }
 
+export async function resolveDbRoomType(
+  roomId?: string | null,
+  roomSlug?: string | null
+): Promise<any | null> {
+  await initDatabase();
+
+  const idStr = (roomId ? String(roomId) : '').trim();
+  const slugStr = (roomSlug ? String(roomSlug) : '').trim();
+
+  if (!idStr && !slugStr) return null;
+
+  // 1. Fetch current room types from database
+  let roomTypesRes = await rawQuery(`SELECT * FROM room_types`);
+  let roomTypes = roomTypesRes.rows;
+
+  // If table is completely empty, auto-seed defaults and re-fetch
+  if (roomTypes.length === 0) {
+    await autoSeedDefaultsIfEmpty();
+    roomTypesRes = await rawQuery(`SELECT * FROM room_types`);
+    roomTypes = roomTypesRes.rows;
+  }
+
+  if (roomTypes.length === 0) return null;
+
+  const norm = (s: any) => String(s || '').toLowerCase().trim();
+
+  const legacyMap: Record<string, string[]> = {
+    '1': ['standard-double-room', 'standard-room', 'rt-standard-double', 'standard'],
+    '2': ['deluxe-king-room', 'deluxe-room', 'rt-deluxe-king', 'deluxe'],
+    '3': ['twin-deluxe-room', 'twin-room', 'rt-twin-deluxe', 'twin'],
+    '4': ['executive-suite', 'grand-executive-suite', 'rt-executive-suite', 'executive'],
+    '5': ['presidential-suite', 'grand-presidential-suite', 'rt-presidential-suite', 'presidential'],
+  };
+
+  const idNorm = norm(idStr);
+  const slugNorm = norm(slugStr);
+  const targetTerms = new Set<string>();
+  if (idNorm) targetTerms.add(idNorm);
+  if (slugNorm) targetTerms.add(slugNorm);
+
+  if (legacyMap[idStr]) {
+    for (const t of legacyMap[idStr]) targetTerms.add(t.toLowerCase());
+  }
+  if (legacyMap[slugStr]) {
+    for (const t of legacyMap[slugStr]) targetTerms.add(t.toLowerCase());
+  }
+
+  if (idNorm === 'standard-room' || slugNorm === 'standard-room') {
+    targetTerms.add('standard-double-room');
+    targetTerms.add('rt-standard-double');
+  }
+  if (idNorm === 'deluxe-room' || slugNorm === 'deluxe-room') {
+    targetTerms.add('deluxe-king-room');
+    targetTerms.add('rt-deluxe-king');
+  }
+  if (idNorm === 'twin-room' || slugNorm === 'twin-room') {
+    targetTerms.add('twin-deluxe-room');
+    targetTerms.add('rt-twin-deluxe');
+  }
+  if (idNorm === 'executive-suite' || slugNorm === 'executive-suite') {
+    targetTerms.add('rt-executive-suite');
+    targetTerms.add('grand-executive-suite');
+  }
+  if (idNorm === 'presidential-suite' || slugNorm === 'presidential-suite') {
+    targetTerms.add('rt-presidential-suite');
+    targetTerms.add('grand-presidential-suite');
+  }
+
+  // Priority 1: Exact ID match
+  for (const rt of roomTypes) {
+    if (norm(rt.id) === idNorm || norm(rt.id) === slugNorm) {
+      return rt;
+    }
+  }
+
+  // Priority 2: Exact canonical slug match
+  for (const rt of roomTypes) {
+    if (norm(rt.slug) === slugNorm || norm(rt.slug) === idNorm) {
+      return rt;
+    }
+  }
+
+  // Priority 3: Target terms match against rt.id or rt.slug
+  for (const rt of roomTypes) {
+    if (targetTerms.has(norm(rt.id)) || targetTerms.has(norm(rt.slug))) {
+      return rt;
+    }
+  }
+
+  // Priority 4: Alias array match
+  for (const rt of roomTypes) {
+    const aliases = parseJsonArray(rt.aliases).map(norm);
+    for (const term of targetTerms) {
+      if (aliases.includes(term)) {
+        return rt;
+      }
+    }
+  }
+
+  // Priority 5: Partial word match (e.g. "deluxe" in "deluxe-king-room")
+  for (const term of targetTerms) {
+    if (term.length < 4) continue;
+    for (const rt of roomTypes) {
+      const rtSlug = norm(rt.slug);
+      const rtName = norm(rt.name);
+      if (rtSlug.includes(term) || term.includes(rtSlug) || rtName.includes(term)) {
+        return rt;
+      }
+    }
+  }
+
+  return null;
+}
+
 export async function getDbRooms(): Promise<DbRoom[]> {
   const cached = getCached<DbRoom[]>('db_rooms');
   if (cached) return cached;
 
   try {
-    const res = await query(`
+    let res = await query(`
       SELECT 
         rt.id,
         rt.slug,
@@ -567,6 +934,34 @@ export async function getDbRooms(): Promise<DbRoom[]> {
       ORDER BY rt."basePriceUSD" ASC;
     `);
 
+    if (res.rows.length === 0) {
+      await autoSeedDefaultsIfEmpty();
+      res = await query(`
+        SELECT 
+          rt.id,
+          rt.slug,
+          rt.name,
+          rt.description,
+          rt."baseCapacity",
+          rt."maxCapacity",
+          COALESCE(rt.size, '32 m²') AS size,
+          COALESCE(rt."bedType", 'King Bed') AS "bedType",
+          COALESCE(rt.view, 'City View') AS view,
+          COALESCE(rt.category, 'Hotel Rooms') AS category,
+          COALESCE(rt.featured, true) AS featured,
+          rt.amenities,
+          rt.images,
+          rt."basePriceETB",
+          rt."basePriceUSD",
+          rt.aliases,
+          SUM(CASE WHEN r.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS "availableCount"
+        FROM room_types rt
+        LEFT JOIN rooms r ON r."roomTypeId" = rt.id
+        GROUP BY rt.id
+        ORDER BY rt."basePriceUSD" ASC;
+      `);
+    }
+
     const rooms: DbRoom[] = res.rows.map((row) => ({
       id: row.id,
       slug: row.slug,
@@ -582,7 +977,7 @@ export async function getDbRooms(): Promise<DbRoom[]> {
       description: row.description,
       images: parseJsonArray(row.images),
       amenities: parseJsonArray(row.amenities),
-      featured: row.featured !== false,
+      featured: row.featured !== false && row.featured !== 0,
       availableCount: Number(row.availableCount) || 0,
       aliases: parseJsonArray(row.aliases),
     }));
@@ -601,86 +996,38 @@ export async function getDbRoomBySlug(slug: string): Promise<DbRoom | null> {
   if (cached) return cached;
 
   try {
-    let res: QueryResult<any>;
+    const rt = await resolveDbRoomType(null, slug);
+    if (!rt) return null;
 
-    if (isMysql) {
-      res = await query(
-        `SELECT 
-          rt.id,
-          rt.slug,
-          rt.name,
-          rt.description,
-          rt."baseCapacity",
-          rt."maxCapacity",
-          COALESCE(rt.size, '32 m²') AS size,
-          COALESCE(rt."bedType", 'King Bed') AS "bedType",
-          COALESCE(rt.view, 'City View') AS view,
-          COALESCE(rt.category, 'Hotel Rooms') AS category,
-          COALESCE(rt.featured, 1) AS featured,
-          rt.amenities,
-          rt.images,
-          rt."basePriceETB",
-          rt."basePriceUSD",
-          rt.aliases,
-          SUM(CASE WHEN r.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS "availableCount"
-        FROM room_types rt
-        LEFT JOIN rooms r ON r."roomTypeId" = rt.id
-        WHERE LOWER(rt.slug) = LOWER($1)
-          OR LOWER(COALESCE(rt.aliases, '')) LIKE CONCAT('%', LOWER($1), '%')
-        GROUP BY rt.id
-        LIMIT 1;`,
-        [slug]
+    let availableCount = 0;
+    try {
+      const availRes = await query(
+        `SELECT COUNT(*) as count FROM rooms WHERE "roomTypeId" = $1 AND status = 'AVAILABLE'`,
+        [rt.id]
       );
-    } else {
-      res = await query(
-        `SELECT 
-          rt.id,
-          rt.slug,
-          rt.name,
-          rt.description,
-          rt."baseCapacity",
-          rt."maxCapacity",
-          COALESCE(rt.size, '32 m²') AS size,
-          COALESCE(rt."bedType", 'King Bed') AS "bedType",
-          COALESCE(rt.view, 'City View') AS view,
-          COALESCE(rt.category, 'Hotel Rooms') AS category,
-          COALESCE(rt.featured, true) AS featured,
-          rt.amenities,
-          rt.images,
-          rt."basePriceETB",
-          rt."basePriceUSD",
-          COALESCE(rt.aliases, ARRAY[]::TEXT[]) AS aliases,
-          SUM(CASE WHEN r.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS "availableCount"
-        FROM room_types rt
-        LEFT JOIN rooms r ON r."roomTypeId" = rt.id
-        WHERE LOWER(rt.slug) = LOWER($1)
-          OR EXISTS (SELECT 1 FROM unnest(COALESCE(rt.aliases, ARRAY[]::TEXT[])) AS a WHERE LOWER(a) = LOWER($1))
-        GROUP BY rt.id
-        LIMIT 1;`,
-        [slug]
-      );
+      availableCount = Number(availRes.rows[0]?.count || 0);
+    } catch {
+      availableCount = 2;
     }
 
-    if (res.rows.length === 0) return null;
-    const row = res.rows[0];
     const room: DbRoom = {
-      id: row.id,
-      slug: row.slug,
-      name: row.name,
-      category: row.category || 'Hotel Rooms',
-      pricePerNight: Number(row.basePriceUSD) || 50,
-      basePriceETB: Number(row.basePriceETB) || 5800,
-      basePriceUSD: Number(row.basePriceUSD) || 50,
-      capacity: Number(row.baseCapacity) || 2,
-      size: row.size || '32 m²',
-      bedType: row.bedType || 'King Bed',
-      view: row.view || 'City View',
-      description: row.description,
-      images: parseJsonArray(row.images),
-      amenities: parseJsonArray(row.amenities),
-      featured: row.featured !== false,
-      availableCount: Number(row.availableCount) || 0,
-      aliases: parseJsonArray(row.aliases),
+      id: rt.id,
+      slug: rt.slug,
+      name: rt.name,
+      category: rt.category || 'Hotel Rooms',
+      pricePerNight: Number(rt.basePriceUSD) || 50,
+      basePriceETB: Number(rt.basePriceETB) || 5800,
+      basePriceUSD: Number(rt.basePriceUSD) || 50,
+      capacity: Number(rt.baseCapacity) || 2,
+      size: rt.size || '32 m²',
+      bedType: rt.bedType || 'King Bed',
+      view: rt.view || 'City View',
+      description: rt.description,
+      images: parseJsonArray(rt.images),
+      amenities: parseJsonArray(rt.amenities),
+      featured: rt.featured !== false && rt.featured !== 0,
+      availableCount,
+      aliases: parseJsonArray(rt.aliases),
     };
 
     setCached(cacheKey, room, 60000);

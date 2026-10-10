@@ -24,8 +24,8 @@ export async function GET() {
         rt.images,
         rt."basePriceETB",
         rt."basePriceUSD",
-        COALESCE(rt.aliases, ARRAY[]::TEXT[]) AS aliases,
-        COUNT(r.id) FILTER (WHERE r.status = 'AVAILABLE') AS "availableCount",
+        rt.aliases,
+        SUM(CASE WHEN r.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS "availableCount",
         COUNT(r.id) AS "totalRoomsCount"
       FROM room_types rt
       LEFT JOIN rooms r ON r."roomTypeId" = rt.id

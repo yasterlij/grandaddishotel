@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import pool, { query, getExchangeRate } from '@/lib/db';
+import pool, { query, getExchangeRate, resolveDbRoomType } from '@/lib/db';
 import { calculateStayNights, getHotelTodayDateStr, isIsoDateStr } from '@/lib/dates';
 import { requireAdmin } from '@/lib/auth';
 import { rateLimit, getClientIp, tooManyRequests } from '@/lib/rate-limit';
@@ -103,18 +103,14 @@ export async function POST(req: NextRequest) {
     const mappedProvider =
       VALID_PROVIDERS[String(paymentProvider).toUpperCase()] || 'CASH_ON_ARRIVAL';
 
-    // ---------- 2. Resolve room type (no silent fallback) ----------
-    const roomTypeRes = await query(
-      `SELECT * FROM room_types WHERE id = $1 OR slug = $2 LIMIT 1`,
-      [roomId, roomSlug || '']
-    );
-    if (roomTypeRes.rows.length === 0) {
+    // ---------- 2. Resolve room type (resilient lookup with alias & numeric ID support) ----------
+    const roomType = await resolveDbRoomType(roomId, roomSlug);
+    if (!roomType) {
       return NextResponse.json(
         { success: false, error: 'Room not found' },
         { status: 404 }
       );
     }
-    const roomType = roomTypeRes.rows[0];
 
     // ---------- 3. Server-authoritative pricing ----------
     const discountPercent = getPromoDiscountPercent(promoCode);
@@ -168,7 +164,7 @@ export async function POST(req: NextRequest) {
         `SELECT COUNT(*)::int AS count FROM rooms WHERE "roomTypeId" = $1`,
         [roomType.id]
       );
-      const tracksPhysicalRooms = roomCountRes.rows[0].count > 0;
+      const tracksPhysicalRooms = Number(roomCountRes.rows[0]?.count || 0) > 0;
 
       if (tracksPhysicalRooms) {
         // Pick a physical room that is AVAILABLE and has no overlapping

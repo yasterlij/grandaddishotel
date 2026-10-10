@@ -292,6 +292,98 @@ async function runHttpTests() {
     logResult('FAIL', 'Direct reservation creation failed', `Status ${validRes.status}: ${JSON.stringify(validRes.data)}`);
   }
 
+  // Test 5.6: Booking Standard Room with UI payload (roomId: '1', roomSlug: 'standard-room')
+  const stdRes = await request('/api/reservations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      roomId: '1',
+      roomSlug: 'standard-room',
+      checkIn: checkInStr,
+      checkOut: checkOutStr,
+      adults: 2,
+      guestName: 'Standard Room Guest',
+      guestEmail: 'standard_guest@example.com',
+      guestPhone: '+251911223355',
+      currency: 'USD',
+      paymentProvider: 'CASH_ON_ARRIVAL',
+    }),
+  });
+  if (stdRes.status === 200 && stdRes.data?.success) {
+    logResult('PASS', 'Booking Standard Room via frontend alias (roomId: 1, slug: standard-room) succeeds');
+  } else {
+    logResult('FAIL', 'Booking Standard Room via frontend alias failed', `Status ${stdRes.status}: ${JSON.stringify(stdRes.data)}`);
+  }
+
+  // Test 5.7: Booking Deluxe Room with UI payload (roomId: '2', roomSlug: 'deluxe-room')
+  const dlxRes = await request('/api/reservations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      roomId: '2',
+      roomSlug: 'deluxe-room',
+      checkIn: checkInStr,
+      checkOut: checkOutStr,
+      adults: 2,
+      guestName: 'Deluxe Room Guest',
+      guestEmail: 'deluxe_guest@example.com',
+      guestPhone: '+251911223366',
+      currency: 'USD',
+      paymentProvider: 'CASH_ON_ARRIVAL',
+    }),
+  });
+  if (dlxRes.status === 200 && dlxRes.data?.success) {
+    logResult('PASS', 'Booking Deluxe Room via frontend alias (roomId: 2, slug: deluxe-room) succeeds');
+  } else {
+    logResult('FAIL', 'Booking Deluxe Room via frontend alias failed', `Status ${dlxRes.status}: ${JSON.stringify(dlxRes.data)}`);
+  }
+
+  // Test 5.8: Booking Twin Room with UI payload (roomId: '3', roomSlug: 'twin-room')
+  const twinRes = await request('/api/reservations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      roomId: '3',
+      roomSlug: 'twin-room',
+      checkIn: checkInStr,
+      checkOut: checkOutStr,
+      adults: 2,
+      guestName: 'Twin Room Guest',
+      guestEmail: 'twin_guest@example.com',
+      guestPhone: '+251911223377',
+      currency: 'USD',
+      paymentProvider: 'CASH_ON_ARRIVAL',
+    }),
+  });
+  if (twinRes.status === 200 && twinRes.data?.success) {
+    logResult('PASS', 'Booking Twin Room via frontend alias (roomId: 3, slug: twin-room) succeeds');
+  } else {
+    logResult('FAIL', 'Booking Twin Room via frontend alias failed', `Status ${twinRes.status}: ${JSON.stringify(twinRes.data)}`);
+  }
+
+  // Test 5.9: Booking with completely invalid room slug returns 404 Room not found
+  const invalidRoomRes = await request('/api/reservations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      roomId: '999',
+      roomSlug: 'invalid-non-existent-room-slug',
+      checkIn: checkInStr,
+      checkOut: checkOutStr,
+      adults: 2,
+      guestName: 'Invalid Room Tester',
+      guestEmail: 'invalid_room@example.com',
+      guestPhone: '+251911223388',
+      currency: 'USD',
+      paymentProvider: 'CASH_ON_ARRIVAL',
+    }),
+  });
+  if (invalidRoomRes.status === 404 && invalidRoomRes.data?.error?.includes('not found')) {
+    logResult('PASS', 'Invalid room ID/slug rejected with 404 Room not found');
+  } else {
+    logResult('FAIL', 'Invalid room ID/slug was NOT rejected with 404', `Status ${invalidRoomRes.status}: ${JSON.stringify(invalidRoomRes.data)}`);
+  }
+
   // ----------------------------------------------------------------
   // 6. Admin Authentication & Session Lifecycle
   // ----------------------------------------------------------------

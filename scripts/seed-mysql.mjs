@@ -74,17 +74,11 @@ function getMysqlConnectionConfig() {
     }
   }
 
-  const finalUser = dbUser || parsedFromUrl.user;
-  const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
-  const finalHost = dbHost || parsedFromUrl.host;
+  const finalUser = dbUser || parsedFromUrl.user || 'root';
+  const finalPassword = dbPassword !== undefined ? dbPassword : (parsedFromUrl.password || '');
+  const finalHost = dbHost || parsedFromUrl.host || '127.0.0.1';
   const finalPort = dbPort || parsedFromUrl.port || 3306;
-  const finalDatabase = dbName || parsedFromUrl.database;
-
-  if (!finalHost || !finalUser || finalPassword === undefined || !finalDatabase) {
-    throw new Error(
-      'MySQL production credentials are not fully configured. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME, or provide a full mysql:// DATABASE_URL / MYSQL_URL.'
-    );
-  }
+  const finalDatabase = dbName || parsedFromUrl.database || 'grand_addis_db';
 
   return {
     host: finalHost,

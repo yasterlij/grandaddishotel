@@ -98,6 +98,9 @@ async function runHttpTests() {
     { method: 'POST', path: '/api/admin/seed', body: {} },
     { method: 'GET', path: '/api/admin/testimonials' },
     { method: 'POST', path: '/api/upload', body: {} },
+    { method: 'GET', path: '/api/admin/gallery' },
+    { method: 'GET', path: '/api/admin/content' },
+    { method: 'GET', path: '/api/admin/experiences' },
   ];
 
   for (const ep of adminEndpoints) {
@@ -143,6 +146,8 @@ async function runHttpTests() {
     { path: '/api/testimonials', expectProp: 'testimonials' },
     { path: '/api/settings/exchange-rate', expectProp: 'rate' },
     { path: '/api/payments/config', expectProp: 'providers' },
+    { path: '/api/gallery', expectProp: 'images' },
+    { path: '/api/content', expectProp: 'content' },
   ];
 
   for (const api of publicApis) {

@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import type { QueryResult, QueryResultRow } from 'pg';
 import mysql from 'mysql2/promise';
 import type { Pool as MysqlPool, PoolConnection } from 'mysql2/promise';
+import { GALLERY_IMAGES, EXPERIENCES } from '@/data/hotelData';
 
 const connectionString =
   process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
@@ -86,6 +87,19 @@ export async function initDatabase(): Promise<void> {
         await mysqlPool.query(`
           INSERT INTO hotel_settings ("key", "value") VALUES ('usd_to_etb_rate', '189')
           ON DUPLICATE KEY UPDATE "value" = VALUES("value");
+        `);
+
+        // Ensure gallery_images exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS gallery_images (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "src" TEXT NOT NULL,
+            "title" VARCHAR(255) NOT NULL,
+            "category" VARCHAR(100) NOT NULL DEFAULT 'hotel',
+            "sort_order" INT NOT NULL DEFAULT 0,
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+            "updated_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+          );
         `);
       } else {
         // PostgreSQL DDL bootstrap
@@ -233,8 +247,22 @@ export async function initDatabase(): Promise<void> {
           CREATE INDEX IF NOT EXISTS idx_spa_app_date ON spa_appointments (date);
           CREATE INDEX IF NOT EXISTS idx_dining_menu_cat ON dining_menu (category);
           CREATE INDEX IF NOT EXISTS idx_reservations_roomtype_status_dates ON reservations ("roomTypeId", status, "checkInDate", "checkOutDate");
+
+          CREATE TABLE IF NOT EXISTS gallery_images (
+            id TEXT PRIMARY KEY,
+            src TEXT NOT NULL,
+            title TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'hotel',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+          CREATE INDEX IF NOT EXISTS idx_gallery_images_sort ON gallery_images (sort_order ASC, created_at ASC);
         `);
       }
+
+      // Auto-seed default content, gallery images, and experiences if empty
+      await autoSeedDefaultsIfEmpty();
     } catch (err) {
       console.error('Database initialization error:', err);
       initPromise = null;
@@ -283,12 +311,10 @@ function translateQueryForMysql(sql: string, params?: any[]): { sql: string; par
   return { sql: translated, params: params || [] };
 }
 
-export async function query<T extends QueryResultRow = any>(
+export async function rawQuery<T extends QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<QueryResult<T>> {
-  await initDatabase();
-
   if (isMysql) {
     const { sql, params: mysqlParams } = translateQueryForMysql(text, params);
     const [result] = await mysqlPool.query(sql, mysqlParams);
@@ -303,6 +329,48 @@ export async function query<T extends QueryResultRow = any>(
   }
 
   return pgPool.query<T>(text, params);
+}
+
+export async function query<T extends QueryResultRow = any>(
+  text: string,
+  params?: any[]
+): Promise<QueryResult<T>> {
+  await initDatabase();
+  return rawQuery<T>(text, params);
+}
+
+async function autoSeedDefaultsIfEmpty(): Promise<void> {
+  try {
+    // 1. Gallery Images Auto-seed
+    const galCountRes = await rawQuery(`SELECT COUNT(*) as count FROM gallery_images`);
+    const galCount = parseInt(galCountRes.rows[0]?.count || '0', 10);
+    if (galCount === 0) {
+      for (let i = 0; i < GALLERY_IMAGES.length; i++) {
+        const item = GALLERY_IMAGES[i];
+        const id = `gal-${i + 1}`;
+        await rawQuery(
+          `INSERT INTO gallery_images (id, src, title, category, sort_order) VALUES ($1, $2, $3, $4, $5)`,
+          [id, item.src, item.title, item.category, i + 1]
+        );
+      }
+    }
+
+    // 2. Experiences Auto-seed
+    const expCountRes = await rawQuery(`SELECT COUNT(*) as count FROM experiences`);
+    const expCount = parseInt(expCountRes.rows[0]?.count || '0', 10);
+    if (expCount === 0) {
+      for (const exp of EXPERIENCES) {
+        const highlightsVal = isMysql ? JSON.stringify(exp.highlights) : exp.highlights;
+        await rawQuery(
+          `INSERT INTO experiences (id, title, subtitle, category, duration, image, description, highlights)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [exp.id, exp.title, exp.subtitle, exp.category, exp.duration, exp.image, exp.description, highlightsVal]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('Auto-seed notice:', err);
+  }
 }
 
 // -------------------------------------------------------------
@@ -534,6 +602,9 @@ export async function getDbExperiences() {
 
   try {
     const res = await query(`SELECT * FROM experiences ORDER BY created_at ASC`);
+    if (res.rows.length === 0) {
+      return EXPERIENCES;
+    }
     const experiences = res.rows.map((row) => ({
       ...row,
       highlights: parseJsonArray(row.highlights),
@@ -542,8 +613,77 @@ export async function getDbExperiences() {
     return experiences;
   } catch (e) {
     console.error('getDbExperiences error:', e);
-    return [];
+    return EXPERIENCES;
   }
+}
+
+export async function addDbExperience(exp: {
+  title: string;
+  subtitle: string;
+  category: string;
+  duration: string;
+  image: string;
+  description: string;
+  highlights: string[];
+}): Promise<any> {
+  const id = `exp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const highlightsVal = isMysql ? JSON.stringify(exp.highlights) : exp.highlights;
+  await query(
+    `INSERT INTO experiences (id, title, subtitle, category, duration, image, description, highlights)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, exp.title, exp.subtitle, exp.category, exp.duration, exp.image, exp.description, highlightsVal]
+  );
+  invalidateCache('db_experiences');
+  return { id, ...exp };
+}
+
+export async function updateDbExperience(
+  id: string,
+  exp: Partial<{
+    title: string;
+    subtitle: string;
+    category: string;
+    duration: string;
+    image: string;
+    description: string;
+    highlights: string[];
+  }>
+): Promise<boolean> {
+  const highlightsVal = exp.highlights
+    ? isMysql
+      ? JSON.stringify(exp.highlights)
+      : exp.highlights
+    : null;
+
+  const res = await query(
+    `UPDATE experiences
+     SET title = COALESCE($1, title),
+         subtitle = COALESCE($2, subtitle),
+         category = COALESCE($3, category),
+         duration = COALESCE($4, duration),
+         image = COALESCE($5, image),
+         description = COALESCE($6, description),
+         highlights = COALESCE($7, highlights)
+     WHERE id = $8`,
+    [
+      exp.title ?? null,
+      exp.subtitle ?? null,
+      exp.category ?? null,
+      exp.duration ?? null,
+      exp.image ?? null,
+      exp.description ?? null,
+      highlightsVal,
+      id,
+    ]
+  );
+  invalidateCache('db_experiences');
+  return (res.rowCount ?? 0) > 0;
+}
+
+export async function deleteDbExperience(id: string): Promise<boolean> {
+  const res = await query(`DELETE FROM experiences WHERE id = $1`, [id]);
+  invalidateCache('db_experiences');
+  return (res.rowCount ?? 0) > 0;
 }
 
 export async function getDbMenuItems() {
@@ -694,6 +834,204 @@ export async function setExchangeRate(
   }
 
   return { rate: newRate, updatedRoomsCount };
+}
+
+// -------------------------------------------------------------
+// Photo Gallery Database Methods
+// -------------------------------------------------------------
+export interface DbGalleryImage {
+  id: string;
+  src: string;
+  title: string;
+  category: string;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getDbGalleryImages(): Promise<DbGalleryImage[]> {
+  const cached = getCached<DbGalleryImage[]>('db_gallery');
+  if (cached) return cached;
+
+  try {
+    const res = await query(`SELECT * FROM gallery_images ORDER BY sort_order ASC, created_at ASC`);
+    if (res.rows.length === 0) {
+      return GALLERY_IMAGES.map((img, i) => ({
+        id: `gal-${i + 1}`,
+        src: img.src,
+        title: img.title,
+        category: img.category,
+        sort_order: i + 1,
+      }));
+    }
+    const images: DbGalleryImage[] = res.rows.map((row) => ({
+      id: String(row.id),
+      src: row.src,
+      title: row.title,
+      category: row.category || 'hotel',
+      sort_order: Number(row.sort_order) || 0,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }));
+    setCached('db_gallery', images, 45000);
+    return images;
+  } catch (error) {
+    console.error('getDbGalleryImages error:', error);
+    return GALLERY_IMAGES.map((img, i) => ({
+      id: `gal-${i + 1}`,
+      src: img.src,
+      title: img.title,
+      category: img.category,
+      sort_order: i + 1,
+    }));
+  }
+}
+
+export async function addDbGalleryImage(item: {
+  src: string;
+  title: string;
+  category: string;
+  sort_order?: number;
+}): Promise<DbGalleryImage> {
+  const id = `gal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const sortOrder = item.sort_order !== undefined ? item.sort_order : 99;
+  await query(
+    `INSERT INTO gallery_images (id, src, title, category, sort_order) VALUES ($1, $2, $3, $4, $5)`,
+    [id, item.src, item.title, item.category || 'hotel', sortOrder]
+  );
+  invalidateCache('db_gallery');
+  return {
+    id,
+    src: item.src,
+    title: item.title,
+    category: item.category || 'hotel',
+    sort_order: sortOrder,
+  };
+}
+
+export async function updateDbGalleryImage(
+  id: string,
+  item: { src?: string; title?: string; category?: string; sort_order?: number }
+): Promise<boolean> {
+  const res = await query(
+    `UPDATE gallery_images
+     SET src = COALESCE($1, src),
+         title = COALESCE($2, title),
+         category = COALESCE($3, category),
+         sort_order = COALESCE($4, sort_order),
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = $5`,
+    [item.src ?? null, item.title ?? null, item.category ?? null, item.sort_order ?? null, id]
+  );
+  invalidateCache('db_gallery');
+  return (res.rowCount ?? 0) > 0;
+}
+
+export async function deleteDbGalleryImage(id: string): Promise<boolean> {
+  const res = await query(`DELETE FROM gallery_images WHERE id = $1`, [id]);
+  invalidateCache('db_gallery');
+  return (res.rowCount ?? 0) > 0;
+}
+
+// -------------------------------------------------------------
+// Page Content & Banners CMS Database Methods
+// -------------------------------------------------------------
+export const DEFAULT_PAGE_CONTENT: Record<string, string> = {
+  // Home Page
+  page_home_hero_title: 'Your Grand Stay In The Heart Of Addis',
+  page_home_hero_subtitle: 'Experience bespoke hospitality, refined comfort, and authentic Ethiopian culture in the diplomatic heart of Africa.',
+  page_home_hero_image: '/images/BO5A5779-scaled.jpg',
+  page_home_hero_badge: 'Resort & Luxury Hotel in 22 Addis Ababa',
+  page_home_story_subtitle: 'THE GRAND ADDIS EXPERIENCE',
+  page_home_story_title: 'A Sanctuary of Luxury & Warm Ethiopian Hospitality',
+  page_home_story_p1: 'Located at 22 Around Golagul in Addis Ababa, Grand Addis Hotel stands as a landmark of distinction. Just 10 minutes from Bole International Airport, we offer an exquisite sanctuary for discerning business travelers, diplomats, and vacationers seeking refined comfort.',
+  page_home_story_p2: 'From plush, acoustically shielded guest rooms to authentic Ethiopian coffee rituals, every detail is crafted to ensure your stay is extraordinary.',
+  page_home_story_image: '/images/BO5A5821-scaled.jpg',
+
+  // About Page
+  page_about_hero_tag: 'OUR STORY & HERITAGE',
+  page_about_hero_title: 'A Place Of Heart, Your Home Away',
+  page_about_hero_subtitle: 'Welcome to our oasis of luxury and tranquility in Addis Ababa, where every aspect of your stay is meticulously crafted to exceed your expectations.',
+  page_about_hero_image: '/images/BO5A5779-scaled.jpg',
+  page_about_story_subtitle: 'THE GRAND ADDIS PHILOSOPHY',
+  page_about_story_title: 'Where Tradition Meets Contemporary Elegance',
+  page_about_story_p1: 'At Grand Addis Hotel, we believe hospitality is more than comfortable rooms—it is about creating an authentic sense of belonging. Nestled in 22 Around Golagul, we provide a peaceful sanctuary amidst the vibrant pulse of Addis Ababa.',
+  page_about_story_p2: 'Immerse yourself in understated elegance, top-notch concierge service, authentic Ethiopian coffee ceremonies, and supreme comfort in the heart of Addis Ababa.',
+  page_about_story_image: '/images/BO5A5821-scaled.jpg',
+
+  // Contact Page & Hotel Info
+  page_contact_hero_tag: 'GET IN TOUCH',
+  page_contact_hero_title: 'Contact Grand Addis Hotel',
+  page_contact_hero_subtitle: 'We would love to hear from you. Get in touch via our contact form, email, or direct phone.',
+  page_contact_hero_image: '/images/BO5A5779-scaled.jpg',
+  page_contact_phone: '+251 116 672 828',
+  page_contact_phone_alt: '+251 911 234 567',
+  page_contact_email: 'reservations@egrandaddishotel.com',
+  page_contact_email_alt: 'info@grandaddishotel.com',
+  page_contact_address: '22 Around Golagul, behind Meklit Building, Addis Ababa, Ethiopia',
+  page_contact_checkin: '14:00 (2:00 PM)',
+  page_contact_checkout: '12:00 (12:00 PM)',
+  page_contact_airport: '5.2 km from Addis Ababa Bole International Airport (approx. 10-15 mins)',
+
+  // Gallery Page
+  page_gallery_hero_tag: 'VISUAL IMMERSION',
+  page_gallery_hero_title: 'Photo Gallery',
+  page_gallery_hero_subtitle: 'Take a visual tour through Grand Addis Hotel. From bespoke suites to tranquil spa spaces and savory culinary creations.',
+  page_gallery_hero_image: '/images/BO5A5779-scaled.jpg',
+
+  // Experiences Page
+  page_experiences_hero_tag: 'ETHIOPIAN CULTURE & TOURS',
+  page_experiences_hero_title: 'Curated Ethiopian Experiences',
+  page_experiences_hero_subtitle: 'Immerse yourself in authentic traditions, vibrant coffee ceremonies, city excursions, and bespoke culinary journeys.',
+  page_experiences_hero_image: '/images/BO5A5779-scaled.jpg',
+
+  // Rooms Page
+  page_rooms_hero_tag: 'LUXURY ACCOMMODATION',
+  page_rooms_hero_title: 'Our Rooms & Luxury Suites',
+  page_rooms_hero_subtitle: 'Designed for total relaxation and productivity with plush bedding, marble bathrooms, and city skyline views.',
+  page_rooms_hero_image: '/images/BO5A5779-scaled.jpg',
+};
+
+export async function getDbPageContent(): Promise<Record<string, string>> {
+  const cached = getCached<Record<string, string>>('db_page_content');
+  if (cached) return cached;
+
+  const content: Record<string, string> = { ...DEFAULT_PAGE_CONTENT };
+  try {
+    const res = await query(`SELECT "key", "value" FROM hotel_settings WHERE "key" LIKE 'page_%'`);
+    for (const row of res.rows) {
+      if (row.key && row.value !== undefined && row.value !== null) {
+        content[row.key] = row.value;
+      }
+    }
+    setCached('db_page_content', content, 60000);
+  } catch (err) {
+    console.error('getDbPageContent error:', err);
+  }
+  return content;
+}
+
+export async function updateDbPageContent(items: Record<string, string>): Promise<boolean> {
+  for (const [key, val] of Object.entries(items)) {
+    if (!key.startsWith('page_') && !key.startsWith('hotel_')) continue;
+    if (isMysql) {
+      await query(
+        `INSERT INTO hotel_settings ("key", "value", updated_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON DUPLICATE KEY UPDATE "value" = VALUES("value"), updated_at = CURRENT_TIMESTAMP`,
+        [key, String(val)]
+      );
+    } else {
+      await query(
+        `INSERT INTO hotel_settings (key, value, updated_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+        [key, String(val)]
+      );
+    }
+  }
+  invalidateCache('db_page_content');
+  return true;
 }
 
 /** Unified Pool object providing connection pooling & transactions across MySQL & PostgreSQL */

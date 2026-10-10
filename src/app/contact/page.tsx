@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   MapPin,
   ExternalLink,
@@ -17,6 +17,7 @@ import { HOTEL_INFO } from '@/data/hotelData';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function ContactPage() {
+  const [content, setContent] = useState<Record<string, string>>({});
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -24,6 +25,15 @@ export default function ContactPage() {
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const { isSubmitting, error, submit } = useFormSubmit();
+
+  useEffect(() => {
+    fetch('/api/content')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.content) setContent(data.content);
+      })
+      .catch((e) => console.error('Failed to load contact page content:', e));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +47,8 @@ export default function ContactPage() {
     if (ok) setSubmitted(true);
   };
 
+  const bannerImg = content.page_contact_hero_image || '/images/BO5A5779-scaled.jpg';
+
   return (
     <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Banner */}
@@ -46,20 +58,20 @@ export default function ContactPage() {
           color: '#FFFFFF',
           padding: '80px 0 60px',
           textAlign: 'center',
-          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('/images/BO5A5779-scaled.jpg')`,
+          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('${bannerImg}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
         <div className="container">
           <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '3px', color: '#E49951', fontWeight: 600, display: 'block', marginBottom: '12px' }}>
-            GET IN TOUCH
+            {content.page_contact_hero_tag || 'GET IN TOUCH'}
           </span>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 54px)', fontWeight: 500, marginBottom: '16px' }}>
-            Contact Grand Addis Hotel
+            {content.page_contact_hero_title || 'Contact Grand Addis Hotel'}
           </h1>
           <p style={{ fontSize: '16px', color: '#A2B5BD', maxWidth: '640px', margin: '0 auto', lineHeight: '1.7' }}>
-            We’d love to hear from you. Get in touch via our contact form, email, or direct phone.
+            {content.page_contact_hero_subtitle || 'We’d love to hear from you. Get in touch via our contact form, email, or direct phone.'}
           </p>
         </div>
       </section>

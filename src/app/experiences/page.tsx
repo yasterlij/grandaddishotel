@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Compass,
@@ -18,6 +18,8 @@ import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { getTodayDateStr } from '@/lib/dates';
 
 export default function ExperiencesPage() {
+  const [experiencesList, setExperiencesList] = useState<any[]>(EXPERIENCES);
+  const [content, setContent] = useState<Record<string, string>>({});
   const [selectedExp, setSelectedExp] = useState<string | null>(null);
   const [inquiryName, setInquiryName] = useState('');
   const [inquiryEmail, setInquiryEmail] = useState('');
@@ -26,7 +28,27 @@ export default function ExperiencesPage() {
   const [inquirySent, setInquirySent] = useState(false);
   const { isSubmitting, error, submit, clearError } = useFormSubmit();
 
-  const activeExp = EXPERIENCES.find((e) => e.id === selectedExp);
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [expRes, contentRes] = await Promise.all([
+          fetch('/api/experiences').then((r) => r.json()).catch(() => null),
+          fetch('/api/content').then((r) => r.json()).catch(() => null),
+        ]);
+        if (expRes?.success && Array.isArray(expRes.experiences) && expRes.experiences.length > 0) {
+          setExperiencesList(expRes.experiences);
+        }
+        if (contentRes?.success && contentRes.content) {
+          setContent(contentRes.content);
+        }
+      } catch (err) {
+        console.error('Error loading experiences:', err);
+      }
+    }
+    loadData();
+  }, []);
+
+  const activeExp = experiencesList.find((e) => e.id === selectedExp);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +61,8 @@ export default function ExperiencesPage() {
     if (ok) setInquirySent(true);
   };
 
+  const bannerImg = content.page_experiences_hero_image || '/images/BO5A5779-scaled.jpg';
+
   return (
     <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Banner */}
@@ -46,7 +70,7 @@ export default function ExperiencesPage() {
         style={{
           position: 'relative',
           padding: '100px 0 70px',
-          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('/images/BO5A5779-scaled.jpg')`,
+          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('${bannerImg}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           color: '#FFFFFF',
@@ -65,7 +89,7 @@ export default function ExperiencesPage() {
               marginBottom: '12px',
             }}
           >
-            DISCOVER ETHIOPIA
+            {content.page_experiences_hero_tag || 'DISCOVER ETHIOPIA'}
           </span>
           <h1
             style={{
@@ -75,7 +99,7 @@ export default function ExperiencesPage() {
               marginBottom: '18px',
             }}
           >
-            Unforgettable Experiences
+            {content.page_experiences_hero_title || 'Unforgettable Experiences'}
           </h1>
           <p
             style={{
@@ -86,7 +110,8 @@ export default function ExperiencesPage() {
               lineHeight: '1.7',
             }}
           >
-            Here’s where memories are truly made. Mindfully curated journeys into the heart, heritage, and soul of Addis Ababa.
+            {content.page_experiences_hero_subtitle ||
+              'Here’s where memories are truly made. Mindfully curated journeys into the heart, heritage, and soul of Addis Ababa.'}
           </p>
         </div>
       </section>
@@ -95,7 +120,7 @@ export default function ExperiencesPage() {
       <section className="section-padding bg-light">
         <div className="container">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
-            {EXPERIENCES.map((exp, idx) => {
+            {experiencesList.map((exp, idx) => {
               const isEven = idx % 2 === 1;
               return (
                 <div
@@ -174,7 +199,7 @@ export default function ExperiencesPage() {
                         Experience Highlights:
                       </h4>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        {exp.highlights.map((h, i) => (
+                        {(exp.highlights || []).map((h: string, i: number) => (
                           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#153D4B' }}>
                             <Check size={14} color="#E49951" />
                             <span>{h}</span>

@@ -38,12 +38,23 @@ import {
   Eye,
   EyeOff,
   Sparkles,
+  Compass,
 } from 'lucide-react';
 import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    'reservations' | 'payments' | 'roomTypes' | 'rooms' | 'dining' | 'spa' | 'messages' | 'testimonials'
+    | 'reservations'
+    | 'payments'
+    | 'roomTypes'
+    | 'rooms'
+    | 'pageContent'
+    | 'gallery'
+    | 'experiences'
+    | 'dining'
+    | 'spa'
+    | 'messages'
+    | 'testimonials'
   >('reservations');
 
   const [loading, setLoading] = useState(true);
@@ -62,6 +73,28 @@ export default function AdminPage() {
   const [eventInquiries, setEventInquiries] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+
+  // Photo Gallery CMS states
+  const [galleryImages, setGalleryImages] = useState<any[]>([]);
+  const [galleryCategoryFilter, setGalleryCategoryFilter] = useState<string>('ALL');
+  const [gallerySearch, setGallerySearch] = useState<string>('');
+  const [editGalleryModal, setEditGalleryModal] = useState<any | null>(null);
+  const [isCreatingGallery, setIsCreatingGallery] = useState(false);
+  const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false);
+
+  // Page Content CMS states
+  const [pageContent, setPageContent] = useState<Record<string, string>>({});
+  const [activeContentSection, setActiveContentSection] = useState<
+    'home' | 'about' | 'contact' | 'gallery' | 'experiences' | 'rooms'
+  >('home');
+  const [isSavingContent, setIsSavingContent] = useState(false);
+  const [uploadingContentKey, setUploadingContentKey] = useState<string | null>(null);
+
+  // Cultural Experiences CMS states
+  const [experiencesList, setExperiencesList] = useState<any[]>([]);
+  const [editExperienceModal, setEditExperienceModal] = useState<any | null>(null);
+  const [isCreatingExperience, setIsCreatingExperience] = useState(false);
+  const [uploadingExpImage, setUploadingExpImage] = useState(false);
 
   // Payment filters & inspection modal
   const [paymentProviderFilter, setPaymentProviderFilter] = useState<string>('ALL');
@@ -128,6 +161,9 @@ export default function AdminPage() {
         testRes,
         payRes,
         rateRes,
+        galRes,
+        contentRes,
+        expRes,
       ] = await Promise.all([
         fetch('/api/admin/overview').then((r) => r.json()),
         fetch('/api/admin/reservations').then((r) => r.json()),
@@ -140,6 +176,9 @@ export default function AdminPage() {
         fetch('/api/admin/testimonials').then((r) => r.json()),
         fetch('/api/admin/payments').then((r) => r.json()),
         fetch('/api/settings/exchange-rate').then((r) => r.json()),
+        fetch('/api/admin/gallery').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/admin/content').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/admin/experiences').then((r) => r.json()).catch(() => ({ success: false })),
       ]);
 
       if (overviewRes.success) setOverview(overviewRes);
@@ -152,6 +191,9 @@ export default function AdminPage() {
       if (eventsRes.success) setEventInquiries(eventsRes.inquiries || []);
       if (testRes.success) setTestimonials(testRes.testimonials || []);
       if (payRes.success) setPayments(payRes.payments || []);
+      if (galRes?.success) setGalleryImages(galRes.images || []);
+      if (contentRes?.success) setPageContent(contentRes.content || {});
+      if (expRes?.success) setExperiencesList(expRes.experiences || []);
       if (rateRes?.success && rateRes?.rate) {
         setUniversalRate(rateRes.rate);
         setTempUniversalRate(rateRes.rate.toString());
@@ -656,6 +698,219 @@ export default function AdminPage() {
       }
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // Photo Gallery CRUD Handlers
+  // -------------------------------------------------------------
+  const handleGalleryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingGalleryImage(true);
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setEditGalleryModal((prev: any) => ({
+          ...prev,
+          src: data.url,
+        }));
+        notify('Photo uploaded successfully!');
+      } else {
+        alert(data.error || 'Failed to upload photo');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error uploading photo');
+    } finally {
+      setUploadingGalleryImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveGalleryImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editGalleryModal) return;
+
+    if (!editGalleryModal.src || !editGalleryModal.title) {
+      alert('Photo image URL and title are required');
+      return;
+    }
+
+    try {
+      const isNew = isCreatingGallery || !editGalleryModal.id;
+      const res = await fetch('/api/admin/gallery', {
+        method: isNew ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editGalleryModal),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify(isNew ? 'Photo added to gallery' : 'Gallery photo updated');
+        setEditGalleryModal(null);
+        setIsCreatingGallery(false);
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to save gallery photo');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error saving photo');
+    }
+  };
+
+  const handleDeleteGalleryImage = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title || 'this photo'}" from gallery?`)) return;
+    try {
+      const res = await fetch(`/api/admin/gallery?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        notify('Photo deleted from gallery');
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to delete photo');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error deleting photo');
+    }
+  };
+
+  // -------------------------------------------------------------
+  // Page Content & Banners CMS Handlers
+  // -------------------------------------------------------------
+  const handleContentImageUpload = async (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingContentKey(key);
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setPageContent((prev) => ({
+          ...prev,
+          [key]: data.url,
+        }));
+        notify('Banner photo uploaded and applied!');
+      } else {
+        alert(data.error || 'Failed to upload photo');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error uploading image');
+    } finally {
+      setUploadingContentKey(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleSavePageContent = async () => {
+    setIsSavingContent(true);
+    try {
+      const res = await fetch('/api/admin/content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: pageContent }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify('Page content & banner media saved successfully!');
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to save page content');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error saving page content');
+    } finally {
+      setIsSavingContent(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // Cultural Experiences Handlers
+  // -------------------------------------------------------------
+  const handleExperienceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingExpImage(true);
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setEditExperienceModal((prev: any) => ({
+          ...prev,
+          image: data.url,
+        }));
+        notify('Experience photo uploaded!');
+      } else {
+        alert(data.error || 'Failed to upload photo');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error uploading photo');
+    } finally {
+      setUploadingExpImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveExperience = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editExperienceModal) return;
+
+    if (!editExperienceModal.title || !editExperienceModal.description) {
+      alert('Title and description are required for experience');
+      return;
+    }
+
+    try {
+      const isNew = isCreatingExperience || !editExperienceModal.id;
+      const res = await fetch('/api/admin/experiences', {
+        method: isNew ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editExperienceModal),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify(isNew ? 'Experience created' : 'Experience updated');
+        setEditExperienceModal(null);
+        setIsCreatingExperience(false);
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to save experience');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error saving experience');
+    }
+  };
+
+  const handleDeleteExperience = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete experience "${title}"?`)) return;
+    try {
+      const res = await fetch(`/api/admin/experiences?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        notify('Experience deleted');
+        loadAllData();
+      } else {
+        alert(data.error || 'Failed to delete experience');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error deleting experience');
     }
   };
 
@@ -1177,6 +1432,9 @@ export default function AdminPage() {
             { id: 'payments', label: 'Payments & Transactions', icon: CreditCard, count: payments.length },
             { id: 'roomTypes', label: 'Room Catalog & Prices', icon: Bed, count: roomTypes.length },
             { id: 'rooms', label: 'Physical Rooms', icon: Bed, count: rooms.length },
+            { id: 'gallery', label: 'Photo Gallery', icon: ImageIcon, count: galleryImages.length },
+            { id: 'pageContent', label: 'Pages & Media CMS', icon: Sparkles, count: undefined },
+            { id: 'experiences', label: 'Cultural Experiences', icon: Compass, count: experiencesList.length },
             { id: 'dining', label: 'Dining Menu', icon: Utensils, count: dining.length },
             { id: 'spa', label: 'Spa Treatments', icon: Flower2, count: spa.length },
             { id: 'messages', label: 'Guest Messages', icon: Mail, count: messages.length + eventInquiries.length },
@@ -1217,7 +1475,7 @@ export default function AdminPage() {
                     fontWeight: 600,
                   }}
                 >
-                  {tab.count}
+                  {tab.count !== undefined ? tab.count : 'CMS'}
                 </span>
               </button>
             );
@@ -2808,6 +3066,1236 @@ export default function AdminPage() {
                     >
                       <Trash2 size={13} />
                     </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB: PHOTO GALLERY MEDIA CMS */}
+        {/* ============================================================== */}
+        {activeTab === 'gallery' && (
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E1DA', overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#153D4B', fontWeight: 600 }}>
+                  Hotel Photo Gallery Manager
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#838A8D' }}>
+                  Upload new photos from device, update titles and categories, set display order, or remove images.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    setIsCreatingGallery(true);
+                    setEditGalleryModal({
+                      title: '',
+                      src: '',
+                      category: 'hotel',
+                      sort_order: galleryImages.length + 1,
+                    });
+                  }}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                >
+                  <Plus size={16} /> Add New Photo
+                </button>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderBottom: '1px solid #F0EFEA',
+                backgroundColor: '#FAF9F5',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'ALL', label: 'All Photos' },
+                  { id: 'HOTEL', label: 'Hotel & Grounds' },
+                  { id: 'ROOMS', label: 'Rooms & Suites' },
+                  { id: 'DINING', label: 'Dining & Lounge' },
+                  { id: 'WELLNESS', label: 'Spa & Wellness' },
+                ].map((cat) => {
+                  const isSel = galleryCategoryFilter === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setGalleryCategoryFilter(cat.id)}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        border: isSel ? '1px solid #E49951' : '1px solid #E2E1DA',
+                        backgroundColor: isSel ? '#E49951' : '#FFFFFF',
+                        color: isSel ? '#FFFFFF' : '#153D4B',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ position: 'relative', width: '240px' }}>
+                <Search size={14} color="#838A8D" style={{ position: 'absolute', left: '12px', top: '10px' }} />
+                <input
+                  type="text"
+                  placeholder="Filter by photo title..."
+                  value={gallerySearch}
+                  onChange={(e) => setGallerySearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 34px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E1DA',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Photos Grid */}
+            <div style={{ padding: '24px' }}>
+              {(() => {
+                const filtered = galleryImages.filter((img) => {
+                  const matchCat =
+                    galleryCategoryFilter === 'ALL' ||
+                    (img.category || '').toUpperCase() === galleryCategoryFilter;
+                  const matchSearch =
+                    !gallerySearch ||
+                    (img.title || '').toLowerCase().includes(gallerySearch.toLowerCase());
+                  return matchCat && matchSearch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '48px 20px', color: '#838A8D' }}>
+                      <ImageIcon size={40} color="#D5D4CC" style={{ margin: '0 auto 12px' }} />
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: '#153D4B' }}>No photos found</div>
+                      <div style={{ fontSize: '13px', marginTop: '4px' }}>
+                        Click &quot;Add New Photo&quot; to upload your first gallery photo.
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                      gap: '20px',
+                    }}
+                  >
+                    {filtered.map((img, idx) => (
+                      <div
+                        key={img.id || idx}
+                        style={{
+                          borderRadius: '12px',
+                          border: '1px solid #E2E1DA',
+                          overflow: 'hidden',
+                          backgroundColor: '#FFFFFF',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          transition: 'transform 0.2s, box-shadow 0.2s',
+                        }}
+                      >
+                        {/* Image Thumbnail Container */}
+                        <div
+                          style={{
+                            position: 'relative',
+                            height: '190px',
+                            backgroundColor: '#0F2A33',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <img
+                            src={img.src}
+                            alt={img.title}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '10px',
+                              left: '10px',
+                              backgroundColor: 'rgba(15, 42, 51, 0.85)',
+                              color: '#E49951',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              letterSpacing: '1px',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {img.category || 'HOTEL'}
+                          </div>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '10px',
+                              right: '10px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                              color: '#153D4B',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            #{img.sort_order || idx + 1}
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                          <h4 style={{ margin: '0 0 4px', fontSize: '15px', color: '#153D4B', fontWeight: 600 }}>
+                            {img.title}
+                          </h4>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              color: '#838A8D',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              marginBottom: '14px',
+                            }}
+                          >
+                            {img.src}
+                          </span>
+
+                          <div style={{ marginTop: 'auto', display: 'flex', gap: '8px', borderTop: '1px solid #F0EFEA', paddingTop: '12px' }}>
+                            <button
+                              onClick={() => {
+                                setIsCreatingGallery(false);
+                                setEditGalleryModal({ ...img });
+                              }}
+                              style={{
+                                flex: 1,
+                                padding: '7px 12px',
+                                backgroundColor: '#153D4B',
+                                color: '#FFFFFF',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              <Edit size={13} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteGalleryImage(img.id, img.title)}
+                              style={{
+                                padding: '7px 12px',
+                                backgroundColor: '#FFF0F0',
+                                color: '#DC3545',
+                                border: '1px solid #FDCBCB',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB: PAGES CONTENT & BANNERS CMS */}
+        {/* ============================================================== */}
+        {activeTab === 'pageContent' && (
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E1DA', overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#153D4B', fontWeight: 600 }}>
+                  Page Content, Media & Banners CMS
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#838A8D' }}>
+                  Manage hero banners, welcome stories, narrative headlines, and public contact information across all pages.
+                </p>
+              </div>
+
+              <button
+                onClick={handleSavePageContent}
+                disabled={isSavingContent}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '10px 20px' }}
+              >
+                {isSavingContent ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                <span>{isSavingContent ? 'Saving Changes...' : 'Save All Page Changes'}</span>
+              </button>
+            </div>
+
+            {/* Sub-tabs for Pages */}
+            <div
+              style={{
+                display: 'flex',
+                borderBottom: '1px solid #E2E1DA',
+                backgroundColor: '#FAF9F5',
+                overflowX: 'auto',
+              }}
+            >
+              {[
+                { id: 'home', label: '🏠 Home Page' },
+                { id: 'about', label: 'ℹ️ About Us Page' },
+                { id: 'contact', label: '📞 Contact & Hotel Info' },
+                { id: 'gallery', label: '🖼️ Gallery Banner' },
+                { id: 'experiences', label: '🧭 Experiences Banner' },
+                { id: 'rooms', label: '🛏️ Rooms Banner' },
+              ].map((sec) => {
+                const isActive = activeContentSection === sec.id;
+                return (
+                  <button
+                    key={sec.id}
+                    onClick={() => setActiveContentSection(sec.id as any)}
+                    style={{
+                      padding: '12px 20px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      borderBottom: isActive ? '3px solid #E49951' : '3px solid transparent',
+                      color: isActive ? '#153D4B' : '#838A8D',
+                      fontWeight: isActive ? 600 : 500,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {sec.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Page Sections Editor */}
+            <div style={{ padding: '28px' }}>
+              {/* HOME PAGE CMS */}
+              {activeContentSection === 'home' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  {/* Hero Banner Section */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sparkles size={16} color="#E49951" /> Hero Banner & Headline
+                    </h4>
+
+                    {/* Banner Image Preview & Upload */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '8px' }}>
+                        Hero Background Image
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC', position: 'relative' }}>
+                          <img
+                            src={pageContent.page_home_hero_image || '/images/BO5A5779-scaled.jpg'}
+                            alt="Hero Banner Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '260px' }}>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_hero_image || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_hero_image: e.target.value })}
+                            placeholder="/images/BO5A5779-scaled.jpg or image URL"
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
+                          />
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 16px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: uploadingContentKey === 'page_home_hero_image' ? 'wait' : 'pointer',
+                            }}
+                          >
+                            <Upload size={14} />
+                            <span>{uploadingContentKey === 'page_home_hero_image' ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingContentKey === 'page_home_hero_image'}
+                              onChange={(e) => handleContentImageUpload('page_home_hero_image', e)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Top Eyebrow Badge
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_hero_badge || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_hero_badge: e.target.value })}
+                          placeholder="Welcome to Grand Addis Hotel & Resort"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Hero Main Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_hero_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_hero_title: e.target.value })}
+                          placeholder="Your Grand Stay In The Heart Of Addis"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Hero Subtitle / Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_home_hero_subtitle || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_home_hero_subtitle: e.target.value })}
+                        placeholder="Rebalance yourself in a timeless space..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Story & Philosophy Section */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Welcome Story & Narrative Section
+                    </h4>
+
+                    {/* Story Image Preview & Upload */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '8px' }}>
+                        Featured Story Image
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC' }}>
+                          <img
+                            src={pageContent.page_home_story_image || '/images/BO5A5821-scaled.jpg'}
+                            alt="Story Image Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '260px' }}>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_story_image || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_story_image: e.target.value })}
+                            placeholder="/images/BO5A5821-scaled.jpg or image URL"
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
+                          />
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 16px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: uploadingContentKey === 'page_home_story_image' ? 'wait' : 'pointer',
+                            }}
+                          >
+                            <Upload size={14} />
+                            <span>{uploadingContentKey === 'page_home_story_image' ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingContentKey === 'page_home_story_image'}
+                              onChange={(e) => handleContentImageUpload('page_home_story_image', e)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Story Subtitle / Eyebrow
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_story_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_story_subtitle: e.target.value })}
+                          placeholder="THE GRAND ADDIS EXPERIENCE"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Story Section Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_story_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_story_title: e.target.value })}
+                          placeholder="A Sanctuary of Luxury & Warm Ethiopian Hospitality"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Paragraph 1
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pageContent.page_home_story_p1 || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_story_p1: e.target.value })}
+                          placeholder="Nestled at 22 Around Golagul in Addis Ababa..."
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Paragraph 2
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pageContent.page_home_story_p2 || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_story_p2: e.target.value })}
+                          placeholder="Whether you are visiting for diplomatic engagements..."
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ABOUT US CMS */}
+              {activeContentSection === 'about' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  {/* Hero Banner */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      About Us Hero Banner
+                    </h4>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '8px' }}>
+                        About Banner Image
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC' }}>
+                          <img
+                            src={pageContent.page_about_hero_image || '/images/BO5A5779-scaled.jpg'}
+                            alt="About Banner Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '260px' }}>
+                          <input
+                            type="text"
+                            value={pageContent.page_about_hero_image || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_about_hero_image: e.target.value })}
+                            placeholder="/images/BO5A5779-scaled.jpg"
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
+                          />
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 16px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: uploadingContentKey === 'page_about_hero_image' ? 'wait' : 'pointer',
+                            }}
+                          >
+                            <Upload size={14} />
+                            <span>{uploadingContentKey === 'page_about_hero_image' ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingContentKey === 'page_about_hero_image'}
+                              onChange={(e) => handleContentImageUpload('page_about_hero_image', e)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Eyebrow Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_hero_tag || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_hero_tag: e.target.value })}
+                          placeholder="OUR STORY & HERITAGE"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Page Headline
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_hero_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_hero_title: e.target.value })}
+                          placeholder="A Place Of Heart, Your Home Away"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Description Subtitle
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_about_hero_subtitle || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_about_hero_subtitle: e.target.value })}
+                        placeholder="Welcome to our oasis of luxury and tranquility..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Philosophy Narrative */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Philosophy & Story Narrative
+                    </h4>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '8px' }}>
+                        Philosophy Image
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC' }}>
+                          <img
+                            src={pageContent.page_about_story_image || '/images/BO5A5821-scaled.jpg'}
+                            alt="Philosophy Image Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '260px' }}>
+                          <input
+                            type="text"
+                            value={pageContent.page_about_story_image || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_about_story_image: e.target.value })}
+                            placeholder="/images/BO5A5821-scaled.jpg"
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
+                          />
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 16px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: uploadingContentKey === 'page_about_story_image' ? 'wait' : 'pointer',
+                            }}
+                          >
+                            <Upload size={14} />
+                            <span>{uploadingContentKey === 'page_about_story_image' ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingContentKey === 'page_about_story_image'}
+                              onChange={(e) => handleContentImageUpload('page_about_story_image', e)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Story Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_story_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_story_subtitle: e.target.value })}
+                          placeholder="THE GRAND ADDIS PHILOSOPHY"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Story Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_story_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_story_title: e.target.value })}
+                          placeholder="Where Tradition Meets Contemporary Elegance"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Narrative Paragraph 1
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pageContent.page_about_story_p1 || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_story_p1: e.target.value })}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Narrative Paragraph 2
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={pageContent.page_about_story_p2 || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_story_p2: e.target.value })}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CONTACT & HOTEL INFO CMS */}
+              {activeContentSection === 'contact' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Contact Page Hero Banner
+                    </h4>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '8px' }}>
+                        Contact Banner Image
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC' }}>
+                          <img
+                            src={pageContent.page_contact_hero_image || '/images/BO5A5779-scaled.jpg'}
+                            alt="Contact Banner Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '260px' }}>
+                          <input
+                            type="text"
+                            value={pageContent.page_contact_hero_image || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_contact_hero_image: e.target.value })}
+                            placeholder="/images/BO5A5779-scaled.jpg"
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
+                          />
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 16px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: uploadingContentKey === 'page_contact_hero_image' ? 'wait' : 'pointer',
+                            }}
+                          >
+                            <Upload size={14} />
+                            <span>{uploadingContentKey === 'page_contact_hero_image' ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingContentKey === 'page_contact_hero_image'}
+                              onChange={(e) => handleContentImageUpload('page_contact_hero_image', e)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Banner Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_hero_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_hero_title: e.target.value })}
+                          placeholder="Contact Grand Addis Hotel"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Banner Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_hero_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_hero_subtitle: e.target.value })}
+                          placeholder="We would love to hear from you..."
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Public Contact & Location Details */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Public Contact, Check-in & Location Details
+                    </h4>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Primary Telephone
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_phone || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_phone: e.target.value })}
+                          placeholder="+251 116 672 828"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Alternate Phone / Mobile
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_phone_alt || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_phone_alt: e.target.value })}
+                          placeholder="+251 911 234 567"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Reservations Email
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_email || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_email: e.target.value })}
+                          placeholder="reservations@egrandaddishotel.com"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          General Inquiry Email
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_email_alt || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_email_alt: e.target.value })}
+                          placeholder="info@grandaddishotel.com"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Standard Check-in Time
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_checkin || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_checkin: e.target.value })}
+                          placeholder="14:00 (2:00 PM)"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Standard Check-out Time
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_checkout || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_checkout: e.target.value })}
+                          placeholder="12:00 (12:00 PM)"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Physical Address
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_address || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_address: e.target.value })}
+                          placeholder="22 Around Golagul, behind Meklit Building, Addis Ababa, Ethiopia"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* GALLERY, EXPERIENCES, AND ROOMS BANNERS */}
+              {['gallery', 'experiences', 'rooms'].includes(activeContentSection) && (
+                <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                  <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, textTransform: 'capitalize' }}>
+                    {activeContentSection} Page Banner
+                  </h4>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '8px' }}>
+                      Banner Image
+                    </label>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC' }}>
+                        <img
+                          src={pageContent[`page_${activeContentSection}_hero_image`] || '/images/BO5A5779-scaled.jpg'}
+                          alt="Banner Preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </div>
+                      <div style={{ flex: 1, minWidth: '260px' }}>
+                        <input
+                          type="text"
+                          value={pageContent[`page_${activeContentSection}_hero_image`] || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, [`page_${activeContentSection}_hero_image`]: e.target.value })}
+                          placeholder="/images/BO5A5779-scaled.jpg"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
+                        />
+                        <label
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '8px 16px',
+                            backgroundColor: '#153D4B',
+                            color: '#FFFFFF',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: uploadingContentKey === `page_${activeContentSection}_hero_image` ? 'wait' : 'pointer',
+                          }}
+                        >
+                          <Upload size={14} />
+                          <span>{uploadingContentKey === `page_${activeContentSection}_hero_image` ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={uploadingContentKey === `page_${activeContentSection}_hero_image`}
+                            onChange={(e) => handleContentImageUpload(`page_${activeContentSection}_hero_image`, e)}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Top Eyebrow Tag
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent[`page_${activeContentSection}_hero_tag`] || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, [`page_${activeContentSection}_hero_tag`]: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Page Title
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent[`page_${activeContentSection}_hero_title`] || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, [`page_${activeContentSection}_hero_title`]: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                      Page Subtitle / Tagline
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={pageContent[`page_${activeContentSection}_hero_subtitle`] || ''}
+                      onChange={(e) => setPageContent({ ...pageContent, [`page_${activeContentSection}_hero_subtitle`]: e.target.value })}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB: CULTURAL EXPERIENCES CRUD */}
+        {/* ============================================================== */}
+        {activeTab === 'experiences' && (
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E1DA', overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#153D4B', fontWeight: 600 }}>
+                  Cultural Experiences & Excursions Manager
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#838A8D' }}>
+                  Manage tours, traditional coffee ceremonies, chef masterclasses, and packages.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsCreatingExperience(true);
+                  setEditExperienceModal({
+                    title: '',
+                    subtitle: '',
+                    category: 'Culture',
+                    duration: '2-3 Hours',
+                    image: '',
+                    description: '',
+                    highlights: [],
+                  });
+                }}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+              >
+                <Plus size={16} /> Add Experience
+              </button>
+            </div>
+
+            <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+              {experiencesList.map((exp) => (
+                <div
+                  key={exp.id}
+                  style={{
+                    borderRadius: '12px',
+                    border: '1px solid #E2E1DA',
+                    overflow: 'hidden',
+                    backgroundColor: '#FFFFFF',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <div style={{ position: 'relative', height: '180px', backgroundColor: '#0F2A33' }}>
+                    <img
+                      src={exp.image || '/images/BO5A5779-scaled.jpg'}
+                      alt={exp.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        backgroundColor: 'rgba(15, 42, 51, 0.85)',
+                        color: '#E49951',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      {exp.category}
+                    </div>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        color: '#153D4B',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      {exp.duration}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <h4 style={{ margin: '0 0 4px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      {exp.title}
+                    </h4>
+                    <p style={{ margin: '0 0 10px', fontSize: '12px', color: '#E49951', fontWeight: 500 }}>
+                      {exp.subtitle}
+                    </p>
+                    <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#5E6E75', lineHeight: '1.6', flex: 1 }}>
+                      {exp.description}
+                    </p>
+
+                    {/* Highlights tags */}
+                    {Array.isArray(exp.highlights) && exp.highlights.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+                        {exp.highlights.map((h: string, idx: number) => (
+                          <span
+                            key={idx}
+                            style={{
+                              fontSize: '11px',
+                              backgroundColor: '#FAF9F5',
+                              border: '1px solid #E2E1DA',
+                              color: '#5E6E75',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            ✓ {h}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #F0EFEA', paddingTop: '14px' }}>
+                      <button
+                        onClick={() => {
+                          setIsCreatingExperience(false);
+                          setEditExperienceModal({
+                            ...exp,
+                            highlightsText: Array.isArray(exp.highlights) ? exp.highlights.join('\n') : '',
+                          });
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '7px 12px',
+                          backgroundColor: '#153D4B',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <Edit size={13} /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteExperience(exp.id, exp.title)}
+                        style={{
+                          padding: '7px 12px',
+                          backgroundColor: '#FFF0F0',
+                          color: '#DC3545',
+                          border: '1px solid #FDCBCB',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -4545,6 +6033,397 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Gallery Image Modal */}
+      {editGalleryModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '560px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#0F2A33',
+                color: '#FFFFFF',
+                borderTopLeftRadius: '16px',
+                borderTopRightRadius: '16px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                {isCreatingGallery ? 'Add Gallery Photo' : `Edit: ${editGalleryModal.title || 'Photo'}`}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditGalleryModal(null)}
+                style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGalleryImage} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Photo Title / Caption *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Luxury Presidential Suite"
+                  value={editGalleryModal.title || ''}
+                  onChange={(e) => setEditGalleryModal({ ...editGalleryModal, title: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Gallery Category *
+                  </label>
+                  <select
+                    value={editGalleryModal.category || 'hotel'}
+                    onChange={(e) => setEditGalleryModal({ ...editGalleryModal, category: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                  >
+                    <option value="hotel">Hotel & Architecture</option>
+                    <option value="rooms">Rooms & Suites</option>
+                    <option value="dining">Dining & Bars</option>
+                    <option value="wellness">Spa & Wellness</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={editGalleryModal.sort_order ?? 0}
+                    onChange={(e) => setEditGalleryModal({ ...editGalleryModal, sort_order: parseInt(e.target.value) || 0 })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Photo Image Upload and URL */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Photo Image *
+                </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="https://... or /uploads/..."
+                    value={editGalleryModal.src || ''}
+                    onChange={(e) => setEditGalleryModal({ ...editGalleryModal, src: e.target.value })}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                  />
+                  <label
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: '#153D4B',
+                      color: '#FFFFFF',
+                      borderRadius: '8px',
+                      cursor: uploadingGalleryImage ? 'not-allowed' : 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Upload size={14} />
+                    {uploadingGalleryImage ? 'Uploading...' : 'Upload'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingGalleryImage}
+                      onChange={handleGalleryImageUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+
+                {editGalleryModal.src && (
+                  <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E1DA', height: '180px', backgroundColor: '#F9F8F6', position: 'relative' }}>
+                    <img
+                      src={editGalleryModal.src}
+                      alt="Preview"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.target as any).src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditGalleryModal(null)}
+                  className="btn btn-secondary"
+                  style={{ padding: '9px 18px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '9px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Check size={16} /> Save Photo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Cultural Experience Modal */}
+      {editExperienceModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '620px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#0F2A33',
+                color: '#FFFFFF',
+                borderTopLeftRadius: '16px',
+                borderTopRightRadius: '16px',
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                {isCreatingExperience ? 'Add Cultural Experience' : `Edit: ${editExperienceModal.title || 'Experience'}`}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditExperienceModal(null)}
+                style={{ background: 'none', border: 'none', color: '#FFFFFF', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveExperience} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Experience Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Traditional Coffee Ceremony"
+                  value={editExperienceModal.title || ''}
+                  onChange={(e) => setEditExperienceModal({ ...editExperienceModal, title: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Subtitle / Tagline
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., An Authentic Ethiopian Ritual"
+                  value={editExperienceModal.subtitle || ''}
+                  onChange={(e) => setEditExperienceModal({ ...editExperienceModal, subtitle: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Culture, Excursion, Culinary"
+                    value={editExperienceModal.category || ''}
+                    onChange={(e) => setEditExperienceModal({ ...editExperienceModal, category: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Duration
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 2 Hours, Full Day"
+                    value={editExperienceModal.duration || ''}
+                    onChange={(e) => setEditExperienceModal({ ...editExperienceModal, duration: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Experience Image
+                </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="https://... or /uploads/..."
+                    value={editExperienceModal.image || ''}
+                    onChange={(e) => setEditExperienceModal({ ...editExperienceModal, image: e.target.value })}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                  />
+                  <label
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: '#153D4B',
+                      color: '#FFFFFF',
+                      borderRadius: '8px',
+                      cursor: uploadingExpImage ? 'not-allowed' : 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Upload size={14} />
+                    {uploadingExpImage ? 'Uploading...' : 'Upload'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingExpImage}
+                      onChange={handleExperienceImageUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                </div>
+
+                {editExperienceModal.image && (
+                  <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #E2E1DA', height: '160px', backgroundColor: '#F9F8F6' }}>
+                    <img
+                      src={editExperienceModal.image}
+                      alt="Preview"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.target as any).src = 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=800&q=80';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Full Description *
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Detailed narrative describing this experience for guests..."
+                  value={editExperienceModal.description || ''}
+                  onChange={(e) => setEditExperienceModal({ ...editExperienceModal, description: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Highlights / Inclusions (one per line)
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Freshly roasted Sidamo beans&#10;Incense ceremony ritual&#10;Traditional snacks (kolo & popcorn)"
+                  value={
+                    Array.isArray(editExperienceModal.highlights)
+                      ? editExperienceModal.highlights.join('\n')
+                      : editExperienceModal.highlights || ''
+                  }
+                  onChange={(e) =>
+                    setEditExperienceModal({
+                      ...editExperienceModal,
+                      highlights: e.target.value.split('\n').filter((h: string) => h.trim().length > 0),
+                    })
+                  }
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #D5D4CC', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditExperienceModal(null)}
+                  className="btn btn-secondary"
+                  style={{ padding: '9px 18px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '9px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Check size={16} /> Save Experience
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -30,26 +30,34 @@ export default function HomePage() {
   const { openBooking } = useBooking();
   const [featuredRooms, setFeaturedRooms] = useState<Room[]>(ROOMS);
   const [testimonialsList, setTestimonialsList] = useState<Testimonial[]>(TESTIMONIALS);
+  const [galleryList, setGalleryList] = useState<any[]>(GALLERY_IMAGES);
+  const [pageContent, setPageContent] = useState<Record<string, string>>({});
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     async function loadPostgresData() {
       try {
-        const [roomsRes, testRes] = await Promise.all([
-          fetch('/api/rooms'),
-          fetch('/api/testimonials'),
+        const [roomsRes, testRes, galRes, contentRes] = await Promise.all([
+          fetch('/api/rooms').then((r) => r.json()).catch(() => null),
+          fetch('/api/testimonials').then((r) => r.json()).catch(() => null),
+          fetch('/api/gallery').then((r) => r.json()).catch(() => null),
+          fetch('/api/content').then((r) => r.json()).catch(() => null),
         ]);
-        const roomsData = await roomsRes.json();
-        if (roomsData.success && roomsData.rooms?.length > 0) {
-          setFeaturedRooms(roomsData.rooms);
+        if (roomsRes?.success && roomsRes.rooms?.length > 0) {
+          setFeaturedRooms(roomsRes.rooms);
         }
-        const testData = await testRes.json();
-        if (testData.success && testData.testimonials?.length > 0) {
-          setTestimonialsList(testData.testimonials);
+        if (testRes?.success && testRes.testimonials?.length > 0) {
+          setTestimonialsList(testRes.testimonials);
+        }
+        if (galRes?.success && Array.isArray(galRes.images) && galRes.images.length > 0) {
+          setGalleryList(galRes.images);
+        }
+        if (contentRes?.success && contentRes.content) {
+          setPageContent(contentRes.content);
         }
       } catch (err) {
-        console.error('Failed to load data from PostgreSQL for homepage:', err);
+        console.error('Failed to load data for homepage:', err);
       }
     }
     loadPostgresData();
@@ -87,7 +95,7 @@ export default function HomePage() {
           }}
         >
           <Image
-            src="/images/BO5A5779-scaled.jpg"
+            src={pageContent.page_home_hero_image || '/images/BO5A5779-scaled.jpg'}
             alt="Grand Addis Hotel & Resort"
             fill
             priority
@@ -136,7 +144,7 @@ export default function HomePage() {
               marginBottom: '24px',
             }}
           >
-            <Sparkles size={14} /> Welcome to Grand Addis Hotel & Resort
+            <Sparkles size={14} /> {pageContent.page_home_hero_badge || 'Welcome to Grand Addis Hotel & Resort'}
           </div>
 
           <h1
@@ -149,7 +157,7 @@ export default function HomePage() {
               textShadow: '0 4px 20px rgba(0,0,0,0.4)',
             }}
           >
-            Your Grand Stay In The Heart Of Addis
+            {pageContent.page_home_hero_title || 'Your Grand Stay In The Heart Of Addis'}
           </h1>
 
           <p
@@ -162,7 +170,8 @@ export default function HomePage() {
               fontWeight: 300,
             }}
           >
-            Rebalance yourself in a timeless space where understated luxury, warm Ethiopian hospitality, and tranquil comfort come together.
+            {pageContent.page_home_hero_subtitle ||
+              'Rebalance yourself in a timeless space where understated luxury, warm Ethiopian hospitality, and tranquil comfort come together.'}
           </p>
 
           <div
@@ -210,9 +219,11 @@ export default function HomePage() {
           >
             {/* Left Column: Text */}
             <div>
-              <span className="section-subtitle">WELCOME TO OUR OASIS</span>
+              <span className="section-subtitle">
+                {pageContent.page_home_story_subtitle || 'WELCOME TO OUR OASIS'}
+              </span>
               <h2 className="section-title">
-                A Place Of Heart, Your Home Away in Addis Ababa
+                {pageContent.page_home_story_title || 'A Place Of Heart, Your Home Away in Addis Ababa'}
               </h2>
               <p
                 style={{
@@ -222,7 +233,11 @@ export default function HomePage() {
                   marginBottom: '20px',
                 }}
               >
-                Nestled at <strong>22 Around Golagul</strong> in Addis Ababa, Grand Addis Hotel offers an unparalleled haven for international travelers, business executives, and vacationers. Our sanctuary harmoniously combines modern refinement with authentic Ethiopian warmth.
+                {pageContent.page_home_story_p1 || (
+                  <>
+                    Nestled at <strong>22 Around Golagul</strong> in Addis Ababa, Grand Addis Hotel offers an unparalleled haven for international travelers, business executives, and vacationers. Our sanctuary harmoniously combines modern refinement with authentic Ethiopian warmth.
+                  </>
+                )}
               </p>
               <p
                 style={{
@@ -232,7 +247,11 @@ export default function HomePage() {
                   marginBottom: '32px',
                 }}
               >
-                Whether you are visiting for diplomatic engagements, conferences, or cultural exploration, enjoy effortless access to Bole International Airport (just 10 minutes away), warm hospitality, and refined luxury accommodations.
+                {pageContent.page_home_story_p2 || (
+                  <>
+                    Whether you are visiting for diplomatic engagements, conferences, or cultural exploration, enjoy effortless access to Bole International Airport (just 10 minutes away), warm hospitality, and refined luxury accommodations.
+                  </>
+                )}
               </p>
 
               {/* Highlights List */}
@@ -279,7 +298,7 @@ export default function HomePage() {
                 }}
               >
                 <img
-                  src="/images/BO5A5826-scaled.jpg"
+                  src={pageContent.page_home_story_image || '/images/BO5A5826-scaled.jpg'}
                   alt="Grand Addis Hotel Suite"
                   style={{ width: '100%', height: '420px', objectFit: 'cover' }}
                 />
@@ -628,9 +647,9 @@ export default function HomePage() {
               gap: '16px',
             }}
           >
-            {GALLERY_IMAGES.slice(0, 8).map((item, index) => (
+            {galleryList.slice(0, 8).map((item, index) => (
               <div
-                key={index}
+                key={item.id || index}
                 onClick={() => openLightbox(index)}
                 style={{
                   position: 'relative',
@@ -644,7 +663,7 @@ export default function HomePage() {
               >
                 <Image
                   src={item.src}
-                  alt={item.title}
+                  alt={item.title || 'Grand Addis Hotel Photo'}
                   fill
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 320px"
                   loading="lazy"
@@ -679,7 +698,7 @@ export default function HomePage() {
 
           <div style={{ textAlign: 'center', marginTop: '36px' }}>
             <Link href="/gallery" className="btn btn-outline">
-              <span>View Complete Gallery ({GALLERY_IMAGES.length} Photos)</span>
+              <span>View Complete Gallery ({galleryList.length} Photos)</span>
               <ArrowRight size={16} />
             </Link>
           </div>
@@ -971,7 +990,7 @@ export default function HomePage() {
 
       {/* Lightbox Modal */}
       <GalleryLightbox
-        images={GALLERY_IMAGES}
+        images={galleryList}
         currentIndex={lightboxIndex}
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}

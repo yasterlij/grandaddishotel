@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -20,6 +20,16 @@ import { useBooking } from '@/context/BookingContext';
 
 export default function AboutPage() {
   const { openBooking } = useBooking();
+  const [content, setContent] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetch('/api/content')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.content) setContent(data.content);
+      })
+      .catch((e) => console.error('Failed to load about page content:', e));
+  }, []);
 
   const timeline = [
     { year: '1983', title: 'Foundational Vision', desc: 'The heritage began with a passion for bringing modern luxury hospitality to the diplomatic capital of Africa.' },
@@ -39,6 +49,8 @@ export default function AboutPage() {
     { title: 'Exceptional Value', desc: 'Unbeatable direct booking rates with complimentary breakfast, zero hidden fees, and member discounts.' },
   ];
 
+  const bannerImg = content.page_about_hero_image || '/images/BO5A5779-scaled.jpg';
+
   return (
     <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Banner */}
@@ -48,20 +60,20 @@ export default function AboutPage() {
           color: '#FFFFFF',
           padding: '100px 0 70px',
           textAlign: 'center',
-          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('/images/BO5A5779-scaled.jpg')`,
+          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('${bannerImg}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
         <div className="container">
           <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '3px', color: '#E49951', fontWeight: 600, display: 'block', marginBottom: '12px' }}>
-            OUR STORY & HERITAGE
+            {content.page_about_hero_tag || 'OUR STORY & HERITAGE'}
           </span>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 500, marginBottom: '18px' }}>
-            A Place Of Heart, Your Home Away
+            {content.page_about_hero_title || 'A Place Of Heart, Your Home Away'}
           </h1>
           <p style={{ fontSize: '17px', color: '#A2B5BD', maxWidth: '680px', margin: '0 auto', lineHeight: '1.7' }}>
-            Welcome to our oasis of luxury and tranquility in Addis Ababa, where every aspect of your stay is meticulously crafted to exceed your expectations.
+            {content.page_about_hero_subtitle || 'Welcome to our oasis of luxury and tranquility in Addis Ababa, where every aspect of your stay is meticulously crafted to exceed your expectations.'}
           </p>
         </div>
       </section>
@@ -71,13 +83,17 @@ export default function AboutPage() {
         <div className="container">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '56px', alignItems: 'center' }}>
             <div>
-              <span className="section-subtitle">THE GRAND ADDIS PHILOSOPHY</span>
-              <h2 className="section-title">Where Tradition Meets Contemporary Elegance</h2>
+              <span className="section-subtitle">
+                {content.page_about_story_subtitle || 'THE GRAND ADDIS PHILOSOPHY'}
+              </span>
+              <h2 className="section-title">
+                {content.page_about_story_title || 'Where Tradition Meets Contemporary Elegance'}
+              </h2>
               <p style={{ fontSize: '16px', lineHeight: '1.8', color: '#5E6E75', marginBottom: '20px' }}>
-                At Grand Addis Hotel, we believe hospitality is more than comfortable rooms—it is about creating an authentic sense of belonging. Nestled in 22 Around Golagul, we provide a peaceful sanctuary amidst the vibrant pulse of Addis Ababa.
+                {content.page_about_story_p1 || 'At Grand Addis Hotel, we believe hospitality is more than comfortable rooms—it is about creating an authentic sense of belonging. Nestled in 22 Around Golagul, we provide a peaceful sanctuary amidst the vibrant pulse of Addis Ababa.'}
               </p>
               <p style={{ fontSize: '15px', lineHeight: '1.8', color: '#5E6E75', marginBottom: '32px' }}>
-                Immerse yourself in understated elegance, top-notch concierge service, authentic Ethiopian coffee ceremonies, and supreme comfort in the heart of Addis Ababa.
+                {content.page_about_story_p2 || 'Immerse yourself in understated elegance, top-notch concierge service, authentic Ethiopian coffee ceremonies, and supreme comfort in the heart of Addis Ababa.'}
               </p>
 
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
@@ -93,7 +109,7 @@ export default function AboutPage() {
             <div style={{ position: 'relative' }}>
               <div style={{ position: 'relative', height: '420px', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
                 <Image
-                  src="/images/BO5A5821-scaled.jpg"
+                  src={content.page_about_story_image || '/images/BO5A5821-scaled.jpg'}
                   alt="Interior Details"
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"

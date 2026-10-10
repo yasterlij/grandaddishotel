@@ -444,4 +444,38 @@ CREATE TABLE `faqs` (
   KEY `idx_faqs_order` (`sort_order`, `id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- -----------------------------------------------------------------------------
+-- 18. Table: gallery_images
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `gallery_images`;
+CREATE TABLE `gallery_images` (
+  `id` VARCHAR(191) NOT NULL,
+  `src` TEXT NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `category` VARCHAR(100) NOT NULL DEFAULT 'hotel',
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `idx_gallery_order` (`sort_order`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `gallery_images` (`id`, `src`, `title`, `category`, `sort_order`) VALUES
+('gal-1', '/images/BO5A5779-scaled.jpg', 'Grand Exterior & Entrance', 'hotel', 1),
+('gal-2', '/images/BO5A5826-scaled.jpg', 'Deluxe Suite Bedding', 'rooms', 2),
+('gal-3', '/images/BO5A5821-scaled.jpg', 'Luxury Guest Room View', 'rooms', 3),
+('gal-4', '/images/BO5A5957-scaled.jpg', 'Lounge & Dining Ambiance', 'hotel', 4),
+('gal-5', '/images/BO5A5963-scaled.jpg', 'Cocktail Lounge & Bar', 'hotel', 5),
+('gal-6', '/images/BO5A5977-scaled.jpg', 'Executive Meeting Room', 'hotel', 6),
+('gal-7', '/images/BO5A5988-scaled.jpg', 'Relaxation Lounge', 'hotel', 7),
+('gal-8', '/images/BO5A5900-scaled.jpg', 'Standard Room Setup', 'rooms', 8),
+('gal-9', '/images/BO5A5992-scaled.jpg', 'Presidential Parlor', 'rooms', 9),
+('gal-10', '/images/BO5A5989-scaled.jpg', 'En-suite Luxury Bath', 'rooms', 10),
+('gal-11', '/images/BO5A5976-scaled.jpg', 'Bespoke Interior Details', 'hotel', 11),
+('gal-12', '/images/BO5A5805-scaled.jpg', 'Culinary Hospitality', 'hotel', 12),
+('gal-13', '/images/vikbooking/bo5a5902.jpg', 'Standard Room Warm Light', 'rooms', 13),
+('gal-14', '/images/vikbooking/bo5a5878.jpg', 'Deluxe Master Suite', 'rooms', 14),
+('gal-15', '/images/vikbooking/bo5a5832.jpg', 'Twin Bed Guest Room', 'rooms', 15)
+ON DUPLICATE KEY UPDATE `title`=VALUES(`title`), `category`=VALUES(`category`), `src`=VALUES(`src`);
+
 SET FOREIGN_KEY_CHECKS = 1;

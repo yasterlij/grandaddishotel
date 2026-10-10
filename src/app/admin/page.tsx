@@ -226,6 +226,32 @@ export default function AdminPage() {
     }
   };
 
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleSeedDatabase = async () => {
+    if (
+      !confirm(
+        'This will populate the database with Grand Addis Hotel default rooms, physical inventory (101-502), cultural experiences, and exchange rates. Proceed?'
+      )
+    )
+      return;
+    setIsSeeding(true);
+    try {
+      const res = await fetch('/api/admin/seed', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        notify('✓ Database seeded successfully with default hotel inventory!');
+        await loadAllData();
+      } else {
+        alert(data.error || 'Failed to seed database');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Seeding request failed');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   const handleQuickPriceSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickPriceModal) return;
@@ -854,10 +880,10 @@ export default function AdminPage() {
                       boxShadow: '0 0 8px #34C759',
                     }}
                   />
-                  POSTGRESQL LIVE CRUD
+                  LIVE DATABASE CRUD
                 </span>
                 <span style={{ fontSize: '12px', color: '#A2B5BD' }}>
-                  Connected to: <strong>grand_addis_db</strong> (port 5432)
+                  Database: <strong>grandaddis_db</strong>
                 </span>
               </div>
               <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '30px', fontWeight: 500, margin: 0 }}>
@@ -866,6 +892,28 @@ export default function AdminPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleSeedDatabase}
+                disabled={isSeeding}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '9px 16px',
+                  backgroundColor: '#E49951',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isSeeding ? 'wait' : 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  boxShadow: '0 2px 8px rgba(228, 153, 81, 0.3)',
+                }}
+              >
+                <Sparkles size={15} style={{ animation: isSeeding ? 'spin 1s linear infinite' : 'none' }} />
+                <span>{isSeeding ? 'Seeding...' : 'Seed Hotel Data'}</span>
+              </button>
+
               <button
                 onClick={loadAllData}
                 disabled={refreshing}
@@ -951,6 +999,49 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
+
+          {roomTypes.length === 0 && !refreshing && (
+            <div
+              style={{
+                marginTop: '20px',
+                padding: '16px 20px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(228, 153, 81, 0.15)',
+                border: '1px solid rgba(228, 153, 81, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <strong style={{ color: '#E49951', fontSize: '14px', display: 'block', marginBottom: '3px' }}>
+                  ⚠️ Database is currently empty (0 rooms found)
+                </strong>
+                <span style={{ fontSize: '12px', color: '#CBD5E1' }}>
+                  Click to populate default room types, physical rooms (101-502), cultural experiences, and settings.
+                </span>
+              </div>
+              <button
+                onClick={handleSeedDatabase}
+                disabled={isSeeding}
+                style={{
+                  padding: '9px 20px',
+                  backgroundColor: '#E49951',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: isSeeding ? 'wait' : 'pointer',
+                  boxShadow: '0 2px 8px rgba(228, 153, 81, 0.4)',
+                }}
+              >
+                {isSeeding ? 'Seeding Database...' : '🌱 Seed Hotel Data Now'}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

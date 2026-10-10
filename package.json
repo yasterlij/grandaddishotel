@@ -10,7 +10,7 @@
     "start": "next start",
     "start:server": "node server.js",
     "test": "node scripts/test-endpoints.mjs",
-    "generate": "prisma contract emit",
+    "generate": "node scripts/generate.mjs",
     "migrate": "node scripts/migrate-mysql.mjs",
     "migrate:mysql": "node scripts/migrate-mysql.mjs",
     "seed": "node scripts/seed-mysql.mjs",
@@ -24,7 +24,7 @@
     "db:status": "node scripts/db-status.mjs",
     "plesk:setup": "node scripts/setup-db.mjs",
     "plesk:build": "next build --webpack",
-    "prisma:generate": "prisma contract emit",
+    "prisma:generate": "node scripts/generate.mjs",
     "prisma:emit": "prisma contract emit",
     "prisma:sign": "prisma db sign --yes",
     "prisma:infer": "prisma contract infer --db $DATABASE_URL --output ./src/prisma/contract.prisma --yes"

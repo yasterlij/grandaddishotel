@@ -21,11 +21,12 @@ export async function GET(req: NextRequest) {
   }
 
   const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
+  const hasDbConfig = Boolean(connectionString || process.env.DB_HOST);
+  if (!hasDbConfig) {
     return NextResponse.json(
       {
         success: false,
-        error: 'DATABASE_URL environment variable is not configured on the server.',
+        error: 'Neither DATABASE_URL nor DB_HOST environment variables are configured on the server.',
       },
       { status: 500 }
     );
@@ -72,7 +73,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: '✓ Grand Addis Hotel MySQL schema and seed data installed successfully!',
-      databaseUrl: connectionString.replace(/:[^:@]+@/, ':****@'),
+      databaseUrl: connectionString
+        ? connectionString.replace(/:[^:@]+@/, ':****@')
+        : `${process.env.DB_USER}@${process.env.DB_HOST}:${process.env.DB_PORT || 3306}/${process.env.DB_NAME}`,
       tablesCount: Array.isArray(rows) ? rows.length : 0,
       adminLoginUrl: '/admin',
       credentials: {

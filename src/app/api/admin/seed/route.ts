@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { query, invalidateCache, isMysql } from '@/lib/db';
+import { query, invalidateCache, isMysql, getMysqlConfig } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import mysql from 'mysql2/promise';
 
@@ -26,20 +26,7 @@ export async function POST() {
       .replace(/USE `?[a-zA-Z0-9_]+`?;/gi, '');
 
     if (isMysql) {
-      const connConfig = process.env.DB_HOST
-        ? {
-            host: process.env.DB_HOST,
-            port: parseInt(process.env.DB_PORT || '3306', 10),
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
-            multipleStatements: true,
-          }
-        : {
-            uri: process.env.DATABASE_URL || 'mysql://root:@127.0.0.1:3306/grand_addis_db',
-            multipleStatements: true,
-          };
-
+      const connConfig = getMysqlConfig();
       const conn = await mysql.createConnection(connConfig);
       try {
         await conn.query(sanitizedSql);

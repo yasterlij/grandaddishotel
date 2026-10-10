@@ -7,10 +7,97 @@ import { GALLERY_IMAGES, EXPERIENCES } from '@/data/hotelData';
 const connectionString =
   process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
 
-export const isMysql =
-  Boolean(process.env.DB_HOST) ||
+export const isMysql = Boolean(
+  process.env.DB_HOST ||
+  process.env.DB_USER ||
+  process.env.DB_USERNAME ||
+  process.env.MYSQL_USER ||
+  process.env.MYSQL_URL ||
+  process.env.MYSQL_DATABASE_URL ||
   connectionString.startsWith('mysql://') ||
-  connectionString.startsWith('mysql:');
+  connectionString.startsWith('mysql:')
+);
+
+export function getMysqlConfig(): {
+  host: string;
+  port: number;
+  user: string;
+  password?: string;
+  database: string;
+  waitForConnections: boolean;
+  connectionLimit: number;
+  queueLimit: number;
+  timezone: string;
+  dateStrings: boolean;
+  multipleStatements: boolean;
+} {
+  const dbUser =
+    process.env.DB_USER ||
+    process.env.DB_USERNAME ||
+    process.env.MYSQL_USER ||
+    process.env.MYSQL_USERNAME;
+
+  const dbPassword =
+    process.env.DB_PASSWORD ||
+    process.env.DB_PASS ||
+    process.env.MYSQL_PASSWORD ||
+    process.env.MYSQL_PASS;
+
+  const dbHost =
+    process.env.DB_HOST ||
+    process.env.MYSQL_HOST;
+
+  const dbPort = parseInt(
+    process.env.DB_PORT || process.env.MYSQL_PORT || '3306',
+    10
+  );
+
+  const dbName =
+    process.env.DB_NAME ||
+    process.env.DB_DATABASE ||
+    process.env.MYSQL_DATABASE ||
+    process.env.MYSQL_DB;
+
+  const rawUrl =
+    process.env.MYSQL_URL ||
+    process.env.MYSQL_DATABASE_URL ||
+    (connectionString.startsWith('mysql') ? connectionString : null);
+
+  let parsedFromUrl: any = {};
+  if (rawUrl) {
+    try {
+      const ConnectionConfig = (mysql as any).ConnectionConfig;
+      if (ConnectionConfig && typeof ConnectionConfig.parseUrl === 'function') {
+        parsedFromUrl = ConnectionConfig.parseUrl(rawUrl) || {};
+      }
+    } catch {
+      const match = rawUrl.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/(.+)$/);
+      if (match) {
+        parsedFromUrl = {
+          user: match[1] ? decodeURIComponent(match[1]) : undefined,
+          password: match[2] ? decodeURIComponent(match[2]) : undefined,
+          host: match[3],
+          port: match[4] ? parseInt(match[4], 10) : undefined,
+          database: match[5]?.split('?')[0],
+        };
+      }
+    }
+  }
+
+  return {
+    host: dbHost || parsedFromUrl.host || '127.0.0.1',
+    port: dbPort || parsedFromUrl.port || 3306,
+    user: dbUser || parsedFromUrl.user || 'root',
+    password: dbPassword !== undefined ? dbPassword : (parsedFromUrl.password || ''),
+    database: dbName || parsedFromUrl.database || 'grand_addis_db',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    timezone: '+00:00',
+    dateStrings: true,
+    multipleStatements: true,
+  };
+}
 
 // Ensure single pool instance across Next.js reloads
 declare global {
@@ -22,33 +109,12 @@ declare global {
   var _dbInitPromise: Promise<void> | undefined;
 }
 
-let pgPool: Pool;
-let mysqlPool: MysqlPool;
+export let pgPool: Pool;
+export let mysqlPool: MysqlPool;
 
 if (isMysql) {
   if (!global._mysqlPool) {
-    const mysqlConfig = process.env.DB_HOST
-      ? {
-          host: process.env.DB_HOST,
-          port: parseInt(process.env.DB_PORT || '3306', 10),
-          user: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          waitForConnections: true,
-          connectionLimit: 10,
-          queueLimit: 0,
-          timezone: '+00:00',
-          dateStrings: true,
-        }
-      : {
-          uri: connectionString,
-          waitForConnections: true,
-          connectionLimit: 10,
-          queueLimit: 0,
-          timezone: '+00:00',
-          dateStrings: true,
-        };
-
+    const mysqlConfig = getMysqlConfig();
     global._mysqlPool = mysql.createPool(mysqlConfig);
   }
   mysqlPool = global._mysqlPool;

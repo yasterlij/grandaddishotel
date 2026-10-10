@@ -84,12 +84,24 @@ export function getMysqlConfig(): {
     }
   }
 
+  const finalHost = dbHost || parsedFromUrl.host;
+  const finalUser = dbUser || parsedFromUrl.user;
+  const finalPassword =
+    dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
+  const finalDatabase = dbName || parsedFromUrl.database;
+
+  if (!finalHost || !finalUser || finalPassword === undefined || !finalDatabase) {
+    throw new Error(
+      'MySQL production credentials are not fully configured. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME, or provide a full mysql:// DATABASE_URL / MYSQL_URL.'
+    );
+  }
+
   return {
-    host: dbHost || parsedFromUrl.host || '127.0.0.1',
+    host: finalHost,
     port: dbPort || parsedFromUrl.port || 3306,
-    user: dbUser || parsedFromUrl.user || 'root',
-    password: dbPassword !== undefined ? dbPassword : (parsedFromUrl.password || ''),
-    database: dbName || parsedFromUrl.database || 'grand_addis_db',
+    user: finalUser,
+    password: finalPassword,
+    database: finalDatabase,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -1005,7 +1017,7 @@ export async function deleteDbGalleryImage(id: string): Promise<boolean> {
 export const DEFAULT_PAGE_CONTENT: Record<string, string> = {
   // Home Page
   page_home_hero_title: 'Your Grand Stay In The Heart Of Addis',
-  page_home_hero_subtitle: 'Experience bespoke hospitality, refined comfort, and authentic Ethiopian culture in the diplomatic heart of Africa.',
+  page_home_hero_subtitle: '',
   page_home_hero_image: '/images/BO5A5779-scaled.jpg',
   page_home_hero_badge: 'Resort & Luxury Hotel in 22 Addis Ababa',
   page_home_story_subtitle: 'THE GRAND ADDIS EXPERIENCE',

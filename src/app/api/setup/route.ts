@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import mysql from 'mysql2/promise';
-import { isMysql } from '@/lib/db';
+import { getMysqlConfig } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,18 +17,6 @@ export async function GET(req: NextRequest) {
         error: 'Invalid or missing setup key. Append ?key=GrandAddis2026! to authorize setup.',
       },
       { status: 401 }
-    );
-  }
-
-  const connectionString = process.env.DATABASE_URL;
-  const hasDbConfig = Boolean(connectionString || process.env.DB_HOST);
-  if (!hasDbConfig) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Neither DATABASE_URL nor DB_HOST environment variables are configured on the server.',
-      },
-      { status: 500 }
     );
   }
 
@@ -49,20 +37,7 @@ export async function GET(req: NextRequest) {
 
   let connection;
   try {
-    const connConfig = process.env.DB_HOST
-      ? {
-          host: process.env.DB_HOST,
-          port: parseInt(process.env.DB_PORT || '3306', 10),
-          user: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          multipleStatements: true,
-        }
-      : {
-          uri: connectionString,
-          multipleStatements: true,
-        };
-
+    const connConfig = getMysqlConfig();
     connection = await mysql.createConnection(connConfig);
 
     await connection.query(sanitizedSql);
@@ -73,9 +48,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: '✓ Grand Addis Hotel MySQL schema and seed data installed successfully!',
-      databaseUrl: connectionString
-        ? connectionString.replace(/:[^:@]+@/, ':****@')
-        : `${process.env.DB_USER}@${process.env.DB_HOST}:${process.env.DB_PORT || 3306}/${process.env.DB_NAME}`,
+      target: `${connConfig.user}@${connConfig.host}:${connConfig.port}/${connConfig.database}`,
       tablesCount: Array.isArray(rows) ? rows.length : 0,
       adminLoginUrl: '/admin',
       credentials: {

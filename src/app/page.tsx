@@ -54,7 +54,9 @@ export default function HomePage() {
           setGalleryList(galRes.images);
         }
         if (contentRes?.success && contentRes.content) {
-          setPageContent(contentRes.content);
+          const sanitizedContent = { ...contentRes.content };
+          delete sanitizedContent.page_home_hero_subtitle;
+          setPageContent(sanitizedContent);
         }
       } catch (err) {
         console.error('Failed to load data for homepage:', err);
@@ -160,19 +162,20 @@ export default function HomePage() {
             {pageContent.page_home_hero_title || 'Your Grand Stay In The Heart Of Addis'}
           </h1>
 
-          <p
-            style={{
-              fontSize: 'clamp(16px, 2vw, 19px)',
-              lineHeight: 1.7,
-              color: 'rgba(255, 255, 255, 0.88)',
-              maxWidth: '680px',
-              margin: '0 auto 36px',
-              fontWeight: 300,
-            }}
-          >
-            {pageContent.page_home_hero_subtitle ||
-              'Rebalance yourself in a timeless space where understated luxury, warm Ethiopian hospitality, and tranquil comfort come together.'}
-          </p>
+          {pageContent.page_home_hero_subtitle && (
+            <p
+              style={{
+                fontSize: 'clamp(16px, 2vw, 19px)',
+                lineHeight: 1.7,
+                color: 'rgba(255, 255, 255, 0.88)',
+                maxWidth: '680px',
+                margin: '0 auto 36px',
+                fontWeight: 300,
+              }}
+            >
+              {pageContent.page_home_hero_subtitle}
+            </p>
+          )}
 
           <div
             style={{

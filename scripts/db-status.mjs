@@ -30,6 +30,20 @@ const isMysql = Boolean(
   connectionString.startsWith('mysql:')
 );
 
+function parseMysqlUrl(rawUrl) {
+  const match = rawUrl.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/([^?]+)(?:\?.*)?$/i);
+  if (match) {
+    return {
+      user: match[1] ? decodeURIComponent(match[1]) : undefined,
+      password: match[2] ? decodeURIComponent(match[2]) : undefined,
+      host: match[3],
+      port: match[4] ? parseInt(match[4], 10) : undefined,
+      database: match[5],
+    };
+  }
+  return {};
+}
+
 async function checkStatus() {
   console.log('\n============================================================');
   console.log('GRAND ADDIS HOTEL - DATABASE HEALTH & STATUS CHECK');
@@ -39,25 +53,36 @@ async function checkStatus() {
   const start = Date.now();
 
   if (isMysql) {
-    const dbUser = process.env.DB_USER || process.env.DB_USERNAME || 'root';
-    const dbHost = process.env.DB_HOST || '127.0.0.1';
+    const dbUser = process.env.DB_USER || process.env.DB_USERNAME || process.env.MYSQL_USER || process.env.MYSQL_USERNAME;
+    const dbHost = process.env.DB_HOST || process.env.MYSQL_HOST;
     const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
-    const dbName = process.env.DB_NAME || 'grand_addis_db';
-    const dbPassword = process.env.DB_PASSWORD || process.env.DB_PASS || '';
+    const dbName = process.env.DB_NAME || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || process.env.MYSQL_DB;
+    const dbPassword = process.env.DB_PASSWORD || process.env.DB_PASS || process.env.MYSQL_PASSWORD || process.env.MYSQL_PASS;
+    const rawUrl = process.env.MYSQL_URL || process.env.MYSQL_DATABASE_URL || (connectionString.startsWith('mysql') ? connectionString : null);
+    const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
+    const finalHost = dbHost || parsedFromUrl.host;
+    const finalUser = dbUser || parsedFromUrl.user;
+    const finalDatabase = dbName || parsedFromUrl.database;
+    const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
 
-    console.log(`Host:     ${dbHost}:${dbPort}`);
-    console.log(`User:     ${dbUser}`);
-    console.log(`Database: ${dbName}`);
-    console.log(`Password: ${dbPassword ? 'YES (' + dbPassword.length + ' chars)' : 'NO'}`);
+    if (!finalHost || !finalUser || finalPassword === undefined || !finalDatabase) {
+      console.error('✗ MySQL configuration is incomplete. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME, or provide MYSQL_URL / DATABASE_URL.');
+      process.exit(1);
+    }
+
+    console.log(`Host:     ${finalHost}:${dbPort}`);
+    console.log(`User:     ${finalUser}`);
+    console.log(`Database: ${finalDatabase}`);
+    console.log(`Password: ${finalPassword ? 'YES (' + String(finalPassword).length + ' chars)' : 'NO'}`);
     console.log('------------------------------------------------------------');
 
     try {
       const conn = await mysql.createConnection({
-        host: dbHost,
+        host: finalHost,
         port: dbPort,
-        user: dbUser,
-        password: dbPassword,
-        database: dbName,
+        user: finalUser,
+        password: finalPassword,
+        database: finalDatabase,
       });
 
       const latency = Date.now() - start;

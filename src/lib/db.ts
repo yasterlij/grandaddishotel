@@ -18,6 +18,43 @@ export const isMysql = Boolean(
   connectionString.startsWith('mysql:')
 );
 
+function parseMysqlUrl(rawUrl: string): {
+  user?: string;
+  password?: string;
+  host?: string;
+  port?: number;
+  database?: string;
+} {
+  const match = rawUrl.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/([^?]+)(?:\?.*)?$/i);
+  if (match) {
+    return {
+      user: match[1] ? decodeURIComponent(match[1]) : undefined,
+      password: match[2] ? decodeURIComponent(match[2]) : undefined,
+      host: match[3],
+      port: match[4] ? parseInt(match[4], 10) : undefined,
+      database: match[5],
+    };
+  }
+
+  try {
+    const ConnectionConfig = (mysql as any).ConnectionConfig;
+    if (ConnectionConfig && typeof ConnectionConfig.parseUrl === 'function') {
+      const parsed = ConnectionConfig.parseUrl(rawUrl) || {};
+      return {
+        user: parsed.user,
+        password: parsed.password,
+        host: parsed.host,
+        port: parsed.port,
+        database: parsed.database,
+      };
+    }
+  } catch {
+    // Ignore and fall back to a validation error below.
+  }
+
+  return {};
+}
+
 export function getMysqlConfig(): {
   host: string;
   port: number;
@@ -63,32 +100,18 @@ export function getMysqlConfig(): {
     process.env.MYSQL_DATABASE_URL ||
     (connectionString.startsWith('mysql') ? connectionString : null);
 
-  let parsedFromUrl: any = {};
-  if (rawUrl) {
-    try {
-      const ConnectionConfig = (mysql as any).ConnectionConfig;
-      if (ConnectionConfig && typeof ConnectionConfig.parseUrl === 'function') {
-        parsedFromUrl = ConnectionConfig.parseUrl(rawUrl) || {};
-      }
-    } catch {
-      const match = rawUrl.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/(.+)$/);
-      if (match) {
-        parsedFromUrl = {
-          user: match[1] ? decodeURIComponent(match[1]) : undefined,
-          password: match[2] ? decodeURIComponent(match[2]) : undefined,
-          host: match[3],
-          port: match[4] ? parseInt(match[4], 10) : undefined,
-          database: match[5]?.split('?')[0],
-        };
-      }
-    }
-  }
+  const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
 
-  const finalHost = dbHost || parsedFromUrl.host || '127.0.0.1';
-  const finalUser = dbUser || parsedFromUrl.user || 'root';
-  const finalPassword =
-    dbPassword !== undefined ? dbPassword : (parsedFromUrl.password || '');
-  const finalDatabase = dbName || parsedFromUrl.database || 'grand_addis_db';
+  const finalHost = dbHost || parsedFromUrl.host;
+  const finalUser = dbUser || parsedFromUrl.user;
+  const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
+  const finalDatabase = dbName || parsedFromUrl.database;
+
+  if (!finalHost || !finalUser || finalPassword === undefined || !finalDatabase) {
+    throw new Error(
+      'MySQL production credentials are not fully configured. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME, or provide a full mysql:// DATABASE_URL / MYSQL_URL.'
+    );
+  }
 
   return {
     host: finalHost,

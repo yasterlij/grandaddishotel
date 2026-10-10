@@ -55,30 +55,38 @@ function getMysqlConnectionConfig() {
 
   let parsedFromUrl = {};
   if (rawUrl) {
-    try {
-      const ConnectionConfig = mysql.ConnectionConfig;
-      if (ConnectionConfig && typeof ConnectionConfig.parseUrl === 'function') {
-        parsedFromUrl = ConnectionConfig.parseUrl(rawUrl) || {};
-      }
-    } catch {
-      const match = rawUrl.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/(.+)$/);
-      if (match) {
-        parsedFromUrl = {
-          user: match[1] ? decodeURIComponent(match[1]) : undefined,
-          password: match[2] ? decodeURIComponent(match[2]) : undefined,
-          host: match[3],
-          port: match[4] ? parseInt(match[4], 10) : undefined,
-          database: match[5]?.split('?')[0],
-        };
+    const match = rawUrl.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/([^?]+)(?:\?.*)?$/i);
+    if (match) {
+      parsedFromUrl = {
+        user: match[1] ? decodeURIComponent(match[1]) : undefined,
+        password: match[2] ? decodeURIComponent(match[2]) : undefined,
+        host: match[3],
+        port: match[4] ? parseInt(match[4], 10) : undefined,
+        database: match[5],
+      };
+    } else {
+      try {
+        const ConnectionConfig = mysql.ConnectionConfig;
+        if (ConnectionConfig && typeof ConnectionConfig.parseUrl === 'function') {
+          parsedFromUrl = ConnectionConfig.parseUrl(rawUrl) || {};
+        }
+      } catch {
+        parsedFromUrl = {};
       }
     }
   }
 
-  const finalUser = dbUser || parsedFromUrl.user || 'root';
-  const finalPassword = dbPassword !== undefined ? dbPassword : (parsedFromUrl.password || '');
-  const finalHost = dbHost || parsedFromUrl.host || '127.0.0.1';
+  const finalUser = dbUser || parsedFromUrl.user;
+  const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
+  const finalHost = dbHost || parsedFromUrl.host;
   const finalPort = dbPort || parsedFromUrl.port || 3306;
-  const finalDatabase = dbName || parsedFromUrl.database || 'grand_addis_db';
+  const finalDatabase = dbName || parsedFromUrl.database;
+
+  if (!finalHost || !finalUser || finalPassword === undefined || !finalDatabase) {
+    throw new Error(
+      'MySQL production credentials are not fully configured. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME, or provide a full mysql:// DATABASE_URL / MYSQL_URL.'
+    );
+  }
 
   return {
     host: finalHost,

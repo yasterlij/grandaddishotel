@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { query, invalidateCache } from '@/lib/db';
+import { query, invalidateCache, isMysql } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 
 export async function GET() {
@@ -130,44 +130,85 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Room type ID is required' }, { status: 400 });
     }
 
-    await query(
-      `UPDATE room_types SET
-        name = COALESCE($1, name),
-        slug = COALESCE($2, slug),
-        description = COALESCE($3, description),
-        category = COALESCE($4, category),
-        size = COALESCE($5, size),
-        "bedType" = COALESCE($6, "bedType"),
-        view = COALESCE($7, view),
-        "basePriceUSD" = COALESCE($8, "basePriceUSD"),
-        "basePriceETB" = COALESCE($9, "basePriceETB"),
-        "baseCapacity" = COALESCE($10, "baseCapacity"),
-        "maxCapacity" = COALESCE($11, "maxCapacity"),
-        amenities = COALESCE($12, amenities),
-        images = COALESCE($13, images),
-        featured = COALESCE($14, featured),
-        aliases = COALESCE($15, aliases),
-        "updatedAt" = NOW()
-      WHERE id = $16`,
-      [
-        name,
-        slug ? slug.toLowerCase().trim().replace(/\s+/g, '-') : null,
-        description,
-        category,
-        size,
-        bedType,
-        view,
-        basePriceUSD !== undefined ? Number(basePriceUSD) : null,
-        basePriceETB !== undefined ? Number(basePriceETB) : null,
-        baseCapacity !== undefined ? Number(baseCapacity) : null,
-        maxCapacity !== undefined ? Number(maxCapacity) : null,
-        amenities,
-        images,
-        featured,
-        aliases,
-        id,
-      ]
-    );
+    if (isMysql) {
+      await query(
+        `UPDATE room_types SET
+          name = COALESCE(?, name),
+          slug = COALESCE(?, slug),
+          description = COALESCE(?, description),
+          category = COALESCE(?, category),
+          size = COALESCE(?, size),
+          bedType = COALESCE(?, bedType),
+          \`view\` = COALESCE(?, \`view\`),
+          basePriceUSD = COALESCE(?, basePriceUSD),
+          basePriceETB = COALESCE(?, basePriceETB),
+          baseCapacity = COALESCE(?, baseCapacity),
+          maxCapacity = COALESCE(?, maxCapacity),
+          amenities = COALESCE(?, amenities),
+          images = COALESCE(?, images),
+          featured = COALESCE(?, featured),
+          aliases = COALESCE(?, aliases),
+          updatedAt = NOW()
+        WHERE id = ?`,
+        [
+          name,
+          slug ? slug.toLowerCase().trim().replace(/\s+/g, '-') : null,
+          description,
+          category,
+          size,
+          bedType,
+          view,
+          basePriceUSD !== undefined ? Number(basePriceUSD) : null,
+          basePriceETB !== undefined ? Number(basePriceETB) : null,
+          baseCapacity !== undefined ? Number(baseCapacity) : null,
+          maxCapacity !== undefined ? Number(maxCapacity) : null,
+          amenities,
+          images,
+          featured,
+          aliases,
+          id,
+        ]
+      );
+    } else {
+      await query(
+        `UPDATE room_types SET
+          name = COALESCE($1, name),
+          slug = COALESCE($2, slug),
+          description = COALESCE($3, description),
+          category = COALESCE($4, category),
+          size = COALESCE($5, size),
+          "bedType" = COALESCE($6, "bedType"),
+          "view" = COALESCE($7, "view"),
+          "basePriceUSD" = COALESCE($8, "basePriceUSD"),
+          "basePriceETB" = COALESCE($9, "basePriceETB"),
+          "baseCapacity" = COALESCE($10, "baseCapacity"),
+          "maxCapacity" = COALESCE($11, "maxCapacity"),
+          amenities = COALESCE($12, amenities),
+          images = COALESCE($13, images),
+          featured = COALESCE($14, featured),
+          aliases = COALESCE($15, aliases),
+          "updatedAt" = NOW()
+        WHERE id = $16`,
+        [
+          name,
+          slug ? slug.toLowerCase().trim().replace(/\s+/g, '-') : null,
+          description,
+          category,
+          size,
+          bedType,
+          view,
+          basePriceUSD !== undefined ? Number(basePriceUSD) : null,
+          basePriceETB !== undefined ? Number(basePriceETB) : null,
+          baseCapacity !== undefined ? Number(baseCapacity) : null,
+          maxCapacity !== undefined ? Number(maxCapacity) : null,
+          amenities,
+          images,
+          featured,
+          aliases,
+          id,
+        ]
+      );
+    }
 
     invalidateCache('db_room');
     return NextResponse.json({ success: true, message: 'Room type updated successfully' });

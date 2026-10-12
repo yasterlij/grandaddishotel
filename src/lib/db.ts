@@ -474,6 +474,12 @@ function translateQueryForMysql(sql: string, params?: any[]): { sql: string; par
   // Replace gen_random_uuid() with UUID()
   translated = translated.replace(/gen_random_uuid\(\)/gi, 'UUID()');
 
+  // Replace PostgreSQL TO_CHAR(...) with MySQL DATE_FORMAT(...)
+  translated = translated.replace(
+    /TO_CHAR\(([^,]+),\s*['"]YYYY-MM-DD['"]\)/gi,
+    "DATE_FORMAT($1, '%Y-%m-%d')"
+  );
+
   // Replace ON CONFLICT (...) DO UPDATE with ON DUPLICATE KEY UPDATE
   translated = translated.replace(
     /ON CONFLICT\s*\([^)]+\)\s*DO UPDATE SET\s+([a-zA-Z0-9_"]+)\s*=\s*EXCLUDED\.\1/gi,
@@ -497,7 +503,18 @@ function translateQueryForMysql(sql: string, params?: any[]): { sql: string; par
   // Convert $1, $2, $3 to ?
   translated = translated.replace(/\$\d+/g, '?');
 
-  return { sql: translated, params: params || [] };
+  // Normalize parameter types for MySQL (arrays/objects to JSON strings)
+  const mysqlParams = (params || []).map((p) => {
+    if (Array.isArray(p)) {
+      return JSON.stringify(p);
+    }
+    if (p !== null && typeof p === 'object' && !(p instanceof Date)) {
+      return JSON.stringify(p);
+    }
+    return p;
+  });
+
+  return { sql: translated, params: mysqlParams };
 }
 
 export async function rawQuery<T extends QueryResultRow = any>(

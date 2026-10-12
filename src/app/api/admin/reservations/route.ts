@@ -40,14 +40,13 @@ export async function GET() {
       FROM reservations r
       JOIN room_types rt ON rt.id = r."roomTypeId"
       JOIN guests g ON g.id = r."guestId"
-      LEFT JOIN rooms rm ON rm.id = r."roomId"
-      LEFT JOIN LATERAL (
-        SELECT status, provider
-        FROM payments
-        WHERE "reservationId" = r.id
-        ORDER BY CASE WHEN status = 'SUCCESS' THEN 1 ELSE 2 END, "createdAt" DESC
+      LEFT JOIN payments p ON p.id = (
+        SELECT p2.id
+        FROM payments p2
+        WHERE p2."reservationId" = r.id
+        ORDER BY CASE WHEN p2.status = 'SUCCESS' THEN 1 ELSE 2 END, p2."createdAt" DESC
         LIMIT 1
-      ) p ON true
+      )
       ORDER BY r."createdAt" DESC
     `);
 

@@ -42,6 +42,7 @@ export default function NavDrawer() {
     { label: 'Photo Gallery', href: '/gallery' },
     { label: 'About Grand Addis', href: '/about-us' },
     { label: 'Guest Testimonials', href: '/testimonials' },
+    { label: 'Frequently Asked Questions', href: '/faqs' },
     { label: 'Contact Us', href: '/contact' },
   ];
 

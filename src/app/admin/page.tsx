@@ -42,8 +42,23 @@ import {
   Coffee,
   MapPin,
   BedDouble,
+  HelpCircle,
+  Tag,
 } from 'lucide-react';
 import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
+
+const LIVE_PAGE_URLS: Record<string, string> = {
+  home: '/',
+  about: '/about-us',
+  contact: '/contact',
+  rooms: '/rooms',
+  gallery: '/gallery',
+  experiences: '/experiences',
+  faqs: '/faqs',
+  testimonials: '/testimonials',
+  terms: '/terms-conditions',
+  footer: '/',
+};
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
@@ -56,6 +71,8 @@ export default function AdminPage() {
     | 'experiences'
     | 'dining'
     | 'spa'
+    | 'faqs'
+    | 'promotions'
     | 'messages'
     | 'testimonials'
   >('reservations');
@@ -87,11 +104,26 @@ export default function AdminPage() {
 
   // Page Content CMS states
   const [pageContent, setPageContent] = useState<Record<string, string>>({});
+  const [initialPageContent, setInitialPageContent] = useState<Record<string, string>>({});
+  const [cmsFieldFilter, setCmsFieldFilter] = useState<string>('');
   const [activeContentSection, setActiveContentSection] = useState<
-    'home' | 'about' | 'contact' | 'gallery' | 'experiences' | 'rooms' | 'testimonials' | 'terms' | 'footer'
+    'home' | 'about' | 'contact' | 'gallery' | 'experiences' | 'rooms' | 'testimonials' | 'terms' | 'footer' | 'faqs'
   >('home');
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [uploadingContentKey, setUploadingContentKey] = useState<string | null>(null);
+
+  // FAQs Manager states
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [faqCategoryFilter, setFaqCategoryFilter] = useState<string>('ALL');
+  const [faqSearch, setFaqSearch] = useState<string>('');
+  const [editFaqModal, setEditFaqModal] = useState<any | null>(null);
+  const [isCreatingFaq, setIsCreatingFaq] = useState(false);
+
+  // Promotions Manager states
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [promoSearch, setPromoSearch] = useState<string>('');
+  const [editPromoModal, setEditPromoModal] = useState<any | null>(null);
+  const [isCreatingPromo, setIsCreatingPromo] = useState(false);
 
   // Cultural Experiences CMS states
   const [experiencesList, setExperiencesList] = useState<any[]>([]);
@@ -167,6 +199,8 @@ export default function AdminPage() {
         galRes,
         contentRes,
         expRes,
+        faqsRes,
+        promosRes,
       ] = await Promise.all([
         fetch('/api/admin/overview').then((r) => r.json()),
         fetch('/api/admin/reservations').then((r) => r.json()),
@@ -182,6 +216,8 @@ export default function AdminPage() {
         fetch('/api/admin/gallery').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/admin/content').then((r) => r.json()).catch(() => ({ success: false })),
         fetch('/api/admin/experiences').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/admin/faqs').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/admin/promotions').then((r) => r.json()).catch(() => ({ success: false })),
       ]);
 
       if (overviewRes.success) setOverview(overviewRes);
@@ -195,8 +231,13 @@ export default function AdminPage() {
       if (testRes.success) setTestimonials(testRes.testimonials || []);
       if (payRes.success) setPayments(payRes.payments || []);
       if (galRes?.success) setGalleryImages(galRes.images || []);
-      if (contentRes?.success) setPageContent(contentRes.content || {});
+      if (contentRes?.success) {
+        setPageContent(contentRes.content || {});
+        setInitialPageContent(contentRes.content || {});
+      }
       if (expRes?.success) setExperiencesList(expRes.experiences || []);
+      if (faqsRes?.success) setFaqs(faqsRes.faqs || []);
+      if (promosRes?.success) setPromotions(promosRes.promotions || []);
       if (rateRes?.success && rateRes?.rate) {
         setUniversalRate(rateRes.rate);
         setTempUniversalRate(rateRes.rate.toString());
@@ -827,6 +868,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (data.success) {
         notify('Page content & banner media saved successfully!');
+        setInitialPageContent({ ...pageContent });
         loadAllData();
       } else {
         alert(data.error || 'Failed to save page content');
@@ -835,6 +877,118 @@ export default function AdminPage() {
       alert(err.message || 'Error saving page content');
     } finally {
       setIsSavingContent(false);
+    }
+  };
+
+  // Keyboard shortcut Ctrl+S / Cmd+S for Page Content CMS
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        if (activeTab === 'pageContent') {
+          e.preventDefault();
+          handleSavePageContent();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, pageContent]);
+
+  // -------------------------------------------------------------
+  // FAQs Manager Handlers
+  // -------------------------------------------------------------
+  const handleSaveFaq = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFaqModal?.question?.trim() || !editFaqModal?.answer?.trim()) {
+      alert('Question and answer are required.');
+      return;
+    }
+
+    try {
+      const isNew = isCreatingFaq;
+      const res = await fetch('/api/admin/faqs', {
+        method: isNew ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFaqModal),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify(isNew ? 'FAQ created successfully!' : 'FAQ updated successfully!');
+        setEditFaqModal(null);
+        setIsCreatingFaq(false);
+        const refreshed = await fetch('/api/admin/faqs').then((r) => r.json());
+        if (refreshed.success) setFaqs(refreshed.faqs || []);
+      } else {
+        alert(data.error || 'Failed to save FAQ');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error saving FAQ');
+    }
+  };
+
+  const handleDeleteFaq = async (id: string, question: string) => {
+    if (!confirm(`Are you sure you want to delete this FAQ: "${question}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/faqs?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        notify('FAQ deleted successfully!');
+        setFaqs((prev) => prev.filter((f) => f.id !== id));
+      } else {
+        alert(data.error || 'Failed to delete FAQ');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error deleting FAQ');
+    }
+  };
+
+  // -------------------------------------------------------------
+  // Promotions Manager Handlers
+  // -------------------------------------------------------------
+  const handleSavePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPromoModal?.title?.trim() || !editPromoModal?.code?.trim() || !editPromoModal?.discount?.trim()) {
+      alert('Title, discount, and promo code are required.');
+      return;
+    }
+
+    try {
+      const isNew = isCreatingPromo;
+      const res = await fetch('/api/admin/promotions', {
+        method: isNew ? 'POST' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editPromoModal),
+      });
+      const data = await res.json();
+      if (data.success) {
+        notify(isNew ? 'Promotion offer created successfully!' : 'Promotion offer updated successfully!');
+        setEditPromoModal(null);
+        setIsCreatingPromo(false);
+        const refreshed = await fetch('/api/admin/promotions').then((r) => r.json());
+        if (refreshed.success) setPromotions(refreshed.promotions || []);
+      } else {
+        alert(data.error || 'Failed to save promotion');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error saving promotion');
+    }
+  };
+
+  const handleDeletePromo = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete offer: "${title}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/promotions?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        notify('Promotion offer deleted successfully!');
+        setPromotions((prev) => prev.filter((p) => p.id !== id));
+      } else {
+        alert(data.error || 'Failed to delete promotion');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error deleting promotion');
     }
   };
 
@@ -1438,6 +1592,8 @@ export default function AdminPage() {
             { id: 'gallery', label: 'Photo Gallery', icon: ImageIcon, count: galleryImages.length },
             { id: 'pageContent', label: 'Pages & Media CMS', icon: Sparkles, count: undefined },
             { id: 'experiences', label: 'Cultural Experiences', icon: Compass, count: experiencesList.length },
+            { id: 'faqs', label: 'FAQs Manager', icon: HelpCircle, count: faqs.length },
+            { id: 'promotions', label: 'Special Offers', icon: Tag, count: promotions.length },
             { id: 'dining', label: 'Dining Menu', icon: Utensils, count: dining.length },
             { id: 'spa', label: 'Spa Treatments', icon: Flower2, count: spa.length },
             { id: 'messages', label: 'Guest Messages', icon: Mail, count: messages.length + eventInquiries.length },
@@ -3377,15 +3533,41 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <button
-                onClick={handleSavePageContent}
-                disabled={isSavingContent}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '10px 20px' }}
-              >
-                {isSavingContent ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-                <span>{isSavingContent ? 'Saving Changes...' : 'Save All Page Changes'}</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <a
+                  href={LIVE_PAGE_URLS[activeContentSection] || '/'}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '9px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: '#FAF9F5',
+                    color: '#153D4B',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    border: '1px solid #E2E1DA',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Eye size={14} color="#E49951" />
+                  <span>View Live Page</span>
+                  <ExternalLink size={12} color="#838A8D" />
+                </a>
+
+                <button
+                  onClick={handleSavePageContent}
+                  disabled={isSavingContent}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '10px 20px' }}
+                >
+                  {isSavingContent ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  <span>{isSavingContent ? 'Saving Changes...' : 'Save All Page Changes (Ctrl+S)'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Sub-tabs for Pages */}
@@ -3401,9 +3583,10 @@ export default function AdminPage() {
                 { id: 'home', label: '🏠 Home Page' },
                 { id: 'about', label: 'ℹ️ About Us Page' },
                 { id: 'contact', label: '📞 Contact & Hotel Info' },
+                { id: 'rooms', label: '🛏️ Rooms Banner' },
                 { id: 'gallery', label: '🖼️ Gallery Banner' },
                 { id: 'experiences', label: '🧭 Experiences Banner' },
-                { id: 'rooms', label: '🛏️ Rooms Banner' },
+                { id: 'faqs', label: '❓ FAQs Banner' },
                 { id: 'testimonials', label: '⭐ Testimonials Banner' },
                 { id: 'terms', label: '📜 Terms & Policies' },
                 { id: 'footer', label: '🏷️ Footer & Branding' },
@@ -3429,6 +3612,64 @@ export default function AdminPage() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* CMS Search & Live State Indicator Bar */}
+            <div
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#FFFFFF',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, maxWidth: '400px' }}>
+                <Search size={14} color="#838A8D" />
+                <input
+                  type="text"
+                  placeholder="Quick search field labels on this page..."
+                  value={cmsFieldFilter}
+                  onChange={(e) => setCmsFieldFilter(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    borderRadius: '4px',
+                    border: '1px solid #E2E1DA',
+                    outline: 'none',
+                  }}
+                />
+                {cmsFieldFilter && (
+                  <button
+                    onClick={() => setCmsFieldFilter('')}
+                    style={{ border: 'none', background: 'none', color: '#838A8D', cursor: 'pointer', fontSize: '12px' }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ fontSize: '12px', color: '#838A8D', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor:
+                      JSON.stringify(pageContent) !== JSON.stringify(initialPageContent) ? '#E49951' : '#10B981',
+                  }}
+                />
+                <span style={{ fontWeight: 500 }}>
+                  {JSON.stringify(pageContent) !== JSON.stringify(initialPageContent)
+                    ? 'Unsaved changes (press Ctrl+S to save)'
+                    : 'All page changes saved to database'}
+                </span>
+              </div>
             </div>
 
             {/* Page Sections Editor */}
@@ -3817,6 +4058,22 @@ export default function AdminPage() {
                         placeholder="Centrally positioned in the vibrant commercial and cultural heart of Addis Ababa..."
                         style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                       />
+                    </div>
+
+                    <div style={{ marginTop: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Google Maps Embed URL or Iframe Code
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_home_map_embed || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_home_map_embed: e.target.value })}
+                        placeholder="https://maps.google.com/maps?q=9.0138943,38.7911099(Grand+Addis+Hotel)&z=17&output=embed"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                      <span style={{ fontSize: '11px', color: '#838A8D', display: 'block', marginTop: '4px' }}>
+                        Paste any Google Maps link or iframe code. Our system safely embeds the pin for Grand Addis Hotel.
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -4318,6 +4575,21 @@ export default function AdminPage() {
                           style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                         />
                       </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Google Maps Embed URL or Iframe Code
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_map_embed || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_map_embed: e.target.value })}
+                          placeholder="https://maps.google.com/maps?q=9.0138943,38.7911099(Grand+Addis+Hotel)&z=17&output=embed"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#838A8D', display: 'block', marginTop: '4px' }}>
+                          Custom embed link or full &lt;iframe&gt; code for the Contact page map. Accepts share URLs or place links.
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -4413,8 +4685,8 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* GALLERY, EXPERIENCES, ROOMS, AND TESTIMONIALS BANNERS */}
-              {['gallery', 'experiences', 'rooms', 'testimonials'].includes(activeContentSection) && (
+              {/* GALLERY, EXPERIENCES, ROOMS, TESTIMONIALS, AND FAQS BANNERS */}
+              {['gallery', 'experiences', 'rooms', 'testimonials', 'faqs'].includes(activeContentSection) && (
                 <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
                   <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, textTransform: 'capitalize' }}>
                     {activeContentSection} Page Banner
@@ -4805,6 +5077,81 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+
+            {/* Sticky Floating Quick-Save Action Bar for CMS */}
+            <div
+              style={{
+                position: 'sticky',
+                bottom: '16px',
+                margin: '16px 24px 20px',
+                backgroundColor: '#0F2A33',
+                color: '#FFFFFF',
+                padding: '14px 22px',
+                borderRadius: '10px',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                zIndex: 30,
+                border: '1px solid rgba(228, 153, 81, 0.4)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Sparkles size={16} color="#E49951" />
+                <div>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>
+                    Page Content CMS &bull; {activeContentSection.toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#A2B5BD', display: 'block' }}>
+                    Press <kbd style={{ padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.15)', fontSize: '10px' }}>Ctrl + S</kbd> to save anytime without scrolling to top
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <a
+                  href={LIVE_PAGE_URLS[activeContentSection] || '/'}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                  }}
+                >
+                  <Eye size={13} color="#E49951" />
+                  <span>Preview Live Page</span>
+                  <ExternalLink size={12} />
+                </a>
+
+                <button
+                  onClick={handleSavePageContent}
+                  disabled={isSavingContent}
+                  className="btn btn-primary"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 18px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {isSavingContent ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  <span>{isSavingContent ? 'Saving...' : 'Save All Changes'}</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -4985,6 +5332,424 @@ export default function AdminPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB: FAQS MANAGER (CRUD) */}
+        {/* ============================================================== */}
+        {activeTab === 'faqs' && (
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E1DA', overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#153D4B', fontWeight: 600 }}>
+                  Frequently Asked Questions (FAQs) Manager
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#838A8D' }}>
+                  Manage questions and answers displayed on the public FAQ page (/faqs) and booking portal.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <a
+                  href="/faqs"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '9px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: '#FAF9F5',
+                    color: '#153D4B',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    border: '1px solid #E2E1DA',
+                  }}
+                >
+                  <Eye size={14} color="#E49951" />
+                  <span>View Live /faqs Page</span>
+                  <ExternalLink size={12} color="#838A8D" />
+                </a>
+
+                <button
+                  onClick={() => {
+                    setIsCreatingFaq(true);
+                    setEditFaqModal({
+                      question: '',
+                      answer: '',
+                      category: 'reservations',
+                      sort_order: faqs.length + 1,
+                    });
+                  }}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                >
+                  <Plus size={16} /> Add FAQ Question
+                </button>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                backgroundColor: '#FAF9F5',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#5E6E75' }}>Category:</span>
+                {['ALL', 'reservations', 'checkin', 'services', 'payment', 'general'].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setFaqCategoryFilter(cat)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      border: faqCategoryFilter === cat ? '1px solid #E49951' : '1px solid #D5D4CC',
+                      backgroundColor: faqCategoryFilter === cat ? '#E49951' : '#FFFFFF',
+                      color: faqCategoryFilter === cat ? '#FFFFFF' : '#153D4B',
+                      fontSize: '12px',
+                      fontWeight: faqCategoryFilter === cat ? 600 : 500,
+                      cursor: 'pointer',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ position: 'relative', width: '260px' }}>
+                <Search size={14} color="#838A8D" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  placeholder="Search questions..."
+                  value={faqSearch}
+                  onChange={(e) => setFaqSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 30px',
+                    borderRadius: '6px',
+                    border: '1px solid #D5D4CC',
+                    fontSize: '12px',
+                    backgroundColor: '#FFFFFF',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* FAQ List */}
+            <div style={{ padding: '24px' }}>
+              {faqs
+                .filter((faq) => {
+                  const matchesCat = faqCategoryFilter === 'ALL' || faq.category?.toLowerCase() === faqCategoryFilter.toLowerCase();
+                  const q = faqSearch.trim().toLowerCase();
+                  const matchesQuery = !q || faq.question.toLowerCase().includes(q) || faq.answer.toLowerCase().includes(q);
+                  return matchesCat && matchesQuery;
+                })
+                .length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px 0', color: '#838A8D' }}>
+                  <HelpCircle size={36} color="#A2B5BD" style={{ margin: '0 auto 12px' }} />
+                  <p style={{ margin: 0, fontSize: '14px' }}>No FAQ questions found in this category.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {faqs
+                    .filter((faq) => {
+                      const matchesCat = faqCategoryFilter === 'ALL' || faq.category?.toLowerCase() === faqCategoryFilter.toLowerCase();
+                      const q = faqSearch.trim().toLowerCase();
+                      const matchesQuery = !q || faq.question.toLowerCase().includes(q) || faq.answer.toLowerCase().includes(q);
+                      return matchesCat && matchesQuery;
+                    })
+                    .map((faq) => (
+                      <div
+                        key={faq.id}
+                        style={{
+                          backgroundColor: '#FAF9F5',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E1DA',
+                          padding: '16px 20px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: '16px',
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                backgroundColor: '#153D4B',
+                                color: '#FFFFFF',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              #{faq.sort_order || 0}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                backgroundColor: 'rgba(228, 153, 81, 0.15)',
+                                color: '#CD8948',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {faq.category || 'general'}
+                            </span>
+                          </div>
+                          <h4 style={{ margin: '0 0 6px', fontSize: '15px', color: '#153D4B', fontWeight: 600 }}>
+                            {faq.question}
+                          </h4>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#5E6E75', lineHeight: 1.5 }}>
+                            {faq.answer}
+                          </p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                          <button
+                            onClick={() => {
+                              setIsCreatingFaq(false);
+                              setEditFaqModal({ ...faq });
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <Edit size={12} /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFaq(faq.id, faq.question)}
+                            style={{
+                              padding: '6px 10px',
+                              backgroundColor: '#FFF0F0',
+                              color: '#DC3545',
+                              border: '1px solid #FDCBCB',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* TAB: SPECIAL OFFERS & PROMOTIONS (CRUD) */}
+        {/* ============================================================== */}
+        {activeTab === 'promotions' && (
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E1DA', overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '16px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#153D4B', fontWeight: 600 }}>
+                  Special Offers & Promotions Manager
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#838A8D' }}>
+                  Manage discount vouchers, seasonal packages, weekend retreats, and promotional coupon codes.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsCreatingPromo(true);
+                  setEditPromoModal({
+                    title: '',
+                    badge: 'Special Offer',
+                    discount: 'Save 15%',
+                    description: '',
+                    inclusions: ['Complimentary breakfast', 'High-speed Wi-Fi', 'Late check-out'],
+                    code: 'GRAND15',
+                    valid_until: 'Ongoing',
+                    inclusionsText: 'Complimentary breakfast\nHigh-speed Wi-Fi\nLate check-out',
+                  });
+                }}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+              >
+                <Plus size={16} /> Add New Special Offer
+              </button>
+            </div>
+
+            {/* Promotions List */}
+            <div style={{ padding: '24px' }}>
+              {promotions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px 0', color: '#838A8D' }}>
+                  <Tag size={36} color="#A2B5BD" style={{ margin: '0 auto 12px' }} />
+                  <p style={{ margin: 0, fontSize: '14px' }}>No active promotions or special offers found.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                  {promotions.map((promo) => (
+                    <div
+                      key={promo.id}
+                      style={{
+                        backgroundColor: '#FAF9F5',
+                        borderRadius: '10px',
+                        border: '1px solid #E2E1DA',
+                        padding: '20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              backgroundColor: '#E49951',
+                              color: '#FFFFFF',
+                              padding: '3px 10px',
+                              borderRadius: '20px',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {promo.badge || 'Offer'}
+                          </span>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#153D4B' }}>
+                            {promo.discount}
+                          </span>
+                        </div>
+
+                        <h4 style={{ margin: '0 0 8px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                          {promo.title}
+                        </h4>
+
+                        <div
+                          style={{
+                            display: 'inline-block',
+                            backgroundColor: 'rgba(21, 61, 75, 0.08)',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontFamily: 'monospace',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            color: '#153D4B',
+                            marginBottom: '10px',
+                            letterSpacing: '1px',
+                          }}
+                        >
+                          CODE: {promo.code}
+                        </div>
+
+                        <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#5E6E75', lineHeight: 1.5 }}>
+                          {promo.description}
+                        </p>
+
+                        {Array.isArray(promo.inclusions) && promo.inclusions.length > 0 && (
+                          <ul style={{ margin: '0 0 14px', paddingLeft: '18px', fontSize: '12px', color: '#5E6E75' }}>
+                            {promo.inclusions.map((inc: string, idx: number) => (
+                              <li key={idx} style={{ marginBottom: '4px' }}>
+                                {inc}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <div style={{ fontSize: '11px', color: '#838A8D', marginBottom: '16px' }}>
+                          Validity: <strong>{promo.valid_until || 'Ongoing'}</strong>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #E2E1DA', paddingTop: '12px' }}>
+                        <button
+                          onClick={() => {
+                            setIsCreatingPromo(false);
+                            setEditPromoModal({
+                              ...promo,
+                              inclusionsText: Array.isArray(promo.inclusions) ? promo.inclusions.join('\n') : '',
+                            });
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '7px 12px',
+                            backgroundColor: '#153D4B',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Edit size={12} /> Edit Offer
+                        </button>
+                        <button
+                          onClick={() => handleDeletePromo(promo.id, promo.title)}
+                          style={{
+                            padding: '7px 12px',
+                            backgroundColor: '#FFF0F0',
+                            color: '#DC3545',
+                            border: '1px solid #FDCBCB',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -7107,6 +7872,327 @@ export default function AdminPage() {
                   style={{ padding: '9px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Check size={16} /> Save Experience
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: FAQ QUESTION & ANSWER EDITOR (CRUD) */}
+      {/* ========================================================================= */}
+      {editFaqModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '600px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 28px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#0F2A33',
+                color: '#FFFFFF',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                  {isCreatingFaq ? 'Add New FAQ Question' : 'Edit FAQ Question'}
+                </h3>
+                <span style={{ fontSize: '12px', color: '#E49951' }}>
+                  Hotel Policies, Reservations, Services & Directions
+                </span>
+              </div>
+              <button
+                onClick={() => setEditFaqModal(null)}
+                style={{ background: 'none', border: 'none', color: '#A2B5BD', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveFaq} style={{ padding: '28px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Question Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFaqModal.question || ''}
+                  onChange={(e) => setEditFaqModal({ ...editFaqModal, question: e.target.value })}
+                  placeholder="e.g. Do you offer airport transportation from Bole Airport?"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Category
+                  </label>
+                  <select
+                    value={editFaqModal.category || 'reservations'}
+                    onChange={(e) => setEditFaqModal({ ...editFaqModal, category: e.target.value })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+                  >
+                    <option value="reservations">Reservations & Booking</option>
+                    <option value="checkin">Check-In & Check-Out</option>
+                    <option value="services">Services & Wi-Fi</option>
+                    <option value="payment">Payment & Rates</option>
+                    <option value="general">General Information</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Display Sort Order
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editFaqModal.sort_order ?? 0}
+                    onChange={(e) => setEditFaqModal({ ...editFaqModal, sort_order: parseInt(e.target.value, 10) || 0 })}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Answer Description *
+                </label>
+                <textarea
+                  rows={5}
+                  required
+                  value={editFaqModal.answer || ''}
+                  onChange={(e) => setEditFaqModal({ ...editFaqModal, answer: e.target.value })}
+                  placeholder="Provide a detailed, helpful answer for guests..."
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', lineHeight: 1.5 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditFaqModal(null)}
+                  className="btn btn-secondary"
+                  style={{ padding: '9px 18px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '9px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Check size={16} /> Save FAQ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: PROMOTION OFFER EDITOR (CRUD) */}
+      {/* ========================================================================= */}
+      {editPromoModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '640px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              overflow: 'hidden',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 28px',
+                borderBottom: '1px solid #E2E1DA',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: '#0F2A33',
+                color: '#FFFFFF',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                  {isCreatingPromo ? 'Create Special Offer Package' : 'Edit Special Offer Package'}
+                </h3>
+                <span style={{ fontSize: '12px', color: '#E49951' }}>
+                  Manage Promo Code, Discounts & Package Inclusions
+                </span>
+              </div>
+              <button
+                onClick={() => setEditPromoModal(null)}
+                style={{ background: 'none', border: 'none', color: '#A2B5BD', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePromo} style={{ padding: '28px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Offer Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editPromoModal.title || ''}
+                    onChange={(e) => setEditPromoModal({ ...editPromoModal, title: e.target.value })}
+                    placeholder="e.g. Member Exclusive Stay"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Badge Tag
+                  </label>
+                  <input
+                    type="text"
+                    value={editPromoModal.badge || ''}
+                    onChange={(e) => setEditPromoModal({ ...editPromoModal, badge: e.target.value })}
+                    placeholder="e.g. Best Value, Popular"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Discount Headline *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editPromoModal.discount || ''}
+                    onChange={(e) => setEditPromoModal({ ...editPromoModal, discount: e.target.value })}
+                    placeholder="Save 15%"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Promo Code *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editPromoModal.code || ''}
+                    onChange={(e) => setEditPromoModal({ ...editPromoModal, code: e.target.value.toUpperCase() })}
+                    placeholder="GRAND15"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                    Valid Until
+                  </label>
+                  <input
+                    type="text"
+                    value={editPromoModal.valid_until || ''}
+                    onChange={(e) => setEditPromoModal({ ...editPromoModal, valid_until: e.target.value })}
+                    placeholder="December 31, 2026"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Description *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editPromoModal.description || ''}
+                  onChange={(e) => setEditPromoModal({ ...editPromoModal, description: e.target.value })}
+                  placeholder="Offer summary and package description..."
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#153D4B', marginBottom: '6px' }}>
+                  Package Inclusions (One perk per line)
+                </label>
+                <textarea
+                  rows={4}
+                  value={editPromoModal.inclusionsText ?? (Array.isArray(editPromoModal.inclusions) ? editPromoModal.inclusions.join('\n') : '')}
+                  onChange={(e) =>
+                    setEditPromoModal({
+                      ...editPromoModal,
+                      inclusionsText: e.target.value,
+                      inclusions: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean),
+                    })
+                  }
+                  placeholder="15% discount on all room categories&#10;Daily complimentary breakfast buffet&#10;Late check-out until 15:00"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', lineHeight: 1.5 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditPromoModal(null)}
+                  className="btn btn-secondary"
+                  style={{ padding: '9px 18px', fontSize: '13px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '9px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Check size={16} /> Save Offer
                 </button>
               </div>
             </form>

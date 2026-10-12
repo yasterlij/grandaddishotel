@@ -39,6 +39,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' data: https://fonts.gstatic.com",
               "img-src 'self' data: blob:",
               "connect-src 'self' https://sandbox.sikinapay.com",
+              "frame-src 'self' https://www.google.com https://maps.google.com",
               "frame-ancestors 'self'",
             ].join('; '),
           },

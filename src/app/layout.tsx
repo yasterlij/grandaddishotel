@@ -24,7 +24,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://grandaddishotel.com'),
+  metadataBase: new URL('https://grandaddishotel.et'),
   title: 'Grand Addis Hotel - Resort & Hotel | Addis Ababa, Ethiopia',
   description: 'Your Grand Stay in the Heart of Addis. Discover refined boutique luxury, authentic Ethiopian hospitality, and modern accommodations at 22 Around Golagul, Addis Ababa.',
   keywords: [
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Grand Addis Hotel - Resort & Hotel | Addis Ababa, Ethiopia',
     description: 'Your Grand Stay in the Heart of Addis. Experience luxury accommodations and authentic Ethiopian hospitality.',
-    url: 'https://grandaddishotel.com',
+    url: 'https://grandaddishotel.et',
     siteName: 'Grand Addis Hotel',
     images: [
       {
@@ -52,6 +52,21 @@ export const metadata: Metadata = {
     ],
     locale: 'en_US',
     type: 'website',
+  },
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+      'max-snippet': -1,
+      'max-image-preview': 'large',
+      'max-video-preview': -1,
+    },
   },
   icons: {
     icon: '/images/logo.png',

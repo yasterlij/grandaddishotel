@@ -13,7 +13,7 @@ import {
   Building,
   ShieldCheck,
 } from 'lucide-react';
-import { HOTEL_INFO } from '@/data/hotelData';
+import { HOTEL_INFO, formatMapEmbedUrl } from '@/data/hotelData';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function ContactPage() {
@@ -367,7 +367,7 @@ export default function ContactPage() {
       <section style={{ height: '440px', width: '100%', position: 'relative' }}>
         <iframe
           title="Grand Addis Hotel Google Map"
-          src="https://maps.google.com/maps?q=Grand+Addis+Hotel,+22,+Addis+Ababa,+Ethiopia&t=&z=17&ie=UTF8&iwloc=&output=embed"
+          src={formatMapEmbedUrl(content.page_contact_map_embed || HOTEL_INFO.mapEmbedUrl)}
           width="100%"
           height="100%"
           style={{ border: 0 }}

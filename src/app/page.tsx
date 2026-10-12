@@ -23,7 +23,7 @@ import {
 import BookingBar from '@/components/BookingBar';
 import RoomCard from '@/components/RoomCard';
 import GalleryLightbox from '@/components/GalleryLightbox';
-import { ROOMS, HOTEL_INFO, TESTIMONIALS, GALLERY_IMAGES, Room, Testimonial } from '@/data/hotelData';
+import { ROOMS, HOTEL_INFO, TESTIMONIALS, GALLERY_IMAGES, Room, Testimonial, formatMapEmbedUrl } from '@/data/hotelData';
 import { useBooking } from '@/context/BookingContext';
 
 export default function HomePage() {
@@ -617,7 +617,7 @@ export default function HomePage() {
             >
               <iframe
                 title="Grand Addis Hotel Location"
-                src="https://maps.google.com/maps?q=Grand+Addis+Hotel,+22,+Addis+Ababa,+Ethiopia&t=&z=17&ie=UTF8&iwloc=&output=embed"
+                src={formatMapEmbedUrl(pageContent.page_home_map_embed || HOTEL_INFO.mapEmbedUrl)}
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}

@@ -374,6 +374,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/faqs" style={{ color: 'inherit' }}>
+                  Frequently Asked Questions
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" style={{ color: 'inherit' }}>
                   Location & Directions
                 </Link>
@@ -444,6 +449,9 @@ export default function Footer() {
           <div style={{ display: 'flex', gap: '20px' }}>
             <Link href="/terms-conditions" style={{ color: 'inherit' }}>
               Terms & Conditions
+            </Link>
+            <Link href="/faqs" style={{ color: 'inherit' }}>
+              FAQs
             </Link>
             <Link href="/contact" style={{ color: 'inherit' }}>
               Contact

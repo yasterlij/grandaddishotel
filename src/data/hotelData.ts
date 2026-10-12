@@ -56,7 +56,8 @@ export const HOTEL_INFO = {
   checkInTime: '14:00 (2:00 PM)',
   checkOutTime: '12:00 (12:00 PM)',
   airportDistance: '5.2 km from Addis Ababa Bole International Airport (approx. 10-15 mins)',
-  mapEmbedUrl: 'https://maps.google.com/maps?q=Grand+Addis+Hotel,+22,+Addis+Ababa,+Ethiopia&t=&z=17&ie=UTF8&iwloc=&output=embed',
+  mapEmbedUrl:
+    'https://www.google.com/maps/place/Grand+Addis+Hotel/data=!4m10!3m9!1s0x164b85ac66768f1b:0xe591995df4ecdd3c!5m2!4m1!1i2!8m2!3d9.0138943!4d38.7911099!16s%2Fg%2F11njpc2cby!19sChIJG492ZqyFSxYRPN3s9F2ZkeU?authuser=0&hl=am&g_ep=EgoyMDI2MTAwNy4wIJJjKgBIAVAD&rclk=1',
   mapDirectionsUrl: 'https://www.google.com/maps/search/?api=1&query=Grand+Addis+Hotel+Addis+Ababa+Ethiopia',
   socials: {
     facebook: 'https://facebook.com',
@@ -65,6 +66,39 @@ export const HOTEL_INFO = {
     telegram: 'https://t.me/grandaddishotel',
   }
 };
+
+export function formatMapEmbedUrl(rawUrl?: string): string {
+  const defaultEmbed =
+    'https://maps.google.com/maps?q=9.0138943,38.7911099(Grand+Addis+Hotel)&z=17&output=embed';
+  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+    return defaultEmbed;
+  }
+  const clean = rawUrl.trim();
+  // If user pasted iframe HTML like <iframe src="..." ...>
+  const iframeMatch = clean.match(/src=["']([^"']+)["']/i);
+  if (iframeMatch && iframeMatch[1]) {
+    return iframeMatch[1];
+  }
+  // If it's already an embed URL
+  if (clean.includes('output=embed') || clean.includes('/maps/embed')) {
+    return clean;
+  }
+  // If it's a Google Maps Place URL containing coordinates 3d... and 4d...
+  const coordMatch = clean.match(/!3d(-?[0-9.]+)!4d(-?[0-9.]+)/);
+  if (coordMatch) {
+    return `https://maps.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}(Grand+Addis+Hotel)&z=17&output=embed`;
+  }
+  // If coordinates are in q=lat,lng
+  const qCoordMatch = clean.match(/[?&]q=(-?[0-9.]+),(-?[0-9.]+)/);
+  if (qCoordMatch) {
+    return `https://maps.google.com/maps?q=${qCoordMatch[1]},${qCoordMatch[2]}(Grand+Addis+Hotel)&z=17&output=embed`;
+  }
+  // If it's a general google maps place url without coordinates, use Grand Addis coordinates
+  if (clean.includes('google.com/maps')) {
+    return defaultEmbed;
+  }
+  return clean;
+}
 
 export const ROOMS: Room[] = [
   {

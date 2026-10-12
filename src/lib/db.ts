@@ -290,6 +290,152 @@ export async function initDatabase(): Promise<void> {
             "updatedAt" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
           );
         `);
+
+        // Ensure table_reservations exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS table_reservations (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "date" DATE NOT NULL,
+            "time" VARCHAR(50) NOT NULL,
+            "party_size" INT NOT NULL,
+            "guest_name" VARCHAR(255) NOT NULL,
+            "guest_phone" VARCHAR(100) NOT NULL,
+            "guest_email" VARCHAR(191) NOT NULL,
+            "notes" TEXT DEFAULT NULL,
+            "status" VARCHAR(50) NOT NULL DEFAULT 'CONFIRMED',
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure spa_appointments exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS spa_appointments (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "service_id" VARCHAR(191) NOT NULL,
+            "service_name" VARCHAR(255) NOT NULL,
+            "date" DATE NOT NULL,
+            "time" VARCHAR(50) NOT NULL,
+            "client_name" VARCHAR(255) NOT NULL,
+            "client_phone" VARCHAR(100) NOT NULL,
+            "client_email" VARCHAR(191) NOT NULL,
+            "status" VARCHAR(50) NOT NULL DEFAULT 'CONFIRMED',
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure contact_messages exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS contact_messages (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "name" VARCHAR(255) NOT NULL,
+            "email" VARCHAR(191) NOT NULL,
+            "phone" VARCHAR(100) DEFAULT NULL,
+            "subject" VARCHAR(255) NOT NULL,
+            "message" TEXT NOT NULL,
+            "status" VARCHAR(50) NOT NULL DEFAULT 'NEW',
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure event_inquiries exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS event_inquiries (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "event_type" VARCHAR(100) NOT NULL,
+            "target_date" DATE NOT NULL,
+            "guests_count" VARCHAR(50) NOT NULL,
+            "name" VARCHAR(255) NOT NULL,
+            "email" VARCHAR(191) NOT NULL,
+            "phone" VARCHAR(100) NOT NULL,
+            "details" TEXT DEFAULT NULL,
+            "status" VARCHAR(50) NOT NULL DEFAULT 'NEW',
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure testimonials exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS testimonials (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "name" VARCHAR(255) NOT NULL,
+            "location" VARCHAR(100) NOT NULL,
+            "rating" INT NOT NULL DEFAULT 5,
+            "date" VARCHAR(50) NOT NULL,
+            "title" VARCHAR(255) NOT NULL,
+            "comment" TEXT NOT NULL,
+            "room_type" VARCHAR(100) NOT NULL,
+            "status" VARCHAR(50) NOT NULL DEFAULT 'APPROVED',
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure dining_menu exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS dining_menu (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "name" VARCHAR(255) NOT NULL,
+            "category" VARCHAR(100) NOT NULL,
+            "price" DECIMAL(10,2) NOT NULL,
+            "description" TEXT NOT NULL,
+            "tag" VARCHAR(50) DEFAULT NULL,
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure spa_treatments exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS spa_treatments (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "name" VARCHAR(255) NOT NULL,
+            "category" VARCHAR(100) NOT NULL,
+            "duration" VARCHAR(50) NOT NULL,
+            "price" DECIMAL(10,2) NOT NULL,
+            "description" TEXT NOT NULL,
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure experiences exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS experiences (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "title" VARCHAR(255) NOT NULL,
+            "subtitle" VARCHAR(255) NOT NULL,
+            "category" VARCHAR(100) NOT NULL,
+            "duration" VARCHAR(50) NOT NULL,
+            "image" TEXT NOT NULL,
+            "description" TEXT NOT NULL,
+            "highlights" JSON DEFAULT NULL,
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure promotions exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS promotions (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "title" VARCHAR(255) NOT NULL,
+            "badge" VARCHAR(100) NOT NULL,
+            "discount" VARCHAR(100) NOT NULL,
+            "description" TEXT NOT NULL,
+            "inclusions" JSON DEFAULT NULL,
+            "code" VARCHAR(100) NOT NULL,
+            "valid_until" VARCHAR(100) NOT NULL,
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
+
+        // Ensure faqs exists in MySQL
+        await mysqlPool.query(`
+          CREATE TABLE IF NOT EXISTS faqs (
+            "id" VARCHAR(191) PRIMARY KEY,
+            "question" TEXT NOT NULL,
+            "answer" TEXT NOT NULL,
+            "category" VARCHAR(100) NOT NULL,
+            "sort_order" INT DEFAULT 0,
+            "created_at" DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+          );
+        `);
       } else {
         // PostgreSQL DDL bootstrap
         await pgPool.query(`
@@ -733,10 +879,153 @@ async function autoSeedDefaultsIfEmpty(): Promise<void> {
         );
       }
     }
+    // 5. FAQs Auto-seed
+    try {
+      const faqCountRes = await rawQuery(`SELECT COUNT(*) as count FROM faqs`);
+      const faqCount = parseInt(faqCountRes.rows[0]?.count || '0', 10);
+      if (faqCount === 0) {
+        for (const faq of DEFAULT_FAQS) {
+          await rawQuery(
+            `INSERT INTO faqs (id, question, answer, category, sort_order) VALUES ($1, $2, $3, $4, $5)`,
+            [faq.id, faq.question, faq.answer, faq.category, faq.sort_order]
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Auto-seed faqs notice:', err);
+    }
+
+    // 6. Promotions Auto-seed
+    try {
+      const promoCountRes = await rawQuery(`SELECT COUNT(*) as count FROM promotions`);
+      const promoCount = parseInt(promoCountRes.rows[0]?.count || '0', 10);
+      if (promoCount === 0) {
+        for (const promo of DEFAULT_PROMOTIONS) {
+          const inclusionsVal = isMysql ? JSON.stringify(promo.inclusions) : promo.inclusions;
+          await rawQuery(
+            `INSERT INTO promotions (id, title, badge, discount, description, inclusions, code, valid_until)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [promo.id, promo.title, promo.badge, promo.discount, promo.description, inclusionsVal, promo.code, promo.valid_until]
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Auto-seed promotions notice:', err);
+    }
   } catch (err) {
     console.warn('Auto-seed experiences notice:', err);
   }
 }
+
+export const DEFAULT_FAQS = [
+  {
+    id: 'f1',
+    question: 'How do I reserve a room at Grand Addis Hotel?',
+    answer:
+      'Reservations can be made directly through our online booking engine on this website, by calling our 24/7 reservations desk at +251 116 672 828, or by emailing reservations@egrandaddishotel.com. You will receive an instant confirmation voucher.',
+    category: 'reservations',
+    sort_order: 1,
+  },
+  {
+    id: 'f2',
+    question: 'What are the check-in and check-out times?',
+    answer:
+      'Check-in is from 14:00 (2:00 PM) onwards, and check-out is until 12:00 (12:00 PM). Early check-in or late check-out is subject to room availability upon arrival; you are always welcome to store luggage in our secure room and enjoy the lounge and dining areas.',
+    category: 'checkin',
+    sort_order: 2,
+  },
+  {
+    id: 'f3',
+    question: 'Do you offer airport transportation from Bole International Airport?',
+    answer:
+      'Yes! We offer convenient airport pick-up and drop-off services. Bole International Airport (ADD) is approximately 10-15 minutes away (5.2 km). You can add airport transfer during your online booking or contact our concierge prior to arrival with your flight details.',
+    category: 'services',
+    sort_order: 3,
+  },
+  {
+    id: 'f4',
+    question: 'What payment methods are accepted at the hotel?',
+    answer:
+      'We accept major international credit and debit cards (Visa, MasterCard, American Express), international bank transfers, and local Ethiopian payment methods including cash in ETB, Telebirr, and CBE Birr.',
+    category: 'payment',
+    sort_order: 4,
+  },
+  {
+    id: 'f5',
+    question: 'What is your cancellation and modification policy?',
+    answer:
+      'Flexible rate reservations can be cancelled or modified free of charge up to 24 hours prior to scheduled check-in date. Promotional and non-refundable rates may carry specific conditions indicated during booking.',
+    category: 'reservations',
+    sort_order: 5,
+  },
+  {
+    id: 'f6',
+    question: 'Is high-speed Wi-Fi available throughout the hotel?',
+    answer:
+      'Yes, complimentary high-speed fiber-optic Wi-Fi is available across all guest rooms, suites, restaurants, conference halls, and lobby areas.',
+    category: 'services',
+    sort_order: 6,
+  },
+  {
+    id: 'f7',
+    question: 'Are dining and room service available 24/7?',
+    answer:
+      'Our main restaurant serves breakfast from 06:30 to 10:30, lunch from 12:00 to 15:00, and dinner from 18:30 to 22:30. An in-room dining night menu is available 24 hours a day for your convenience.',
+    category: 'services',
+    sort_order: 7,
+  },
+];
+
+export const DEFAULT_PROMOTIONS = [
+  {
+    id: 'promo1',
+    title: 'Member Exclusive Stay',
+    badge: 'Best Value',
+    discount: 'Save 15%',
+    description:
+      'Book direct as a Grand Addis member and unlock 15% off room rates, complimentary high-speed Wi-Fi, late check-out upon availability, and 24-hour fitness access.',
+    inclusions: [
+      '15% discount on all room categories',
+      'Daily complimentary breakfast buffet',
+      'Late check-out until 15:00 (subject to availability)',
+      'Complimentary airport pickup on bookings of 3+ nights',
+    ],
+    code: 'GRANDMEMBER15',
+    valid_until: 'December 31, 2026',
+  },
+  {
+    id: 'promo2',
+    title: 'Dinner, Bed & Breakfast Package',
+    badge: 'Popular',
+    discount: 'Full Board Perks',
+    description:
+      'A seamless, fully flexible package combining luxurious overnight accommodation, hearty breakfast, and a 3-course dinner from our restaurant set menu.',
+    inclusions: [
+      'Luxury room or suite accommodation',
+      'Full buffet breakfast daily',
+      'Three-course evening dinner for two resident adults',
+      'High-speed Wi-Fi in rooms and public spaces',
+    ],
+    code: 'DINNERBED26',
+    valid_until: 'Ongoing',
+  },
+  {
+    id: 'promo3',
+    title: 'Weekend Rebalance Retreat',
+    badge: 'Weekend Special',
+    discount: 'Save 20%',
+    description:
+      'Designed for quick weekend escapes and couples. Enjoy complimentary bottle of sparkling wine on arrival, 30% discount on spa treatments, and leisurely Sunday brunch.',
+    inclusions: [
+      'Welcome sparkling wine & fresh fruit basket',
+      '30% discount on all spa treatments',
+      'Sunday late checkout until 16:00',
+      'Complimentary access to steam and sauna',
+    ],
+    code: 'WEEKENDREBALANCE',
+    valid_until: 'Year-Round (Fri-Sun)',
+  },
+];
 
 // -------------------------------------------------------------
 // High-performance In-Memory TTL Cache
@@ -1192,6 +1481,137 @@ export async function getDbFaqs() {
   }
 }
 
+export async function addDbFaq(faq: {
+  question: string;
+  answer: string;
+  category?: string;
+  sort_order?: number;
+}) {
+  const id = `faq-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const category = (faq.category || 'general').trim();
+  const sort_order = Number(faq.sort_order) || 0;
+  await query(
+    `INSERT INTO faqs (id, question, answer, category, sort_order) VALUES ($1, $2, $3, $4, $5)`,
+    [id, faq.question.trim(), faq.answer.trim(), category, sort_order]
+  );
+  invalidateCache('db_faqs');
+  return { id, question: faq.question.trim(), answer: faq.answer.trim(), category, sort_order };
+}
+
+export async function updateDbFaq(faq: {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string;
+  sort_order?: number;
+}) {
+  const category = (faq.category || 'general').trim();
+  const sort_order = Number(faq.sort_order) || 0;
+  await query(
+    `UPDATE faqs SET question = $1, answer = $2, category = $3, sort_order = $4 WHERE id = $5`,
+    [faq.question.trim(), faq.answer.trim(), category, sort_order, faq.id]
+  );
+  invalidateCache('db_faqs');
+  return { id: faq.id, question: faq.question.trim(), answer: faq.answer.trim(), category, sort_order };
+}
+
+export async function deleteDbFaq(id: string) {
+  await query(`DELETE FROM faqs WHERE id = $1`, [id]);
+  invalidateCache('db_faqs');
+  return true;
+}
+
+export async function addDbPromotion(promo: {
+  title: string;
+  badge?: string;
+  discount: string;
+  description: string;
+  inclusions?: string[] | string;
+  code: string;
+  valid_until?: string;
+}) {
+  const id = `promo-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const badge = (promo.badge || 'Offer').trim();
+  const valid_until = (promo.valid_until || 'Ongoing').trim();
+  const inclusionsArr = Array.isArray(promo.inclusions)
+    ? promo.inclusions.filter(Boolean)
+    : typeof promo.inclusions === 'string'
+    ? promo.inclusions.split('\n').map((s) => s.trim()).filter(Boolean)
+    : [];
+  const inclusionsVal = isMysql ? JSON.stringify(inclusionsArr) : inclusionsArr;
+
+  await query(
+    `INSERT INTO promotions (id, title, badge, discount, description, inclusions, code, valid_until)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, promo.title.trim(), badge, promo.discount.trim(), promo.description.trim(), inclusionsVal, promo.code.trim().toUpperCase(), valid_until]
+  );
+  return { id, ...promo, inclusions: inclusionsArr, badge, valid_until };
+}
+
+export async function updateDbPromotion(promo: {
+  id: string;
+  title: string;
+  badge?: string;
+  discount: string;
+  description: string;
+  inclusions?: string[] | string;
+  code: string;
+  valid_until?: string;
+}) {
+  const badge = (promo.badge || 'Offer').trim();
+  const valid_until = (promo.valid_until || 'Ongoing').trim();
+  const inclusionsArr = Array.isArray(promo.inclusions)
+    ? promo.inclusions.filter(Boolean)
+    : typeof promo.inclusions === 'string'
+    ? promo.inclusions.split('\n').map((s) => s.trim()).filter(Boolean)
+    : [];
+  const inclusionsVal = isMysql ? JSON.stringify(inclusionsArr) : inclusionsArr;
+
+  await query(
+    `UPDATE promotions SET title = $1, badge = $2, discount = $3, description = $4, inclusions = $5, code = $6, valid_until = $7 WHERE id = $8`,
+    [promo.title.trim(), badge, promo.discount.trim(), promo.description.trim(), inclusionsVal, promo.code.trim().toUpperCase(), valid_until, promo.id]
+  );
+  return { ...promo, inclusions: inclusionsArr, badge, valid_until };
+}
+
+export async function deleteDbPromotion(id: string) {
+  await query(`DELETE FROM promotions WHERE id = $1`, [id]);
+  return true;
+}
+
+export function formatMapEmbedUrl(rawUrl?: string): string {
+  const defaultEmbed =
+    'https://maps.google.com/maps?q=9.0138943,38.7911099(Grand+Addis+Hotel)&z=17&output=embed';
+  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+    return defaultEmbed;
+  }
+  const clean = rawUrl.trim();
+  // If user pasted iframe HTML like <iframe src="..." ...>
+  const iframeMatch = clean.match(/src=["']([^"']+)["']/i);
+  if (iframeMatch && iframeMatch[1]) {
+    return iframeMatch[1];
+  }
+  // If it's already an embed URL
+  if (clean.includes('output=embed') || clean.includes('/maps/embed')) {
+    return clean;
+  }
+  // If it's a Google Maps Place URL containing coordinates 3d... and 4d...
+  const coordMatch = clean.match(/!3d(-?[0-9.]+)!4d(-?[0-9.]+)/);
+  if (coordMatch) {
+    return `https://maps.google.com/maps?q=${coordMatch[1]},${coordMatch[2]}(Grand+Addis+Hotel)&z=17&output=embed`;
+  }
+  // If coordinates are in q=lat,lng
+  const qCoordMatch = clean.match(/[?&]q=(-?[0-9.]+),(-?[0-9.]+)/);
+  if (qCoordMatch) {
+    return `https://maps.google.com/maps?q=${qCoordMatch[1]},${qCoordMatch[2]}(Grand+Addis+Hotel)&z=17&output=embed`;
+  }
+  // If it's just any general google maps place url, default to Grand Addis coordinates
+  if (clean.includes('google.com/maps')) {
+    return defaultEmbed;
+  }
+  return clean;
+}
+
 export async function getDbTestimonials() {
   const cached = getCached<any[]>('db_testimonials');
   if (cached) return cached;
@@ -1503,6 +1923,16 @@ export const DEFAULT_PAGE_CONTENT: Record<string, string> = {
   page_terms_sec5: 'Your credit card details entered during booking are securely processed through PCI DSS-compliant gateways and used strictly to guarantee your reservation. No unauthorized charges are applied prior to your check-in, except where specified under special non-refundable packages or in cases of unnotified no-show. We accept Mastercard, Visa, and domestic Ethiopian payment methods.',
   page_terms_sec6_title: '6. Contact & Inquiries',
   page_terms_sec6: 'For any questions concerning your stay, payment verification, or these policies, please contact our 24/7 guest relations department at our phone or email.',
+
+  // FAQs Page
+  page_faqs_hero_tag: 'FREQUENTLY ASKED QUESTIONS',
+  page_faqs_hero_title: 'Everything You Need To Know',
+  page_faqs_hero_subtitle: 'Answers to commonly asked questions about booking, check-in, amenities, dining, and your stay at Grand Addis Hotel.',
+  page_faqs_hero_image: '/images/BO5A5779-scaled.jpg',
+
+  // Map Embeds
+  page_home_map_embed: 'https://maps.google.com/maps?q=9.0138943,38.7911099(Grand+Addis+Hotel)&z=17&output=embed',
+  page_contact_map_embed: 'https://maps.google.com/maps?q=9.0138943,38.7911099(Grand+Addis+Hotel)&z=17&output=embed',
 
   // Footer & Branding
   page_footer_tag: 'EXPERIENCE LUXURY IN ETHIOPIA',

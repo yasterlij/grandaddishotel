@@ -101,6 +101,8 @@ async function runHttpTests() {
     { method: 'GET', path: '/api/admin/gallery' },
     { method: 'GET', path: '/api/admin/content' },
     { method: 'GET', path: '/api/admin/experiences' },
+    { method: 'GET', path: '/api/admin/faqs' },
+    { method: 'GET', path: '/api/admin/promotions' },
   ];
 
   for (const ep of adminEndpoints) {

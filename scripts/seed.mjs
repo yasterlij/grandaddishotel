@@ -275,6 +275,74 @@ const SEED_TESTIMONIALS = [
   { id: 't3', name: 'Dawit Bekele', location: 'Addis Ababa / Diaspora', rating: 5, date: 'September 2026', title: 'Proud of This Level of Hospitality', comment: 'World-class comfort right in the vibrant heart of 22. Highly recommended for international travelers and local staycations alike.', room_type: 'Grand Presidential Suite', status: 'APPROVED' },
 ];
 
+const MYSQL_COLUMN_MIGRATIONS = [
+  // room_types
+  "ALTER TABLE \`room_types\` ADD COLUMN \`size\` VARCHAR(50) DEFAULT '32 m²'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`bedType\` VARCHAR(100) DEFAULT 'King Bed'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`view\` VARCHAR(100) DEFAULT 'City View'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`category\` VARCHAR(100) DEFAULT 'Hotel Rooms'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`featured\` TINYINT(1) DEFAULT 1",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`aliases\` JSON DEFAULT NULL",
+
+  // reservations
+  "ALTER TABLE \`reservations\` ADD COLUMN \`adultsCount\` INT NOT NULL DEFAULT 1",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`childrenCount\` INT NOT NULL DEFAULT 0",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`expiresAt\` DATETIME(3) DEFAULT NULL",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`subtotal\` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`taxAmount\` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`totalAmount\` DECIMAL(10,2) NOT NULL DEFAULT 0.00",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`roomId\` VARCHAR(191) DEFAULT NULL",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`isDateExtended\` TINYINT(1) DEFAULT 0",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`dateChangeNote\` TEXT DEFAULT NULL",
+
+  // payments
+  "ALTER TABLE \`payments\` ADD COLUMN \`reservationId\` VARCHAR(191) DEFAULT NULL",
+  "ALTER TABLE \`payments\` ADD COLUMN \`paidAt\` DATETIME(3) DEFAULT NULL",
+  "ALTER TABLE \`payments\` ADD COLUMN \`rawPayload\` JSON DEFAULT NULL",
+
+  // promotions
+  "ALTER TABLE \`promotions\` ADD COLUMN \`badge\` VARCHAR(100) NOT NULL DEFAULT 'Offer'",
+  "ALTER TABLE \`promotions\` ADD COLUMN \`discount\` VARCHAR(100) NOT NULL DEFAULT '10% Off'",
+  "ALTER TABLE \`promotions\` ADD COLUMN \`inclusions\` JSON DEFAULT NULL",
+  "ALTER TABLE \`promotions\` ADD COLUMN \`code\` VARCHAR(100) NOT NULL DEFAULT 'PROMO'",
+  "ALTER TABLE \`promotions\` MODIFY COLUMN \`valid_until\` VARCHAR(100) NOT NULL DEFAULT 'Ongoing'",
+
+  // dining_menu
+  "ALTER TABLE \`dining_menu\` ADD COLUMN \`price\` DECIMAL(10,2) NOT NULL DEFAULT 25.00",
+  "ALTER TABLE \`dining_menu\` ADD COLUMN \`tag\` VARCHAR(50) DEFAULT NULL",
+
+  // spa_treatments
+  "ALTER TABLE \`spa_treatments\` ADD COLUMN \`price\` DECIMAL(10,2) NOT NULL DEFAULT 50.00",
+
+  // table_reservations
+  "ALTER TABLE \`table_reservations\` ADD COLUMN \`party_size\` INT NOT NULL DEFAULT 2",
+  "ALTER TABLE \`table_reservations\` ADD COLUMN \`guest_name\` VARCHAR(255) DEFAULT NULL",
+  "ALTER TABLE \`table_reservations\` ADD COLUMN \`guest_phone\` VARCHAR(100) DEFAULT NULL",
+  "ALTER TABLE \`table_reservations\` ADD COLUMN \`guest_email\` VARCHAR(191) DEFAULT NULL",
+  "ALTER TABLE \`table_reservations\` ADD COLUMN \`notes\` TEXT DEFAULT NULL",
+
+  // spa_appointments
+  "ALTER TABLE \`spa_appointments\` ADD COLUMN \`service_id\` VARCHAR(191) DEFAULT NULL",
+  "ALTER TABLE \`spa_appointments\` ADD COLUMN \`service_name\` VARCHAR(255) DEFAULT 'Spa Treatment'",
+  "ALTER TABLE \`spa_appointments\` ADD COLUMN \`client_name\` VARCHAR(255) DEFAULT NULL",
+  "ALTER TABLE \`spa_appointments\` ADD COLUMN \`client_phone\` VARCHAR(100) DEFAULT NULL",
+  "ALTER TABLE \`spa_appointments\` ADD COLUMN \`client_email\` VARCHAR(191) DEFAULT NULL",
+
+  // event_inquiries
+  "ALTER TABLE \`event_inquiries\` ADD COLUMN \`target_date\` DATE DEFAULT NULL",
+  "ALTER TABLE \`event_inquiries\` ADD COLUMN \`guests_count\` VARCHAR(50) NOT NULL DEFAULT '50'",
+  "ALTER TABLE \`event_inquiries\` ADD COLUMN \`details\` TEXT DEFAULT NULL",
+
+  // experiences
+  "ALTER TABLE \`experiences\` ADD COLUMN \`subtitle\` VARCHAR(255) DEFAULT NULL",
+
+  // gallery_images
+  "ALTER TABLE \`gallery_images\` ADD COLUMN \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+
+  // hotel_settings
+  "ALTER TABLE \`hotel_settings\` MODIFY COLUMN \`value\` LONGTEXT NOT NULL",
+];
+
 async function seed() {
   console.log('\n============================================================');
   console.log('GRAND ADDIS HOTEL - IDEMPOTENT DATABASE SEED');
@@ -295,6 +363,15 @@ async function seed() {
     try {
       conn = await mysql.createConnection(connConfig);
       console.log('✓ Connected to MySQL database.\n');
+
+      // Ensure all schema columns exist before seeding
+      for (const migration of MYSQL_COLUMN_MIGRATIONS) {
+        try {
+          await conn.query(migration);
+        } catch {
+          // Column already exists or already modified
+        }
+      }
 
       // 1. Hotel Settings
       await conn.query(`

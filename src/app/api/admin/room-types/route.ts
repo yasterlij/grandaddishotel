@@ -164,7 +164,7 @@ export async function PUT(req: NextRequest) {
           maxCapacity !== undefined ? Number(maxCapacity) : null,
           amenities,
           images,
-          featured,
+          featured !== undefined ? (featured ? 1 : 0) : null,
           aliases,
           id,
         ]

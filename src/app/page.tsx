@@ -150,7 +150,7 @@ export default function HomePage() {
           <h1
             style={{
               fontFamily: 'var(--font-serif)',
-              fontSize: 'clamp(38px, 6vw, 68px)',
+              fontSize: 'clamp(38px, 6vw, 48px)',
               fontWeight: 500,
               lineHeight: 1.15,
               marginBottom: '24px',

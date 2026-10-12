@@ -28,21 +28,24 @@ function runScript(scriptName) {
 
 async function setup() {
   console.log('============================================================');
-  console.log('GRAND ADDIS HOTEL - ONE-STEP DATABASE INITIALIZATION');
+  console.log('GRAND ADDIS HOTEL - ONE-STEP DATABASE INITIALIZATION & SYNC');
   console.log('============================================================');
 
   try {
-    // 1. Run safe schema migration
-    await runScript('migrate-mysql.mjs');
+    // 1. Ensure Prisma client contracts are up to date
+    await runScript('generate.mjs');
 
-    // 2. Seed initial inventory & hotel data
-    await runScript('seed-mysql.mjs');
+    // 2. Run safe, non-destructive schema migration
+    await runScript('migrate.mjs');
 
-    // 3. Output database status
+    // 3. Seed initial inventory & hotel data (safe, preserves bookings)
+    await runScript('seed.mjs');
+
+    // 4. Output database health and row status
     await runScript('db-status.mjs');
 
     console.log('============================================================');
-    console.log('✓ Database setup completed successfully!');
+    console.log('✓ Database setup & contracts completed successfully!');
     console.log('============================================================\n');
   } catch (err) {
     console.error('\n✗ Setup encountered an error:', err.message);

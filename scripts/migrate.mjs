@@ -1,0 +1,590 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import mysql from 'mysql2/promise';
+import { Pool } from 'pg';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..');
+
+// Load environment in priority order
+for (const envFile of ['.env.production', '.env.local', '.env']) {
+  const envPath = path.join(rootDir, envFile);
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+  }
+}
+
+const connectionString =
+  process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
+
+const isMysql = Boolean(
+  process.env.DB_HOST ||
+  process.env.DB_USER ||
+  process.env.DB_USERNAME ||
+  process.env.MYSQL_USER ||
+  process.env.MYSQL_URL ||
+  process.env.MYSQL_DATABASE_URL ||
+  connectionString.startsWith('mysql://') ||
+  connectionString.startsWith('mysql:')
+);
+
+function parseMysqlUrl(rawUrl) {
+  const match = rawUrl?.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/([^?]+)(?:\?.*)?$/i);
+  if (match) {
+    return {
+      user: match[1] ? decodeURIComponent(match[1]) : undefined,
+      password: match[2] ? decodeURIComponent(match[2]) : undefined,
+      host: match[3],
+      port: match[4] ? parseInt(match[4], 10) : undefined,
+      database: match[5],
+    };
+  }
+  return {};
+}
+
+function getMysqlConnectionConfig() {
+  const dbUser = process.env.DB_USER || process.env.DB_USERNAME || process.env.MYSQL_USER || process.env.MYSQL_USERNAME;
+  const dbPassword = process.env.DB_PASSWORD || process.env.DB_PASS || process.env.MYSQL_PASSWORD || process.env.MYSQL_PASS;
+  const dbHost = process.env.DB_HOST || process.env.MYSQL_HOST;
+  const dbPort = parseInt(process.env.DB_PORT || process.env.MYSQL_PORT || '3306', 10);
+  const dbName = process.env.DB_NAME || process.env.DB_DATABASE || process.env.MYSQL_DATABASE || process.env.MYSQL_DB;
+  const rawUrl = process.env.MYSQL_URL || process.env.MYSQL_DATABASE_URL || (connectionString.startsWith('mysql') ? connectionString : null);
+  const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
+
+  const finalHost = dbHost || parsedFromUrl.host;
+  const finalUser = dbUser || parsedFromUrl.user;
+  const finalDatabase = dbName || parsedFromUrl.database;
+  const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
+
+  if (!finalHost || !finalUser || finalPassword === undefined || !finalDatabase) {
+    throw new Error('MySQL credentials incomplete. Set DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, and DB_NAME, or MYSQL_URL / DATABASE_URL.');
+  }
+
+  return {
+    host: finalHost,
+    port: dbPort || 3306,
+    user: finalUser,
+    password: finalPassword,
+    database: finalDatabase,
+    multipleStatements: true,
+  };
+}
+
+const MYSQL_TABLES = [
+  {
+    name: 'hotel_settings',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`hotel_settings\` (
+        \`key\` VARCHAR(191) PRIMARY KEY,
+        \`value\` LONGTEXT NOT NULL,
+        \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'room_types',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`room_types\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`slug\` VARCHAR(191) NOT NULL UNIQUE,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`description\` TEXT NOT NULL,
+        \`baseCapacity\` INT NOT NULL DEFAULT 2,
+        \`maxCapacity\` INT NOT NULL DEFAULT 3,
+        \`amenities\` JSON DEFAULT NULL,
+        \`images\` JSON DEFAULT NULL,
+        \`basePriceETB\` DECIMAL(10,2) NOT NULL DEFAULT 5800.00,
+        \`basePriceUSD\` DECIMAL(10,2) NOT NULL DEFAULT 50.00,
+        \`size\` VARCHAR(50) DEFAULT '32 m²',
+        \`bedType\` VARCHAR(100) DEFAULT 'King Bed',
+        \`view\` VARCHAR(100) DEFAULT 'City View',
+        \`category\` VARCHAR(100) DEFAULT 'Hotel Rooms',
+        \`featured\` TINYINT(1) DEFAULT 1,
+        \`aliases\` JSON DEFAULT NULL,
+        \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'rooms',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`rooms\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`roomNumber\` VARCHAR(50) NOT NULL UNIQUE,
+        \`floor\` INT NOT NULL DEFAULT 1,
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'AVAILABLE',
+        \`roomTypeId\` VARCHAR(191) NOT NULL,
+        \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'guests',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`guests\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`firstName\` VARCHAR(100) NOT NULL,
+        \`lastName\` VARCHAR(100) NOT NULL,
+        \`email\` VARCHAR(191) NOT NULL UNIQUE,
+        \`phoneNumber\` VARCHAR(100) NOT NULL,
+        \`nationalIdOrPass\` VARCHAR(100) DEFAULT NULL,
+        \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'reservations',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`reservations\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`bookingRef\` VARCHAR(100) NOT NULL UNIQUE,
+        \`checkInDate\` DATE NOT NULL,
+        \`checkOutDate\` DATE NOT NULL,
+        \`adultsCount\` INT NOT NULL DEFAULT 1,
+        \`childrenCount\` INT NOT NULL DEFAULT 0,
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'CONFIRMED',
+        \`expiresAt\` DATETIME(3) DEFAULT NULL,
+        \`currency\` VARCHAR(10) NOT NULL DEFAULT 'USD',
+        \`subtotal\` DECIMAL(10,2) NOT NULL,
+        \`taxAmount\` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        \`totalAmount\` DECIMAL(10,2) NOT NULL,
+        \`specialRequests\` TEXT DEFAULT NULL,
+        \`guestId\` VARCHAR(191) NOT NULL,
+        \`roomTypeId\` VARCHAR(191) NOT NULL,
+        \`roomId\` VARCHAR(191) DEFAULT NULL,
+        \`isDateExtended\` TINYINT(1) DEFAULT 0,
+        \`dateChangeNote\` TEXT DEFAULT NULL,
+        \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'payments',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`payments\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`amount\` DECIMAL(10,2) NOT NULL,
+        \`currency\` VARCHAR(10) NOT NULL DEFAULT 'USD',
+        \`provider\` VARCHAR(50) NOT NULL DEFAULT 'CASH_ON_ARRIVAL',
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'SUCCESS',
+        \`txRef\` VARCHAR(191) NOT NULL UNIQUE,
+        \`gatewayRef\` VARCHAR(191) DEFAULT NULL,
+        \`rawPayload\` JSON DEFAULT NULL,
+        \`reservationId\` VARCHAR(191) NOT NULL,
+        \`paidAt\` DATETIME(3) DEFAULT NULL,
+        \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'table_reservations',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`table_reservations\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`date\` DATE NOT NULL,
+        \`time\` VARCHAR(50) NOT NULL,
+        \`party_size\` INT NOT NULL,
+        \`guest_name\` VARCHAR(255) NOT NULL,
+        \`guest_phone\` VARCHAR(100) NOT NULL,
+        \`guest_email\` VARCHAR(191) NOT NULL,
+        \`notes\` TEXT DEFAULT NULL,
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'CONFIRMED',
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'spa_appointments',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`spa_appointments\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`service_id\` VARCHAR(191) NOT NULL,
+        \`service_name\` VARCHAR(255) NOT NULL,
+        \`date\` DATE NOT NULL,
+        \`time\` VARCHAR(50) NOT NULL,
+        \`client_name\` VARCHAR(255) NOT NULL,
+        \`client_phone\` VARCHAR(100) NOT NULL,
+        \`client_email\` VARCHAR(191) NOT NULL,
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'CONFIRMED',
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'contact_messages',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`contact_messages\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`email\` VARCHAR(191) NOT NULL,
+        \`phone\` VARCHAR(100) DEFAULT NULL,
+        \`subject\` VARCHAR(255) NOT NULL,
+        \`message\` TEXT NOT NULL,
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'NEW',
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'event_inquiries',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`event_inquiries\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`event_type\` VARCHAR(100) NOT NULL,
+        \`target_date\` DATE NOT NULL,
+        \`guests_count\` VARCHAR(50) NOT NULL,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`email\` VARCHAR(191) NOT NULL,
+        \`phone\` VARCHAR(100) NOT NULL,
+        \`details\` TEXT DEFAULT NULL,
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'NEW',
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'testimonials',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`testimonials\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`location\` VARCHAR(100) NOT NULL,
+        \`rating\` INT NOT NULL DEFAULT 5,
+        \`date\` VARCHAR(50) NOT NULL,
+        \`title\` VARCHAR(255) NOT NULL,
+        \`comment\` TEXT NOT NULL,
+        \`room_type\` VARCHAR(100) NOT NULL,
+        \`status\` VARCHAR(50) NOT NULL DEFAULT 'APPROVED',
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'dining_menu',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`dining_menu\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`category\` VARCHAR(100) NOT NULL,
+        \`price\` DECIMAL(10,2) NOT NULL,
+        \`description\` TEXT NOT NULL,
+        \`tag\` VARCHAR(50) DEFAULT NULL,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'spa_treatments',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`spa_treatments\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`category\` VARCHAR(100) NOT NULL,
+        \`duration\` VARCHAR(50) NOT NULL,
+        \`price\` DECIMAL(10,2) NOT NULL,
+        \`description\` TEXT NOT NULL,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'experiences',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`experiences\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`title\` VARCHAR(255) NOT NULL,
+        \`subtitle\` VARCHAR(255) NOT NULL,
+        \`category\` VARCHAR(100) NOT NULL,
+        \`duration\` VARCHAR(50) NOT NULL,
+        \`image\` TEXT NOT NULL,
+        \`description\` TEXT NOT NULL,
+        \`highlights\` JSON DEFAULT NULL,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'promotions',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`promotions\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`title\` VARCHAR(255) NOT NULL,
+        \`badge\` VARCHAR(100) NOT NULL,
+        \`discount\` VARCHAR(100) NOT NULL,
+        \`description\` TEXT NOT NULL,
+        \`inclusions\` JSON DEFAULT NULL,
+        \`code\` VARCHAR(100) NOT NULL,
+        \`valid_until\` VARCHAR(100) NOT NULL,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'faqs',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`faqs\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`question\` TEXT NOT NULL,
+        \`answer\` TEXT NOT NULL,
+        \`category\` VARCHAR(100) NOT NULL,
+        \`sort_order\` INT DEFAULT 0,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+  {
+    name: 'gallery_images',
+    sql: `
+      CREATE TABLE IF NOT EXISTS \`gallery_images\` (
+        \`id\` VARCHAR(191) PRIMARY KEY,
+        \`src\` TEXT NOT NULL,
+        \`title\` VARCHAR(255) NOT NULL,
+        \`category\` VARCHAR(100) NOT NULL DEFAULT 'hotel',
+        \`sort_order\` INT NOT NULL DEFAULT 0,
+        \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `,
+  },
+];
+
+const MYSQL_COLUMN_MIGRATIONS = [
+  "ALTER TABLE \`room_types\` ADD COLUMN \`size\` VARCHAR(50) DEFAULT '32 m²'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`bedType\` VARCHAR(100) DEFAULT 'King Bed'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`view\` VARCHAR(100) DEFAULT 'City View'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`category\` VARCHAR(100) DEFAULT 'Hotel Rooms'",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`featured\` TINYINT(1) DEFAULT 1",
+  "ALTER TABLE \`room_types\` ADD COLUMN \`aliases\` JSON DEFAULT NULL",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`isDateExtended\` TINYINT(1) DEFAULT 0",
+  "ALTER TABLE \`reservations\` ADD COLUMN \`dateChangeNote\` TEXT DEFAULT NULL",
+  "ALTER TABLE \`payments\` ADD COLUMN \`rawPayload\` JSON DEFAULT NULL",
+  "ALTER TABLE \`gallery_images\` ADD COLUMN \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)",
+  "ALTER TABLE \`hotel_settings\` MODIFY COLUMN \`value\` LONGTEXT NOT NULL",
+];
+
+async function migrate() {
+  console.log('\n============================================================');
+  console.log('GRAND ADDIS HOTEL - UNIVERSAL SCHEMA MIGRATION');
+  console.log(`Detected Engine: ${isMysql ? 'MySQL / MariaDB' : 'PostgreSQL'}`);
+  console.log('============================================================\n');
+
+  if (isMysql) {
+    let connConfig;
+    try {
+      connConfig = getMysqlConnectionConfig();
+    } catch (err) {
+      console.warn('⚠️ Warning: MySQL config not found. Skipping MySQL migration:', err.message);
+      return;
+    }
+
+    console.log(`Target: ${connConfig.user}@${connConfig.host}:${connConfig.port}/${connConfig.database}`);
+    let connection;
+    try {
+      connection = await mysql.createConnection(connConfig);
+      console.log('✓ Connected to MySQL database.\n');
+
+      for (const table of MYSQL_TABLES) {
+        process.stdout.write(`Migrating table \`${table.name}\`... `);
+        await connection.query(table.sql);
+        console.log('✓ OK');
+      }
+
+      console.log('\nApplying non-blocking column upgrades on existing tables...');
+      for (const migration of MYSQL_COLUMN_MIGRATIONS) {
+        try {
+          await connection.query(migration);
+        } catch {
+          // Column already exists or already modified, safely ignore
+        }
+      }
+      console.log('✓ Column upgrades applied cleanly.');
+
+      console.log('\n✓ MySQL database tables and columns are fully up-to-date!\n');
+    } catch (err) {
+      console.error('\n✗ MySQL migration error:', err.message || err);
+      process.exit(1);
+    } finally {
+      if (connection) await connection.end();
+    }
+  } else {
+    // PostgreSQL Migration
+    console.log(`Target: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
+    const pool = new Pool({ connectionString });
+    try {
+      const client = await pool.connect();
+      console.log('✓ Connected to PostgreSQL database.\n');
+
+      await client.query(`
+        ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "size" TEXT DEFAULT '32 m²';
+        ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "bedType" TEXT DEFAULT 'King Bed';
+        ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "view" TEXT DEFAULT 'City View';
+        ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "category" TEXT DEFAULT 'Hotel Rooms';
+        ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "featured" BOOLEAN DEFAULT true;
+        ALTER TABLE room_types ADD COLUMN IF NOT EXISTS "aliases" TEXT[] DEFAULT '{}';
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS "isDateExtended" BOOLEAN DEFAULT false;
+        ALTER TABLE reservations ADD COLUMN IF NOT EXISTS "dateChangeNote" TEXT;
+
+        CREATE TABLE IF NOT EXISTS table_reservations (
+          id TEXT PRIMARY KEY,
+          date DATE NOT NULL,
+          time TEXT NOT NULL,
+          party_size INTEGER NOT NULL,
+          guest_name TEXT NOT NULL,
+          guest_phone TEXT NOT NULL,
+          guest_email TEXT NOT NULL,
+          notes TEXT,
+          status TEXT NOT NULL DEFAULT 'CONFIRMED',
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS spa_appointments (
+          id TEXT PRIMARY KEY,
+          service_id TEXT NOT NULL,
+          service_name TEXT NOT NULL,
+          date DATE NOT NULL,
+          time TEXT NOT NULL,
+          client_name TEXT NOT NULL,
+          client_phone TEXT NOT NULL,
+          client_email TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'CONFIRMED',
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS contact_messages (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          phone TEXT,
+          subject TEXT NOT NULL,
+          message TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'NEW',
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS event_inquiries (
+          id TEXT PRIMARY KEY,
+          event_type TEXT NOT NULL,
+          target_date DATE NOT NULL,
+          guests_count TEXT NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          details TEXT,
+          status TEXT NOT NULL DEFAULT 'NEW',
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS testimonials (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          location TEXT NOT NULL,
+          rating INTEGER NOT NULL DEFAULT 5,
+          date TEXT NOT NULL,
+          title TEXT NOT NULL,
+          comment TEXT NOT NULL,
+          room_type TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'APPROVED',
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS dining_menu (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          price NUMERIC(10,2) NOT NULL,
+          description TEXT NOT NULL,
+          tag TEXT,
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS spa_treatments (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          duration TEXT NOT NULL,
+          price NUMERIC(10,2) NOT NULL,
+          description TEXT NOT NULL,
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS experiences (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          subtitle TEXT NOT NULL,
+          category TEXT NOT NULL,
+          duration TEXT NOT NULL,
+          image TEXT NOT NULL,
+          description TEXT NOT NULL,
+          highlights TEXT[] NOT NULL,
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS promotions (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          badge TEXT NOT NULL,
+          discount TEXT NOT NULL,
+          description TEXT NOT NULL,
+          inclusions TEXT[] NOT NULL,
+          code TEXT NOT NULL,
+          valid_until TEXT NOT NULL,
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS faqs (
+          id TEXT PRIMARY KEY,
+          question TEXT NOT NULL,
+          answer TEXT NOT NULL,
+          category TEXT NOT NULL,
+          sort_order INTEGER DEFAULT 0,
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS hotel_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO hotel_settings (key, value)
+        VALUES ('usd_to_etb_rate', '189')
+        ON CONFLICT (key) DO NOTHING;
+
+        CREATE TABLE IF NOT EXISTS gallery_images (
+          id TEXT PRIMARY KEY,
+          src TEXT NOT NULL,
+          title TEXT NOT NULL,
+          category TEXT NOT NULL DEFAULT 'hotel',
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP(3) WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_room_types_slug ON room_types (slug);
+        CREATE INDEX IF NOT EXISTS idx_testimonials_status ON testimonials (status, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_faqs_order ON faqs (sort_order ASC, id ASC);
+        CREATE INDEX IF NOT EXISTS idx_table_res_date ON table_reservations (date);
+        CREATE INDEX IF NOT EXISTS idx_spa_app_date ON spa_appointments (date);
+        CREATE INDEX IF NOT EXISTS idx_dining_menu_cat ON dining_menu (category);
+        CREATE INDEX IF NOT EXISTS idx_gallery_images_sort ON gallery_images (sort_order ASC, created_at ASC);
+      `);
+
+      client.release();
+      console.log('✓ PostgreSQL tables, indices, and schema verified successfully!\n');
+    } catch (err) {
+      console.error('\n✗ PostgreSQL migration error:', err.message || err);
+      process.exit(1);
+    } finally {
+      await pool.end();
+    }
+  }
+}
+
+migrate();

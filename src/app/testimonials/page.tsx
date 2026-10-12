@@ -7,6 +7,7 @@ import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function TestimonialsPage() {
   const [reviews, setReviews] = useState(TESTIMONIALS);
+  const [content, setContent] = useState<Record<string, string>>({});
   const [formName, setFormName] = useState('');
   const [formLocation, setFormLocation] = useState('');
   const [formTitle, setFormTitle] = useState('');
@@ -18,14 +19,23 @@ export default function TestimonialsPage() {
   const { isSubmitting, error, submit } = useFormSubmit();
 
   useEffect(() => {
-    fetch('/api/testimonials')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.testimonials?.length > 0) {
-          setReviews(data.testimonials);
+    async function loadData() {
+      try {
+        const [testRes, contentRes] = await Promise.all([
+          fetch('/api/testimonials').then((res) => res.json()).catch(() => null),
+          fetch('/api/content').then((res) => res.json()).catch(() => null),
+        ]);
+        if (testRes?.success && testRes.testimonials?.length > 0) {
+          setReviews(testRes.testimonials);
         }
-      })
-      .catch((err) => console.error('Error fetching testimonials:', err));
+        if (contentRes?.success && contentRes.content) {
+          setContent(contentRes.content);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      }
+    }
+    loadData();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +66,8 @@ export default function TestimonialsPage() {
     );
   };
 
+  const bannerImg = content.page_testimonials_hero_image || '/images/BO5A5826-scaled.jpg';
+
   return (
     <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Banner */}
@@ -65,20 +77,20 @@ export default function TestimonialsPage() {
           color: '#FFFFFF',
           padding: '80px 0 60px',
           textAlign: 'center',
-          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('/images/BO5A5826-scaled.jpg')`,
+          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('${bannerImg}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
         <div className="container">
           <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '3px', color: '#E49951', fontWeight: 600, display: 'block', marginBottom: '12px' }}>
-            VERIFIED GUEST FEEDBACK
+            {content.page_testimonials_hero_tag || 'VERIFIED GUEST FEEDBACK'}
           </span>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(36px, 5vw, 54px)', fontWeight: 500, marginBottom: '16px' }}>
-            What Customers Have To Say
+            {content.page_testimonials_hero_title || 'What Customers Have To Say'}
           </h1>
           <p style={{ fontSize: '16px', color: '#A2B5BD', maxWidth: '640px', margin: '0 auto', lineHeight: '1.7' }}>
-            99% of guests recommend Grand Addis Hotel. Discover real impressions and stories from our international travelers.
+            {content.page_testimonials_hero_subtitle || '99% of guests recommend Grand Addis Hotel. Discover real impressions and stories from our international travelers.'}
           </p>
         </div>
       </section>

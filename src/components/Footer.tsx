@@ -10,7 +10,17 @@ import { useFormSubmit } from '@/hooks/useFormSubmit';
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [content, setContent] = useState<Record<string, string>>({});
   const { isSubmitting, error, submit } = useFormSubmit();
+
+  React.useEffect(() => {
+    fetch('/api/content')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.content) setContent(data.content);
+      })
+      .catch((e) => console.error('Failed to load footer content:', e));
+  }, []);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +36,13 @@ export default function Footer() {
       setEmail('');
     }
   };
+
+  const phone = content.page_contact_phone || content.hotel_phone || HOTEL_INFO.phone;
+  const emailAddr = content.page_contact_email || content.hotel_email || HOTEL_INFO.email;
+  const address = content.page_contact_address || content.hotel_address || HOTEL_INFO.address;
+  const igLink = content.hotel_social_instagram || HOTEL_INFO.socials.instagram;
+  const fbLink = content.hotel_social_facebook || HOTEL_INFO.socials.facebook;
+  const tgLink = content.hotel_social_telegram || HOTEL_INFO.socials.telegram;
 
   return (
     <footer
@@ -65,7 +82,7 @@ export default function Footer() {
               marginBottom: '10px',
             }}
           >
-            EXPERIENCE LUXURY IN ETHIOPIA
+            {content.page_footer_tag || 'EXPERIENCE LUXURY IN ETHIOPIA'}
           </span>
           <h2
             style={{
@@ -77,7 +94,7 @@ export default function Footer() {
               lineHeight: '1.25',
             }}
           >
-            {HOTEL_INFO.headline}
+            {content.page_footer_headline || HOTEL_INFO.headline}
           </h2>
           <p
             style={{
@@ -88,7 +105,7 @@ export default function Footer() {
               lineHeight: '1.6',
             }}
           >
-            A place of heart, your home away in Addis Ababa. Where refined comfort meets authentic Ethiopian hospitality.
+            {content.page_footer_desc || 'A place of heart, your home away in Addis Ababa. Where refined comfort meets authentic Ethiopian hospitality.'}
           </p>
 
           <form
@@ -212,12 +229,12 @@ export default function Footer() {
             </div>
 
             <p style={{ fontSize: '14px', color: '#A2B5BD', lineHeight: '1.7', marginBottom: '20px' }}>
-              Distinctly designed rooms, timeless ambiance, and warm boutique service in the heart of Addis Ababa.
+              {content.hotel_tagline || 'Distinctly designed rooms, timeless ambiance, and warm boutique service in the heart of Addis Ababa.'}
             </p>
 
             <div style={{ display: 'flex', gap: '12px' }}>
               <a
-                href={HOTEL_INFO.socials.instagram}
+                href={igLink}
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -235,7 +252,7 @@ export default function Footer() {
                 <span style={{ fontSize: '13px', fontWeight: 600 }}>IG</span>
               </a>
               <a
-                href={HOTEL_INFO.socials.facebook}
+                href={fbLink}
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -253,7 +270,7 @@ export default function Footer() {
                 <span style={{ fontSize: '13px', fontWeight: 600 }}>FB</span>
               </a>
               <a
-                href={HOTEL_INFO.socials.telegram}
+                href={tgLink}
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -381,20 +398,20 @@ export default function Footer() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '14px', color: '#A2B5BD' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <MapPin size={18} color="#E49951" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <span>{HOTEL_INFO.address}</span>
+                <span>{address}</span>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <Phone size={18} color="#E49951" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <a href={`tel:${HOTEL_INFO.phone}`} style={{ color: 'inherit', display: 'block' }}>
-                    {HOTEL_INFO.phone}
+                  <a href={`tel:${phone}`} style={{ color: 'inherit', display: 'block' }}>
+                    {phone}
                   </a>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <Mail size={18} color="#E49951" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <a href={`mailto:${HOTEL_INFO.email}`} style={{ color: 'inherit' }}>
-                  {HOTEL_INFO.email}
+                <a href={`mailto:${emailAddr}`} style={{ color: 'inherit' }}>
+                  {emailAddr}
                 </a>
               </div>
             </div>

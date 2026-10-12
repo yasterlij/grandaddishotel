@@ -89,10 +89,14 @@ export default function ContactPage() {
           >
             {/* Contact Details Column */}
             <div>
-              <span className="section-subtitle">24/7 GUEST SUPPORT</span>
-              <h2 className="section-title">We’re Here For You</h2>
+              <span className="section-subtitle">
+                {content.page_contact_intro_subtitle || '24/7 GUEST SUPPORT'}
+              </span>
+              <h2 className="section-title">
+                {content.page_contact_intro_title || 'We’re Here For You'}
+              </h2>
               <p style={{ fontSize: '15px', lineHeight: '1.8', color: '#5E6E75', marginBottom: '32px' }}>
-                Whether you need assistance with room reservations, airport shuttle transfers, local city guides, or bespoke concierge requests, our team is always at your disposal.
+                {content.page_contact_intro_desc || 'Whether you need assistance with room reservations, airport shuttle transfers, local city guides, or bespoke concierge requests, our team is always at your disposal.'}
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '40px' }}>
@@ -102,9 +106,11 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <strong style={{ display: 'block', fontSize: '16px', color: '#153D4B' }}>Hotel Address</strong>
-                    <p style={{ fontSize: '14px', color: '#5E6E75', marginTop: '2px' }}>{HOTEL_INFO.address}</p>
+                    <p style={{ fontSize: '14px', color: '#5E6E75', marginTop: '2px' }}>
+                      {content.page_contact_address || HOTEL_INFO.address}
+                    </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#E49951', marginTop: '4px' }}>
-                      <Plane size={14} /> 5.2 km from Bole International Airport (~10 mins)
+                      <Plane size={14} /> {content.page_contact_airport || '5.2 km from Bole International Airport (~10 mins)'}
                     </div>
                   </div>
                 </div>
@@ -115,9 +121,14 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <strong style={{ display: 'block', fontSize: '16px', color: '#153D4B' }}>Telephone & Reservations</strong>
-                    <a href={`tel:${HOTEL_INFO.phone}`} style={{ fontSize: '15px', color: '#5E6E75', display: 'block', marginTop: '2px' }}>
-                      {HOTEL_INFO.phone}
+                    <a href={`tel:${content.page_contact_phone || HOTEL_INFO.phone}`} style={{ fontSize: '15px', color: '#5E6E75', display: 'block', marginTop: '2px' }}>
+                      {content.page_contact_phone || HOTEL_INFO.phone}
                     </a>
+                    {content.page_contact_phone_alt && (
+                      <a href={`tel:${content.page_contact_phone_alt}`} style={{ fontSize: '13px', color: '#83969E', display: 'block', marginTop: '2px' }}>
+                        Alt: {content.page_contact_phone_alt}
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -127,9 +138,14 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <strong style={{ display: 'block', fontSize: '16px', color: '#153D4B' }}>Electronic Mail</strong>
-                    <a href={`mailto:${HOTEL_INFO.email}`} style={{ fontSize: '14px', color: '#5E6E75', display: 'block', marginTop: '2px' }}>
-                      {HOTEL_INFO.email}
+                    <a href={`mailto:${content.page_contact_email || HOTEL_INFO.email}`} style={{ fontSize: '14px', color: '#5E6E75', display: 'block', marginTop: '2px' }}>
+                      {content.page_contact_email || HOTEL_INFO.email}
                     </a>
+                    {content.page_contact_email_alt && (
+                      <a href={`mailto:${content.page_contact_email_alt}`} style={{ fontSize: '13px', color: '#83969E', display: 'block', marginTop: '2px' }}>
+                        General: {content.page_contact_email_alt}
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -139,7 +155,9 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <strong style={{ display: 'block', fontSize: '16px', color: '#153D4B' }}>Front Desk Hours</strong>
-                    <p style={{ fontSize: '14px', color: '#5E6E75', marginTop: '2px' }}>Open 24 Hours • 7 Days a Week</p>
+                    <p style={{ fontSize: '14px', color: '#5E6E75', marginTop: '2px' }}>
+                      {content.page_contact_hours || 'Open 24 Hours • 7 Days a Week'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -393,10 +411,10 @@ export default function ContactPage() {
             </span>
           </div>
           <div style={{ fontSize: '12px', color: '#C2D1D9', lineHeight: '1.4' }}>
-            22 Around Golagul, behind Meklit Building, Addis Ababa, Ethiopia
+            {content.page_contact_address || '22 Around Golagul, behind Meklit Building, Addis Ababa, Ethiopia'}
           </div>
           <div style={{ fontSize: '11px', color: '#E49951', marginTop: '4px' }}>
-            Phone: {HOTEL_INFO.phone}
+            Phone: {content.page_contact_phone || HOTEL_INFO.phone}
           </div>
           <a
             href="https://www.google.com/maps/search/?api=1&query=Grand+Addis+Hotel+Addis+Ababa+Ethiopia"

@@ -1401,11 +1401,54 @@ export const DEFAULT_PAGE_CONTENT: Record<string, string> = {
   page_home_hero_subtitle: '',
   page_home_hero_image: '/images/BO5A5779-scaled.jpg',
   page_home_hero_badge: 'Resort & Luxury Hotel in 22 Addis Ababa',
+  page_home_hero_btn1_text: 'Book Your Stay',
+  page_home_hero_btn2_text: 'Explore Our Rooms',
+
   page_home_story_subtitle: 'THE GRAND ADDIS EXPERIENCE',
   page_home_story_title: 'A Sanctuary of Luxury & Warm Ethiopian Hospitality',
   page_home_story_p1: 'Located at 22 Around Golagul in Addis Ababa, Grand Addis Hotel stands as a landmark of distinction. Just 10 minutes from Bole International Airport, we offer an exquisite sanctuary for discerning business travelers, diplomats, and vacationers seeking refined comfort.',
   page_home_story_p2: 'From plush, acoustically shielded guest rooms to authentic Ethiopian coffee rituals, every detail is crafted to ensure your stay is extraordinary.',
-  page_home_story_image: '/images/BO5A5821-scaled.jpg',
+  page_home_story_image: '/images/BO5A5989-scaled.jpg',
+  page_home_story_feat1: '22 Around Golagul',
+  page_home_story_feat2: '10 Mins to Bole Airport',
+  page_home_story_feat3: 'High-Speed Fiber Wi-Fi',
+  page_home_story_feat4: '24/7 Room & Concierge',
+  page_home_story_badge_title: '99% of Guests',
+  page_home_story_badge_desc: 'Recommend Grand Addis Hotel for comfort, safety, and hospitality.',
+
+  page_home_pillars_subtitle: 'THE GRAND ADDIS EXPERIENCE',
+  page_home_pillars_title: 'Rebalance Yourself In A Timeless Space',
+  page_home_pillars_desc: 'Every touchpoint at Grand Addis Hotel is designed to nurture your senses, calm your mind, and provide an enriching stay.',
+  page_home_pillar1_tag: 'ACCOMMODATIONS',
+  page_home_pillar1_title: 'Relax & Unwind',
+  page_home_pillar1_desc: 'Serene guest rooms and suites furnished with orthopedic bedding, soundproof insulation, climate control, and rain showers.',
+  page_home_pillar2_tag: 'CULTURE & TRADITION',
+  page_home_pillar2_title: 'Authentic Experiences',
+  page_home_pillar2_desc: 'Immerse yourself in our daily Ethiopian Buna coffee ceremonies, cultural discoveries, and warm Addis Ababa hospitality.',
+  page_home_pillar3_tag: 'PRIME LOCATION',
+  page_home_pillar3_title: 'Heart of Addis',
+  page_home_pillar3_desc: 'Located at 22 Around Golagul, just 10 minutes from Bole International Airport with seamless access to diplomatic centers.',
+
+  page_home_rooms_subtitle: 'LUXURY ACCOMMODATIONS',
+  page_home_rooms_title: 'Our Featured Rooms & Suites',
+  page_home_rooms_desc: 'Immerse yourself in understated elegance. Best rates guaranteed when booking directly on our site.',
+
+  page_home_banner_image: '/images/BO5A5779-scaled.jpg',
+  page_home_banner_tag: 'BESPOKE HOSPITALITY',
+  page_home_banner_title: 'Authentic Ethiopian Hospitality',
+  page_home_banner_desc: 'Experience the genuine warmth and cultural heritage of Addis Ababa. From complimentary airport shuttle transfers to our daily traditional Buna ceremonies, we make your stay in Ethiopia unforgettable.',
+
+  page_home_gallery_subtitle: 'VISUAL TOUR',
+  page_home_gallery_title: 'GALLERY',
+  page_home_gallery_desc: 'Explore the ambiance, architecture, and spaces of Grand Addis Hotel.',
+
+  page_home_testimonials_subtitle: 'GUEST EXPERIENCES',
+  page_home_testimonials_title: 'What Customers Have To Say',
+  page_home_testimonials_desc: 'Real reviews from international and domestic guests who stayed at Grand Addis Hotel.',
+
+  page_home_location_subtitle: 'FIND US',
+  page_home_location_title: 'Location and Info',
+  page_home_location_desc: 'Centrally positioned in the vibrant commercial and cultural heart of Addis Ababa, Grand Addis Hotel offers premier convenience for travelers and delegates.',
 
   // About Page
   page_about_hero_tag: 'OUR STORY & HERITAGE',
@@ -1417,20 +1460,33 @@ export const DEFAULT_PAGE_CONTENT: Record<string, string> = {
   page_about_story_p1: 'At Grand Addis Hotel, we believe hospitality is more than comfortable rooms—it is about creating an authentic sense of belonging. Nestled in 22 Around Golagul, we provide a peaceful sanctuary amidst the vibrant pulse of Addis Ababa.',
   page_about_story_p2: 'Immerse yourself in understated elegance, top-notch concierge service, authentic Ethiopian coffee ceremonies, and supreme comfort in the heart of Addis Ababa.',
   page_about_story_image: '/images/BO5A5821-scaled.jpg',
+  page_about_timeline_subtitle: 'OUR JOURNEY',
+  page_about_timeline_title: 'Milestones Through The Decades',
+  page_about_timeline_desc: 'An enduring commitment to refined hospitality in Ethiopia.',
+  page_about_why_subtitle: 'YOUR HAPPINESS GUARANTEED',
+  page_about_why_title: 'Why Choose Grand Addis Hotel',
+  page_about_why_desc: 'Whether you are seeking total relaxation, productive corporate stays, or cultural discovery.',
 
   // Contact Page & Hotel Info
   page_contact_hero_tag: 'GET IN TOUCH',
   page_contact_hero_title: 'Contact Grand Addis Hotel',
   page_contact_hero_subtitle: 'We would love to hear from you. Get in touch via our contact form, email, or direct phone.',
   page_contact_hero_image: '/images/BO5A5779-scaled.jpg',
+  page_contact_intro_subtitle: '24/7 GUEST SUPPORT',
+  page_contact_intro_title: 'We’re Here For You',
+  page_contact_intro_desc: 'Whether you need assistance with room reservations, airport shuttle transfers, local city guides, or bespoke concierge requests, our team is always at your disposal.',
   page_contact_phone: '+251 116 672 828',
   page_contact_phone_alt: '+251 911 234 567',
   page_contact_email: 'reservations@egrandaddishotel.com',
   page_contact_email_alt: 'info@grandaddishotel.com',
   page_contact_address: '22 Around Golagul, behind Meklit Building, Addis Ababa, Ethiopia',
+  page_contact_hours: 'Open 24 Hours • 7 Days a Week',
   page_contact_checkin: '14:00 (2:00 PM)',
   page_contact_checkout: '12:00 (12:00 PM)',
   page_contact_airport: '5.2 km from Addis Ababa Bole International Airport (approx. 10-15 mins)',
+  hotel_social_facebook: 'https://facebook.com',
+  hotel_social_instagram: 'https://instagram.com',
+  hotel_social_telegram: 'https://t.me',
 
   // Gallery Page
   page_gallery_hero_tag: 'VISUAL IMMERSION',
@@ -1449,6 +1505,38 @@ export const DEFAULT_PAGE_CONTENT: Record<string, string> = {
   page_rooms_hero_title: 'Our Rooms & Luxury Suites',
   page_rooms_hero_subtitle: 'Designed for total relaxation and productivity with plush bedding, marble bathrooms, and city skyline views.',
   page_rooms_hero_image: '/images/BO5A5779-scaled.jpg',
+
+  // Testimonials Page
+  page_testimonials_hero_tag: 'VERIFIED GUEST FEEDBACK',
+  page_testimonials_hero_title: 'What Customers Have To Say',
+  page_testimonials_hero_subtitle: 'Real reviews from international and domestic guests who stayed at Grand Addis Hotel.',
+  page_testimonials_hero_image: '/images/BO5A5826-scaled.jpg',
+
+  // Terms & Conditions Page
+  page_terms_hero_tag: 'LEGAL & POLICIES',
+  page_terms_hero_title: 'Terms & Conditions',
+  page_terms_updated: 'Last updated: October 2026 • Grand Addis Hotel',
+  page_terms_sec1_title: '1. General Hotel Policies',
+  page_terms_sec1: 'Welcome to Grand Addis Hotel. By accessing this website or booking accommodations and services at our property (located at 22 Around Golagul, Addis Ababa, Ethiopia), you agree to comply with and be bound by these Terms and Conditions.',
+  page_terms_sec2_title: '2. Reservations & Guarantee',
+  page_terms_sec2: 'A valid reservation guarantee (via credit card, corporate agreement, or approved direct deposit) is required to secure any room reservation made through this site or directly with our front desk. All rates quoted on our direct reservation engine are in USD ($) and include 15% Value Added Tax (VAT) and municipal tourism fees.',
+  page_terms_sec3_title: '3. Check-In & Check-Out Times',
+  page_terms_sec3: 'Standard check-in time commences at 14:00 (2:00 PM) on the arrival date. Standard check-out time is until 12:00 (12:00 PM) on the departure date. Early check-in or late check-out is subject to room availability upon request. Complimentary secure luggage storage is provided for all registered guests.',
+  page_terms_sec4_title: '4. Cancellation & Modifications',
+  page_terms_sec4: 'Flexible rate bookings may be cancelled or modified free of charge up to 24 hours prior to standard check-in time. In the event of a late cancellation or no-show, the hotel reserves the right to charge the equivalent of the first night room charge. Non-refundable promotional rates are subject to the specific terms outlined during reservation.',
+  page_terms_sec5_title: '5. Payment Terms & Card Guarantee',
+  page_terms_sec5: 'Your credit card details entered during booking are securely processed through PCI DSS-compliant gateways and used strictly to guarantee your reservation. No unauthorized charges are applied prior to your check-in, except where specified under special non-refundable packages or in cases of unnotified no-show. We accept Mastercard, Visa, and domestic Ethiopian payment methods.',
+  page_terms_sec6_title: '6. Contact & Inquiries',
+  page_terms_sec6: 'For any questions concerning your stay, payment verification, or these policies, please contact our 24/7 guest relations department at our phone or email.',
+
+  // Footer & Branding
+  page_footer_tag: 'EXPERIENCE LUXURY IN ETHIOPIA',
+  page_footer_headline: 'Your Grand Stay In The Heart Of Addis',
+  page_footer_desc: 'A place of heart, your home away in Addis Ababa. Where refined comfort meets authentic Ethiopian hospitality.',
+  hotel_tagline: 'Distinctly designed rooms, timeless ambiance, and warm boutique service in the heart of Addis Ababa.',
+  hotel_phone: '+251 116 672 828',
+  hotel_email: 'reservations@egrandaddishotel.com',
+  hotel_address: '22 Around Golagul, behind Meklit Building, Addis Ababa, Ethiopia',
 };
 
 export async function getDbPageContent(): Promise<Record<string, string>> {
@@ -1457,7 +1545,7 @@ export async function getDbPageContent(): Promise<Record<string, string>> {
 
   const content: Record<string, string> = { ...DEFAULT_PAGE_CONTENT };
   try {
-    const res = await query(`SELECT "key", "value" FROM hotel_settings WHERE "key" LIKE 'page_%'`);
+    const res = await query(`SELECT "key", "value" FROM hotel_settings WHERE "key" LIKE 'page_%' OR "key" LIKE 'hotel_%'`);
     for (const row of res.rows) {
       if (row.key && row.value !== undefined && row.value !== null) {
         content[row.key] = row.value;

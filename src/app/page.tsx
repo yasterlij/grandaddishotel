@@ -54,9 +54,7 @@ export default function HomePage() {
           setGalleryList(galRes.images);
         }
         if (contentRes?.success && contentRes.content) {
-          const sanitizedContent = { ...contentRes.content };
-          delete sanitizedContent.page_home_hero_subtitle;
-          setPageContent(sanitizedContent);
+          setPageContent(contentRes.content);
         }
       } catch (err) {
         console.error('Failed to load data for homepage:', err);
@@ -193,12 +191,12 @@ export default function HomePage() {
               }}
             >
               <Calendar size={18} />
-              <span>Book Your Stay</span>
+              <span>{pageContent.page_home_hero_btn1_text || 'Book Your Stay'}</span>
               <ArrowRight size={18} />
             </button>
 
             <Link href="/rooms" className="btn btn-outline-white btn-lg">
-              Explore Our Rooms
+              {pageContent.page_home_hero_btn2_text || 'Explore Our Rooms'}
             </Link>
           </div>
         </div>
@@ -236,11 +234,8 @@ export default function HomePage() {
                   marginBottom: '20px',
                 }}
               >
-                {pageContent.page_home_story_p1 || (
-                  <>
-                    Nestled at <strong>22 Around Golagul</strong> in Addis Ababa, Grand Addis Hotel offers an unparalleled haven for international travelers, business executives, and vacationers. Our sanctuary harmoniously combines modern refinement with authentic Ethiopian warmth.
-                  </>
-                )}
+                {pageContent.page_home_story_p1 ||
+                  'Nestled at 22 Around Golagul in Addis Ababa, Grand Addis Hotel offers an unparalleled haven for international travelers, business executives, and vacationers. Our sanctuary harmoniously combines modern refinement with authentic Ethiopian warmth.'}
               </p>
               <p
                 style={{
@@ -250,11 +245,8 @@ export default function HomePage() {
                   marginBottom: '32px',
                 }}
               >
-                {pageContent.page_home_story_p2 || (
-                  <>
-                    Whether you are visiting for diplomatic engagements, conferences, or cultural exploration, enjoy effortless access to Bole International Airport (just 10 minutes away), warm hospitality, and refined luxury accommodations.
-                  </>
-                )}
+                {pageContent.page_home_story_p2 ||
+                  'Whether you are visiting for diplomatic engagements, conferences, or cultural exploration, enjoy effortless access to Bole International Airport (just 10 minutes away), warm hospitality, and refined luxury accommodations.'}
               </p>
 
               {/* Highlights List */}
@@ -268,19 +260,27 @@ export default function HomePage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <CheckCircle2 size={18} color="#E49951" />
-                  <span style={{ fontSize: '14px', fontWeight: 500 }}>22 Around Golagul</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                    {pageContent.page_home_story_h1 || '22 Around Golagul'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <CheckCircle2 size={18} color="#E49951" />
-                  <span style={{ fontSize: '14px', fontWeight: 500 }}>10 Mins to Bole Airport</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                    {pageContent.page_home_story_h2 || '10 Mins to Bole Airport'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <CheckCircle2 size={18} color="#E49951" />
-                  <span style={{ fontSize: '14px', fontWeight: 500 }}>High-Speed Fiber Wi-Fi</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                    {pageContent.page_home_story_h3 || 'High-Speed Fiber Wi-Fi'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <CheckCircle2 size={18} color="#E49951" />
-                  <span style={{ fontSize: '14px', fontWeight: 500 }}>24/7 Room & Concierge</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                    {pageContent.page_home_story_h4 || '24/7 Room & Concierge'}
+                  </span>
                 </div>
               </div>
 
@@ -323,10 +323,11 @@ export default function HomePage() {
                 }}
               >
                 <div style={{ fontSize: '20px', fontWeight: 600, fontFamily: 'var(--font-serif)', marginBottom: '4px' }}>
-                  99% of Guests
+                  {pageContent.page_home_story_stat_title || '99% of Guests'}
                 </div>
                 <p style={{ fontSize: '12px', color: '#A2B5BD', lineHeight: '1.4' }}>
-                  Recommend Grand Addis Hotel for comfort, safety, and hospitality.
+                  {pageContent.page_home_story_stat_desc ||
+                    'Recommend Grand Addis Hotel for comfort, safety, and hospitality.'}
                 </p>
               </div>
             </div>
@@ -337,12 +338,15 @@ export default function HomePage() {
       {/* ================= THREE PILLARS: REFRESH, RELAX, RENEW ================= */}
       <section className="section-padding bg-dark">
         <div className="container" style={{ textAlign: 'center' }}>
-          <span className="section-subtitle">THE GRAND ADDIS EXPERIENCE</span>
+          <span className="section-subtitle">
+            {pageContent.page_home_pillars_subtitle || 'THE GRAND ADDIS EXPERIENCE'}
+          </span>
           <h2 className="section-title" style={{ maxWidth: '720px', margin: '0 auto 18px' }}>
-            Rebalance Yourself In A Timeless Space
+            {pageContent.page_home_pillars_title || 'Rebalance Yourself In A Timeless Space'}
           </h2>
           <p className="section-desc" style={{ margin: '0 auto 56px' }}>
-            Every touchpoint at Grand Addis Hotel is designed to nurture your senses, calm your mind, and provide an enriching stay.
+            {pageContent.page_home_pillars_desc ||
+              'Every touchpoint at Grand Addis Hotel is designed to nurture your senses, calm your mind, and provide an enriching stay.'}
           </p>
 
           <div
@@ -380,13 +384,14 @@ export default function HomePage() {
                 <Sparkles size={26} />
               </div>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#E49951', fontWeight: 600 }}>
-                ACCOMMODATIONS
+                {pageContent.page_home_pillar1_tag || 'ACCOMMODATIONS'}
               </span>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: '#FFFFFF', margin: '8px 0 14px' }}>
-                Relax & Unwind
+                {pageContent.page_home_pillar1_title || 'Relax & Unwind'}
               </h3>
               <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-on-dark-muted)', marginBottom: '22px' }}>
-                Serene guest rooms and suites furnished with orthopedic bedding, soundproof insulation, climate control, and rain showers.
+                {pageContent.page_home_pillar1_desc ||
+                  'Serene guest rooms and suites furnished with orthopedic bedding, soundproof insulation, climate control, and rain showers.'}
               </p>
               <Link
                 href="/rooms"
@@ -432,13 +437,14 @@ export default function HomePage() {
                 <Coffee size={26} />
               </div>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#E49951', fontWeight: 600 }}>
-                CULTURE & TRADITION
+                {pageContent.page_home_pillar2_tag || 'CULTURE & TRADITION'}
               </span>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: '#FFFFFF', margin: '8px 0 14px' }}>
-                Authentic Experiences
+                {pageContent.page_home_pillar2_title || 'Authentic Experiences'}
               </h3>
               <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-on-dark-muted)', marginBottom: '22px' }}>
-                Immerse yourself in our daily Ethiopian Buna coffee ceremonies, cultural discoveries, and warm Addis Ababa hospitality.
+                {pageContent.page_home_pillar2_desc ||
+                  'Immerse yourself in our daily Ethiopian Buna coffee ceremonies, cultural discoveries, and warm Addis Ababa hospitality.'}
               </p>
               <Link
                 href="/experiences"
@@ -484,13 +490,14 @@ export default function HomePage() {
                 <MapPin size={26} />
               </div>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '2px', color: '#E49951', fontWeight: 600 }}>
-                PRIME LOCATION
+                {pageContent.page_home_pillar3_tag || 'PRIME LOCATION'}
               </span>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', color: '#FFFFFF', margin: '8px 0 14px' }}>
-                Heart of Addis
+                {pageContent.page_home_pillar3_title || 'Heart of Addis'}
               </h3>
               <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-on-dark-muted)', marginBottom: '22px' }}>
-                Located at 22 Around Golagul, just 10 minutes from Bole International Airport with seamless access to diplomatic centers.
+                {pageContent.page_home_pillar3_desc ||
+                  'Located at 22 Around Golagul, just 10 minutes from Bole International Airport with seamless access to diplomatic centers.'}
               </p>
               <Link
                 href="/contact"
@@ -534,10 +541,14 @@ export default function HomePage() {
             }}
           >
             <div>
-              <span className="section-subtitle">LUXURY ACCOMMODATIONS</span>
-              <h2 className="section-title">Our Featured Rooms & Suites</h2>
+              <span className="section-subtitle">
+                {pageContent.page_home_rooms_subtitle || 'LUXURY ACCOMMODATIONS'}
+              </span>
+              <h2 className="section-title">
+                {pageContent.page_home_rooms_title || 'Our Featured Rooms & Suites'}
+              </h2>
               <p className="section-desc">
-                Immerse yourself in understated elegance. Best rates guaranteed when booking directly on our site.
+                {pageContent.page_home_rooms_desc || 'Immerse yourself in understated elegance. Best rates guaranteed when booking directly on our site.'}
               </p>
             </div>
 
@@ -566,7 +577,7 @@ export default function HomePage() {
         style={{
           position: 'relative',
           padding: '120px 0',
-          backgroundImage: `url('/images/BO5A5779-scaled.jpg')`,
+          backgroundImage: `url('${pageContent.page_home_banner_image || '/images/BO5A5779-scaled.jpg'}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',
@@ -594,7 +605,7 @@ export default function HomePage() {
                 marginBottom: '12px',
               }}
             >
-              BESPOKE HOSPITALITY
+              {pageContent.page_home_banner_tag || 'BESPOKE HOSPITALITY'}
             </span>
             <h2
               style={{
@@ -604,7 +615,7 @@ export default function HomePage() {
                 marginBottom: '20px',
               }}
             >
-              Authentic Ethiopian Hospitality
+              {pageContent.page_home_banner_title || 'Authentic Ethiopian Hospitality'}
             </h2>
             <p
               style={{
@@ -614,7 +625,8 @@ export default function HomePage() {
                 marginBottom: '32px',
               }}
             >
-              Experience the genuine warmth and cultural heritage of Addis Ababa. From complimentary airport shuttle transfers to our daily traditional Buna ceremonies, we make your stay in Ethiopia unforgettable.
+              {pageContent.page_home_banner_desc ||
+                'Experience the genuine warmth and cultural heritage of Addis Ababa. From complimentary airport shuttle transfers to our daily traditional Buna ceremonies, we make your stay in Ethiopia unforgettable.'}
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
@@ -635,10 +647,10 @@ export default function HomePage() {
       <section className="section-padding bg-light defer-render">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <span className="section-subtitle">VISUAL TOUR</span>
-            <h2 className="section-title">GALLERY</h2>
+            <span className="section-subtitle">{pageContent.page_home_gallery_subtitle || 'VISUAL TOUR'}</span>
+            <h2 className="section-title">{pageContent.page_home_gallery_title || 'GALLERY'}</h2>
             <p className="section-desc" style={{ margin: '0 auto' }}>
-              Explore the ambiance, architecture, and spaces of Grand Addis Hotel.
+              {pageContent.page_home_gallery_desc || 'Explore the ambiance, architecture, and spaces of Grand Addis Hotel.'}
             </p>
           </div>
 
@@ -721,10 +733,10 @@ export default function HomePage() {
       <section className="section-padding defer-render">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-            <span className="section-subtitle">GUEST EXPERIENCES</span>
-            <h2 className="section-title">What Customers Have To Say</h2>
+            <span className="section-subtitle">{pageContent.page_home_testimonials_subtitle || 'GUEST EXPERIENCES'}</span>
+            <h2 className="section-title">{pageContent.page_home_testimonials_title || 'What Customers Have To Say'}</h2>
             <p className="section-desc" style={{ margin: '0 auto' }}>
-              Real reviews from international and domestic guests who stayed at Grand Addis Hotel.
+              {pageContent.page_home_testimonials_desc || 'Real reviews from international and domestic guests who stayed at Grand Addis Hotel.'}
             </p>
           </div>
 
@@ -808,10 +820,15 @@ export default function HomePage() {
           >
             {/* Contact details */}
             <div>
-              <span className="section-subtitle">FIND US</span>
-              <h2 className="section-title">Location and Info</h2>
+              <span className="section-subtitle">
+                {pageContent.page_home_location_subtitle || 'FIND US'}
+              </span>
+              <h2 className="section-title">
+                {pageContent.page_home_location_title || 'Location and Info'}
+              </h2>
               <p style={{ fontSize: '15px', lineHeight: '1.7', color: 'var(--text-muted)', marginBottom: '32px' }}>
-                Centrally positioned in the vibrant commercial and cultural heart of Addis Ababa, Grand Addis Hotel offers premier convenience for travelers and delegates.
+                {pageContent.page_home_location_desc ||
+                  'Centrally positioned in the vibrant commercial and cultural heart of Addis Ababa, Grand Addis Hotel offers premier convenience for travelers and delegates.'}
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '36px' }}>
@@ -834,9 +851,11 @@ export default function HomePage() {
                   </div>
                   <div>
                     <strong style={{ display: 'block', fontSize: '15px', color: '#153D4B' }}>Address</strong>
-                    <p style={{ fontSize: '14px', color: '#5E6E75' }}>{HOTEL_INFO.address}</p>
+                    <p style={{ fontSize: '14px', color: '#5E6E75' }}>
+                      {pageContent.page_contact_address || HOTEL_INFO.address}
+                    </p>
                     <span style={{ fontSize: '12px', color: '#E49951', fontWeight: 500 }}>
-                      Approx. 10 mins from Addis Ababa Bole International Airport
+                      {pageContent.page_contact_airport || 'Approx. 10 mins from Addis Ababa Bole International Airport'}
                     </span>
                   </div>
                 </div>
@@ -861,10 +880,10 @@ export default function HomePage() {
                   <div>
                     <strong style={{ display: 'block', fontSize: '15px', color: '#153D4B' }}>Reservations Desk</strong>
                     <a
-                      href={`tel:${HOTEL_INFO.phone}`}
+                      href={`tel:${pageContent.page_contact_phone || HOTEL_INFO.phone}`}
                       style={{ fontSize: '14px', color: '#5E6E75', textDecoration: 'none' }}
                     >
-                      {HOTEL_INFO.phone}
+                      {pageContent.page_contact_phone || HOTEL_INFO.phone}
                     </a>
                   </div>
                 </div>
@@ -889,10 +908,10 @@ export default function HomePage() {
                   <div>
                     <strong style={{ display: 'block', fontSize: '15px', color: '#153D4B' }}>Email Inquiries</strong>
                     <a
-                      href={`mailto:${HOTEL_INFO.email}`}
+                      href={`mailto:${pageContent.page_contact_email || HOTEL_INFO.email}`}
                       style={{ fontSize: '14px', color: '#5E6E75', textDecoration: 'none' }}
                     >
-                      {HOTEL_INFO.email}
+                      {pageContent.page_contact_email || HOTEL_INFO.email}
                     </a>
                   </div>
                 </div>

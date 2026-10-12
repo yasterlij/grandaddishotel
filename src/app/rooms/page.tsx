@@ -10,24 +10,30 @@ import { useBooking } from '@/context/BookingContext';
 export default function RoomsPage() {
   const { openBooking } = useBooking();
   const [rooms, setRooms] = useState<Room[]>(ROOMS);
+  const [content, setContent] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('recommended');
 
   useEffect(() => {
-    async function loadPostgresRooms() {
+    async function loadData() {
       try {
-        const res = await fetch('/api/rooms');
-        const data = await res.json();
-        if (data.success && data.rooms && data.rooms.length > 0) {
-          setRooms(data.rooms);
+        const [roomsRes, contentRes] = await Promise.all([
+          fetch('/api/rooms').then((r) => r.json()).catch(() => null),
+          fetch('/api/content').then((r) => r.json()).catch(() => null),
+        ]);
+        if (roomsRes?.success && roomsRes.rooms && roomsRes.rooms.length > 0) {
+          setRooms(roomsRes.rooms);
+        }
+        if (contentRes?.success && contentRes.content) {
+          setContent(contentRes.content);
         }
       } catch (err) {
-        console.error('Failed to load rooms from PostgreSQL, using defaults:', err);
+        console.error('Failed to load data:', err);
       }
     }
-    loadPostgresRooms();
+    loadData();
   }, []);
 
   const categories = ['All', 'Hotel Rooms', 'Suites'];
@@ -44,6 +50,8 @@ export default function RoomsPage() {
     return 0; // recommended
   });
 
+  const bannerImg = content.page_rooms_hero_image || '/images/BO5A5826-scaled.jpg';
+
   return (
     <div style={{ paddingTop: 'var(--header-height, 96px)' }}>
       {/* Page Header Banner */}
@@ -54,7 +62,7 @@ export default function RoomsPage() {
           padding: '80px 0 60px',
           position: 'relative',
           overflow: 'hidden',
-          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('/images/BO5A5826-scaled.jpg')`,
+          backgroundImage: `linear-gradient(rgba(15, 42, 51, 0.85), rgba(15, 42, 51, 0.95)), url('${bannerImg}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           textAlign: 'center',
@@ -72,7 +80,7 @@ export default function RoomsPage() {
               marginBottom: '12px',
             }}
           >
-            ACCOMMODATIONS AT GRAND ADDIS
+            {content.page_rooms_hero_tag || 'ACCOMMODATIONS AT GRAND ADDIS'}
           </span>
           <h1
             style={{
@@ -82,7 +90,7 @@ export default function RoomsPage() {
               marginBottom: '16px',
             }}
           >
-            Our Rooms & Suites
+            {content.page_rooms_hero_title || 'Our Rooms & Suites'}
           </h1>
           <p
             style={{
@@ -93,7 +101,7 @@ export default function RoomsPage() {
               lineHeight: '1.7',
             }}
           >
-            Choose from our collection of distinctly designed rooms and suites, each crafted for serene comfort, peaceful sleep, and luxury living.
+            {content.page_rooms_hero_subtitle || 'Choose from our collection of distinctly designed rooms and suites, each crafted for serene comfort, peaceful sleep, and luxury living.'}
           </p>
 
           <button

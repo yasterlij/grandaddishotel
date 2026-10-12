@@ -126,10 +126,14 @@ export default function AboutPage() {
       <section className="section-padding bg-white" style={{ borderTop: '1px solid #E2E1DA' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-            <span className="section-subtitle">OUR JOURNEY</span>
-            <h2 className="section-title">Milestones Through The Decades</h2>
+            <span className="section-subtitle">
+              {content.page_about_timeline_subtitle || 'OUR JOURNEY'}
+            </span>
+            <h2 className="section-title">
+              {content.page_about_timeline_title || 'Milestones Through The Decades'}
+            </h2>
             <p className="section-desc" style={{ margin: '0 auto' }}>
-              A enduring commitment to refined hospitality in Ethiopia.
+              {content.page_about_timeline_desc || 'An enduring commitment to refined hospitality in Ethiopia.'}
             </p>
           </div>
 
@@ -170,10 +174,14 @@ export default function AboutPage() {
       <section className="section-padding bg-dark">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-            <span className="section-subtitle">YOUR HAPPINESS GUARANTEED</span>
-            <h2 className="section-title">Why Choose Grand Addis Hotel</h2>
+            <span className="section-subtitle">
+              {content.page_about_why_subtitle || 'YOUR HAPPINESS GUARANTEED'}
+            </span>
+            <h2 className="section-title">
+              {content.page_about_why_title || 'Why Choose Grand Addis Hotel'}
+            </h2>
             <p className="section-desc" style={{ margin: '0 auto' }}>
-              Whether you are seeking total relaxation, productive corporate stays, or cultural discovery.
+              {content.page_about_why_desc || 'Whether you are seeking total relaxation, productive corporate stays, or cultural discovery.'}
             </p>
           </div>
 

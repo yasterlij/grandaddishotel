@@ -10,12 +10,20 @@ import { HOTEL_INFO } from '@/data/hotelData';
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [content, setContent] = useState<Record<string, string>>({});
   const pathname = usePathname();
   const { openBooking, openNavDrawer } = useBooking();
 
   const isHomePage = pathname === '/';
 
   useEffect(() => {
+    fetch('/api/content')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.content) setContent(data.content);
+      })
+      .catch((e) => console.error('Failed to load header content:', e));
+
     const handleScroll = () => {
       if (window.scrollY > 40) {
         setIsScrolled(true);
@@ -177,7 +185,7 @@ export default function Header() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
 
           <a
-            href={`tel:${HOTEL_INFO.phone}`}
+            href={`tel:${content.page_contact_phone || content.hotel_phone || HOTEL_INFO.phone}`}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -204,7 +212,7 @@ export default function Header() {
             >
               <Phone size={15} />
             </div>
-            <span style={{ letterSpacing: '0.5px' }}>{HOTEL_INFO.phone}</span>
+            <span style={{ letterSpacing: '0.5px' }}>{content.page_contact_phone || content.hotel_phone || HOTEL_INFO.phone}</span>
           </a>
 
           <button

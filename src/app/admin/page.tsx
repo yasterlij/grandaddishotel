@@ -39,6 +39,9 @@ import {
   EyeOff,
   Sparkles,
   Compass,
+  Coffee,
+  MapPin,
+  BedDouble,
 } from 'lucide-react';
 import { getTodayDateStr, addDays, calculateStayNights, formatFriendlyDate } from '@/lib/dates';
 
@@ -85,7 +88,7 @@ export default function AdminPage() {
   // Page Content CMS states
   const [pageContent, setPageContent] = useState<Record<string, string>>({});
   const [activeContentSection, setActiveContentSection] = useState<
-    'home' | 'about' | 'contact' | 'gallery' | 'experiences' | 'rooms'
+    'home' | 'about' | 'contact' | 'gallery' | 'experiences' | 'rooms' | 'testimonials' | 'terms' | 'footer'
   >('home');
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [uploadingContentKey, setUploadingContentKey] = useState<string | null>(null);
@@ -3401,6 +3404,9 @@ export default function AdminPage() {
                 { id: 'gallery', label: '🖼️ Gallery Banner' },
                 { id: 'experiences', label: '🧭 Experiences Banner' },
                 { id: 'rooms', label: '🛏️ Rooms Banner' },
+                { id: 'testimonials', label: '⭐ Testimonials Banner' },
+                { id: 'terms', label: '📜 Terms & Policies' },
+                { id: 'footer', label: '🏷️ Footer & Branding' },
               ].map((sec) => {
                 const isActive = activeContentSection === sec.id;
                 return (
@@ -3512,7 +3518,7 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    <div>
+                    <div style={{ marginBottom: '16px' }}>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
                         Hero Subtitle / Description
                       </label>
@@ -3520,16 +3526,43 @@ export default function AdminPage() {
                         rows={2}
                         value={pageContent.page_home_hero_subtitle || ''}
                         onChange={(e) => setPageContent({ ...pageContent, page_home_hero_subtitle: e.target.value })}
-                        placeholder="Rebalance yourself in a timeless space..."
+                        placeholder="Rebalance yourself in a timeless space where understated luxury, warm Ethiopian hospitality, and tranquil comfort come together."
                         style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                       />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Primary Call-to-Action Button Text
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_hero_btn1_text || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_hero_btn1_text: e.target.value })}
+                          placeholder="Book Your Stay"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Secondary Button Text
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_hero_btn2_text || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_hero_btn2_text: e.target.value })}
+                          placeholder="Explore Our Rooms"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
                     </div>
                   </div>
 
                   {/* Story & Philosophy Section */}
                   <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
-                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
-                      Welcome Story & Narrative Section
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sparkles size={16} color="#E49951" /> Welcome Story & Narrative Section
                     </h4>
 
                     {/* Story Image Preview & Upload */}
@@ -3540,7 +3573,7 @@ export default function AdminPage() {
                       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                         <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC' }}>
                           <img
-                            src={pageContent.page_home_story_image || '/images/BO5A5821-scaled.jpg'}
+                            src={pageContent.page_home_story_image || '/images/BO5A5826-scaled.jpg'}
                             alt="Story Image Preview"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
@@ -3550,7 +3583,7 @@ export default function AdminPage() {
                             type="text"
                             value={pageContent.page_home_story_image || ''}
                             onChange={(e) => setPageContent({ ...pageContent, page_home_story_image: e.target.value })}
-                            placeholder="/images/BO5A5821-scaled.jpg or image URL"
+                            placeholder="/images/BO5A5826-scaled.jpg or image URL"
                             style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
                           />
                           <label
@@ -3590,7 +3623,7 @@ export default function AdminPage() {
                           type="text"
                           value={pageContent.page_home_story_subtitle || ''}
                           onChange={(e) => setPageContent({ ...pageContent, page_home_story_subtitle: e.target.value })}
-                          placeholder="THE GRAND ADDIS EXPERIENCE"
+                          placeholder="WELCOME TO OUR OASIS"
                           style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                         />
                       </div>
@@ -3602,13 +3635,13 @@ export default function AdminPage() {
                           type="text"
                           value={pageContent.page_home_story_title || ''}
                           onChange={(e) => setPageContent({ ...pageContent, page_home_story_title: e.target.value })}
-                          placeholder="A Sanctuary of Luxury & Warm Ethiopian Hospitality"
+                          placeholder="A Place Of Heart, Your Home Away in Addis Ababa"
                           style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                         />
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
                           Paragraph 1
@@ -3633,6 +3666,458 @@ export default function AdminPage() {
                           style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                         />
                       </div>
+                    </div>
+
+                    {/* Story Feature Highlights (4 Bullets) */}
+                    <div style={{ paddingTop: '16px', borderTop: '1px solid #EAE8E0', marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '10px' }}>
+                        Story Feature Checkmarks (4 Highlights)
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                        <div>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_story_feat1 || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_story_feat1: e.target.value })}
+                            placeholder="22 Around Golagul"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_story_feat2 || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_story_feat2: e.target.value })}
+                            placeholder="10 Mins to Bole Airport"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_story_feat3 || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_story_feat3: e.target.value })}
+                            placeholder="High-Speed Fiber Wi-Fi"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_story_feat4 || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_story_feat4: e.target.value })}
+                            placeholder="24/7 Room & Concierge"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Floating Guest Satisfaction Badge */}
+                    <div style={{ paddingTop: '16px', borderTop: '1px solid #EAE8E0' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '10px' }}>
+                        Floating Rating Badge (Overlaid on Story Photo)
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#838A8D', marginBottom: '4px' }}>
+                            Badge Statistic / Rating Title
+                          </label>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_story_badge_title || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_story_badge_title: e.target.value })}
+                            placeholder="99% of Guests"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#838A8D', marginBottom: '4px' }}>
+                            Badge Sub-text
+                          </label>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_story_badge_desc || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_story_badge_desc: e.target.value })}
+                            placeholder="Recommend Grand Addis Hotel for comfort, safety, and hospitality."
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Experience Pillars Section */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Coffee size={16} color="#E49951" /> The Grand Addis Experience Pillars (3 Feature Cards)
+                    </h4>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Section Eyebrow Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_pillars_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillars_subtitle: e.target.value })}
+                          placeholder="THE GRAND ADDIS EXPERIENCE"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Section Main Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_pillars_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillars_title: e.target.value })}
+                          placeholder="Rebalance Yourself In A Timeless Space"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Overview Paragraph
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_home_pillars_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_home_pillars_desc: e.target.value })}
+                        placeholder="Every touchpoint at Grand Addis Hotel is designed to nurture your senses..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+
+                    {/* Pillar Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                      {/* Pillar 1 */}
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#E49951', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>
+                          Pillar 1: Accommodations
+                        </span>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_pillar1_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillar1_title: e.target.value })}
+                          placeholder="Relax & Unwind"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '8px' }}
+                        />
+                        <textarea
+                          rows={3}
+                          value={pageContent.page_home_pillar1_desc || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillar1_desc: e.target.value })}
+                          placeholder="Serene guest rooms and suites furnished with orthopedic bedding..."
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      {/* Pillar 2 */}
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#E49951', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>
+                          Pillar 2: Culture & Heritage
+                        </span>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_pillar2_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillar2_title: e.target.value })}
+                          placeholder="Authentic Experiences"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '8px' }}
+                        />
+                        <textarea
+                          rows={3}
+                          value={pageContent.page_home_pillar2_desc || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillar2_desc: e.target.value })}
+                          placeholder="Immerse yourself in our daily Ethiopian Buna coffee ceremonies..."
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      {/* Pillar 3 */}
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#E49951', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '8px' }}>
+                          Pillar 3: Prime Location
+                        </span>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_pillar3_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillar3_title: e.target.value })}
+                          placeholder="Heart of Addis"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '8px' }}
+                        />
+                        <textarea
+                          rows={3}
+                          value={pageContent.page_home_pillar3_desc || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_pillar3_desc: e.target.value })}
+                          placeholder="Located at 22 Around Golagul, just 10 minutes from Bole International Airport..."
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '12px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Featured Rooms Section Header */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '16px', color: '#153D4B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BedDouble size={16} color="#E49951" /> Featured Rooms Section Headline
+                      </h4>
+                      <span style={{ fontSize: '12px', color: '#838A8D', backgroundColor: '#EDECE6', padding: '4px 10px', borderRadius: '4px' }}>
+                        💡 To manage actual room cards, pricing & photos, use the "Rooms" tab
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Section Eyebrow Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_rooms_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_rooms_subtitle: e.target.value })}
+                          placeholder="LUXURY ACCOMMODATIONS"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Section Main Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_rooms_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_rooms_title: e.target.value })}
+                          placeholder="Our Featured Rooms & Suites"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_home_rooms_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_home_rooms_desc: e.target.value })}
+                        placeholder="Immerse yourself in understated elegance. Best rates guaranteed when booking directly on our site."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bespoke Hospitality Mid-Banner */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sparkles size={16} color="#E49951" /> Mid-Page Bespoke Hospitality Banner
+                    </h4>
+
+                    {/* Banner Image Preview & Upload */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '8px' }}>
+                        Banner Parallax Background Image
+                      </label>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ width: '240px', height: '140px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#0F2A33', border: '1px solid #D5D4CC', position: 'relative' }}>
+                          <img
+                            src={pageContent.page_home_banner_image || '/images/BO5A5779-scaled.jpg'}
+                            alt="Hospitality Banner Preview"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                        <div style={{ flex: 1, minWidth: '260px' }}>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_banner_image || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_banner_image: e.target.value })}
+                            placeholder="/images/BO5A5779-scaled.jpg or image URL"
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px', marginBottom: '10px' }}
+                          />
+                          <label
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '8px 16px',
+                              backgroundColor: '#153D4B',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: uploadingContentKey === 'page_home_banner_image' ? 'wait' : 'pointer',
+                            }}
+                          >
+                            <Upload size={14} />
+                            <span>{uploadingContentKey === 'page_home_banner_image' ? 'Uploading...' : 'Upload Photo from Device'}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={uploadingContentKey === 'page_home_banner_image'}
+                              onChange={(e) => handleContentImageUpload('page_home_banner_image', e)}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Banner Eyebrow Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_banner_tag || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_banner_tag: e.target.value })}
+                          placeholder="BESPOKE HOSPITALITY"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Banner Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_banner_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_banner_title: e.target.value })}
+                          placeholder="Authentic Ethiopian Hospitality"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Banner Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_home_banner_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_home_banner_desc: e.target.value })}
+                        placeholder="Experience the genuine warmth and cultural heritage of Addis Ababa..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Gallery & Testimonials Section Headers */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sparkles size={16} color="#E49951" /> Gallery & Reviews Section Headlines
+                    </h4>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#153D4B', display: 'block', marginBottom: '10px' }}>
+                          Photo Gallery Section
+                        </span>
+                        <div style={{ marginBottom: '10px' }}>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#838A8D', marginBottom: '4px' }}>Title</label>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_gallery_title || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_gallery_title: e.target.value })}
+                            placeholder="GALLERY"
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#838A8D', marginBottom: '4px' }}>Subtitle</label>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_gallery_subtitle || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_gallery_subtitle: e.target.value })}
+                            placeholder="VISUAL TOUR"
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '8px', border: '1px solid #E2E1DA' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#153D4B', display: 'block', marginBottom: '10px' }}>
+                          Testimonials Section
+                        </span>
+                        <div style={{ marginBottom: '10px' }}>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#838A8D', marginBottom: '4px' }}>Title</label>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_testimonials_title || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_testimonials_title: e.target.value })}
+                            placeholder="What Customers Have To Say"
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', color: '#838A8D', marginBottom: '4px' }}>Subtitle</label>
+                          <input
+                            type="text"
+                            value={pageContent.page_home_testimonials_subtitle || ''}
+                            onChange={(e) => setPageContent({ ...pageContent, page_home_testimonials_subtitle: e.target.value })}
+                            placeholder="GUEST EXPERIENCES"
+                            style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Home Location & Info Section */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '16px', color: '#153D4B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MapPin size={16} color="#E49951" /> Location & Contact Info Section
+                      </h4>
+                      <span style={{ fontSize: '12px', color: '#838A8D', backgroundColor: '#EDECE6', padding: '4px 10px', borderRadius: '4px' }}>
+                        💡 Phone, Email and Address are shared with the "Contact & Hotel Info" tab
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Section Eyebrow Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_location_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_location_subtitle: e.target.value })}
+                          placeholder="FIND US"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Section Main Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_home_location_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_home_location_title: e.target.value })}
+                          placeholder="Location and Info"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_home_location_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_home_location_desc: e.target.value })}
+                        placeholder="Centrally positioned in the vibrant commercial and cultural heart of Addis Ababa..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -3842,6 +4327,96 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Heritage Timeline Section Headers */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Heritage Milestones & Decades Journey Headers
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Timeline Eyebrow Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_timeline_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_timeline_subtitle: e.target.value })}
+                          placeholder="OUR JOURNEY"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Timeline Headline
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_timeline_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_timeline_title: e.target.value })}
+                          placeholder="Milestones Through The Decades"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Timeline Description Subtitle
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_about_timeline_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_about_timeline_desc: e.target.value })}
+                        placeholder="An enduring commitment to refined hospitality in Ethiopia."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Why Choose Us Section Headers */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Why Choose Grand Addis Headers
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Why Choose Us Eyebrow Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_why_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_why_subtitle: e.target.value })}
+                          placeholder="YOUR HAPPINESS GUARANTEED"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Why Choose Us Headline
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_about_why_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_about_why_title: e.target.value })}
+                          placeholder="Why Choose Grand Addis Hotel"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Why Choose Us Description Subtitle
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_about_why_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_about_why_desc: e.target.value })}
+                        placeholder="Whether you are seeking total relaxation, productive corporate stays, or cultural discovery."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -4008,6 +4583,30 @@ export default function AdminPage() {
                           style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                         />
                       </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Front Desk Operating Hours
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_hours || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_hours: e.target.value })}
+                          placeholder="Open 24 Hours • 7 Days a Week"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Airport Proximity Description
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_airport || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_airport: e.target.value })}
+                          placeholder="5.2 km from Bole International Airport (~10 mins)"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
                       <div style={{ gridColumn: '1 / -1' }}>
                         <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
                           Physical Address
@@ -4022,11 +4621,101 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* 24/7 Guest Support Narrative */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Support Narrative & Introduction
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Support Eyebrow Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_intro_subtitle || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_intro_subtitle: e.target.value })}
+                          placeholder="24/7 GUEST SUPPORT"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Support Section Headline
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_contact_intro_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_contact_intro_title: e.target.value })}
+                          placeholder="We’re Here For You"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Support Paragraph Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_contact_intro_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_contact_intro_desc: e.target.value })}
+                        placeholder="Whether you need assistance with room reservations, airport shuttle transfers..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Social Media Channels */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Official Social Media Channels
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Instagram Profile Link
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.hotel_social_instagram || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, hotel_social_instagram: e.target.value })}
+                          placeholder="https://instagram.com/grandaddishotel"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Facebook Page Link
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.hotel_social_facebook || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, hotel_social_facebook: e.target.value })}
+                          placeholder="https://facebook.com/grandaddishotel"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Telegram Channel Link
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.hotel_social_telegram || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, hotel_social_telegram: e.target.value })}
+                          placeholder="https://t.me/grandaddishotel"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* GALLERY, EXPERIENCES, AND ROOMS BANNERS */}
-              {['gallery', 'experiences', 'rooms'].includes(activeContentSection) && (
+              {/* GALLERY, EXPERIENCES, ROOMS, AND TESTIMONIALS BANNERS */}
+              {['gallery', 'experiences', 'rooms', 'testimonials'].includes(activeContentSection) && (
                 <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
                   <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600, textTransform: 'capitalize' }}>
                     {activeContentSection} Page Banner
@@ -4115,6 +4804,304 @@ export default function AdminPage() {
                       onChange={(e) => setPageContent({ ...pageContent, [`page_${activeContentSection}_hero_subtitle`]: e.target.value })}
                       style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* TERMS & CONDITIONS CMS */}
+              {activeContentSection === 'terms' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  {/* Hero & Meta */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Legal Banner & Last Updated
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Eyebrow Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_terms_hero_tag || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_terms_hero_tag: e.target.value })}
+                          placeholder="LEGAL & POLICIES"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Page Title
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_terms_hero_title || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_terms_hero_title: e.target.value })}
+                          placeholder="Terms & Conditions"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Last Updated Text
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_terms_updated || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_updated: e.target.value })}
+                        placeholder="Last updated: October 2026 • Grand Addis Hotel"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 1 */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Section 1: General Policies
+                    </h4>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Title
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_terms_sec1_title || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec1_title: e.target.value })}
+                        placeholder="1. General Hotel Policies"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Policy Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={pageContent.page_terms_sec1 || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec1: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 2 */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Section 2: Reservations & Guarantee
+                    </h4>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Title
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_terms_sec2_title || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec2_title: e.target.value })}
+                        placeholder="2. Reservations & Guarantee"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Policy Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={pageContent.page_terms_sec2 || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec2: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3 */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Section 3: Check-In & Check-Out Times
+                    </h4>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Title
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_terms_sec3_title || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec3_title: e.target.value })}
+                        placeholder="3. Check-In & Check-Out Times"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Policy Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={pageContent.page_terms_sec3 || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec3: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 4 */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Section 4: Cancellation & Modifications
+                    </h4>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Title
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_terms_sec4_title || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec4_title: e.target.value })}
+                        placeholder="4. Cancellation & Modifications"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Policy Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={pageContent.page_terms_sec4 || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec4: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 5 */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Section 5: Payment Terms & Card Guarantee
+                    </h4>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Title
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_terms_sec5_title || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec5_title: e.target.value })}
+                        placeholder="5. Payment Terms & Card Guarantee"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Policy Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={pageContent.page_terms_sec5 || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec5: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 6 */}
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Section 6: Contact & Inquiries
+                    </h4>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Section Title
+                      </label>
+                      <input
+                        type="text"
+                        value={pageContent.page_terms_sec6_title || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec6_title: e.target.value })}
+                        placeholder="6. Contact & Inquiries"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Inquiries Instructions Text
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_terms_sec6 || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_terms_sec6: e.target.value })}
+                        placeholder="For any questions concerning your stay, payment verification, or these policies, please contact our 24/7 guest relations department..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* FOOTER & GLOBAL BRANDING CMS */}
+              {activeContentSection === 'footer' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Footer Gold Accent & Subscribe Banner
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Eyebrow Tag
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_footer_tag || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_footer_tag: e.target.value })}
+                          placeholder="EXPERIENCE LUXURY IN ETHIOPIA"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                          Main Headline
+                        </label>
+                        <input
+                          type="text"
+                          value={pageContent.page_footer_headline || ''}
+                          onChange={(e) => setPageContent({ ...pageContent, page_footer_headline: e.target.value })}
+                          placeholder="Your Grand Stay In The Heart Of Addis"
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Description Subtitle
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.page_footer_desc || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, page_footer_desc: e.target.value })}
+                        placeholder="A place of heart, your home away in Addis Ababa..."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ backgroundColor: '#FAF9F5', borderRadius: '12px', border: '1px solid #E2E1DA', padding: '24px' }}>
+                    <h4 style={{ margin: '0 0 16px', fontSize: '16px', color: '#153D4B', fontWeight: 600 }}>
+                      Global Brand Statement & Tagline
+                    </h4>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#5E6E75', marginBottom: '6px' }}>
+                        Brand Tagline (Shown under Logo in Footer)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={pageContent.hotel_tagline || ''}
+                        onChange={(e) => setPageContent({ ...pageContent, hotel_tagline: e.target.value })}
+                        placeholder="Distinctly designed rooms, timeless ambiance, and warm boutique service in the heart of Addis Ababa."
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

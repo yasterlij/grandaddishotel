@@ -67,6 +67,8 @@ export function getMysqlConfig(): {
   timezone: string;
   dateStrings: boolean;
   multipleStatements: boolean;
+  connectTimeout?: number;
+  charset?: string;
 } {
   const dbUser =
     process.env.DB_USER ||
@@ -122,6 +124,8 @@ export function getMysqlConfig(): {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+    connectTimeout: 10000,
+    charset: 'utf8mb4',
     timezone: '+00:00',
     dateStrings: true,
     multipleStatements: true,
@@ -648,6 +652,9 @@ function translateQueryForMysql(sql: string, params?: any[]): { sql: string; par
 
   // Convert $1, $2, $3 to ?
   translated = translated.replace(/\$\d+/g, '?');
+
+  // Convert double-quoted PostgreSQL identifiers "columnName" to MySQL backticks `columnName`
+  translated = translated.replace(/"([a-zA-Z0-9_]+)"/g, '`$1`');
 
   // Normalize parameter types for MySQL (arrays/objects to JSON strings)
   const mysqlParams = (params || []).map((p) => {
@@ -1664,7 +1671,9 @@ export async function getExchangeRate(): Promise<number> {
   if (cached !== null) return cached;
 
   try {
-    const res = await query(`SELECT value FROM hotel_settings WHERE "key" = 'usd_to_etb_rate' LIMIT 1`);
+    const res = isMysql
+      ? await rawQuery(`SELECT \`value\` FROM \`hotel_settings\` WHERE \`key\` = 'usd_to_etb_rate' LIMIT 1`)
+      : await query(`SELECT value FROM hotel_settings WHERE "key" = 'usd_to_etb_rate' LIMIT 1`);
     if (res.rows.length > 0) {
       const val = parseFloat(res.rows[0].value);
       if (!isNaN(val) && val > 0) {
@@ -1682,19 +1691,20 @@ export async function setExchangeRate(
   newRate: number,
   syncRooms = false
 ): Promise<{ rate: number; updatedRoomsCount: number }> {
+  const rateStr = newRate.toString();
   if (isMysql) {
-    await query(
-      `INSERT INTO hotel_settings ("key", "value", updated_at)
-       VALUES ('usd_to_etb_rate', $1, CURRENT_TIMESTAMP)
-       ON DUPLICATE KEY UPDATE "value" = VALUES("value"), updated_at = CURRENT_TIMESTAMP`,
-      [newRate.toString()]
+    await rawQuery(
+      `INSERT INTO \`hotel_settings\` (\`key\`, \`value\`, \`updated_at\`)
+       VALUES ('usd_to_etb_rate', ?, NOW())
+       ON DUPLICATE KEY UPDATE \`value\` = ?, \`updated_at\` = NOW()`,
+      [rateStr, rateStr]
     );
   } else {
     await query(
       `INSERT INTO hotel_settings (key, value, updated_at)
        VALUES ('usd_to_etb_rate', $1, CURRENT_TIMESTAMP)
        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      [newRate.toString()]
+      [rateStr]
     );
   }
 
@@ -1702,13 +1712,23 @@ export async function setExchangeRate(
 
   let updatedRoomsCount = 0;
   if (syncRooms) {
-    const res = await query(
-      `UPDATE room_types
-       SET "basePriceETB" = ROUND("basePriceUSD" * $1),
-           "updatedAt" = CURRENT_TIMESTAMP`,
-      [newRate]
-    );
-    updatedRoomsCount = res.rowCount || 0;
+    if (isMysql) {
+      const res = await rawQuery(
+        `UPDATE \`room_types\`
+         SET \`basePriceETB\` = ROUND(\`basePriceUSD\` * ?),
+             \`updatedAt\` = NOW()`,
+        [newRate]
+      );
+      updatedRoomsCount = res.rowCount || 0;
+    } else {
+      const res = await query(
+        `UPDATE room_types
+         SET "basePriceETB" = ROUND("basePriceUSD" * $1),
+             "updatedAt" = CURRENT_TIMESTAMP`,
+        [newRate]
+      );
+      updatedRoomsCount = res.rowCount || 0;
+    }
     invalidateCache('db_room');
   }
 

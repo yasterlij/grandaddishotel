@@ -370,34 +370,57 @@ export default function AdminPage() {
   const handleSaveUniversalRate = async (customRate?: number) => {
     const rateToSave = customRate !== undefined ? customRate : parseFloat(tempUniversalRate);
     if (isNaN(rateToSave) || rateToSave <= 0) {
-      alert('Please enter a valid exchange rate (e.g. 189)');
+      alert('Please enter a valid exchange rate (e.g. 159 or 189)');
       return;
     }
     setIsSavingRate(true);
     setRateSaveSuccess('');
+
+    const controller = new AbortController();
+    const timeoutTimer = setTimeout(() => controller.abort(), 12000); // 12-second safety timeout
+
     try {
       const res = await fetch('/api/admin/settings/exchange-rate', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rate: rateToSave, syncRooms: syncRoomsWithRate }),
+        signal: controller.signal,
       });
-      const data = await res.json();
+      clearTimeout(timeoutTimer);
+
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned HTTP ${res.status}. Please check database connection.`);
+      }
+
       if (data.success) {
         setUniversalRate(rateToSave);
         setTempUniversalRate(rateToSave.toString());
         localStorage.setItem('gah_usd_to_etb_rate', rateToSave.toString());
         window.dispatchEvent(new CustomEvent('gah_exchange_rate_updated', { detail: { rate: rateToSave } }));
-        setRateSaveSuccess(data.message || `Universal exchange rate updated to 1 USD = ${rateToSave} ETB!`);
-        notify(`Universal exchange rate updated to 1 USD = ${rateToSave} ETB!`);
-        // Refresh room types from DB so updated basePriceETB is displayed
-        const rtRes = await fetch('/api/admin/room-types').then((r) => r.json());
-        if (rtRes.success) setRoomTypes(rtRes.roomTypes || []);
+        const successMsg = data.message || `Universal exchange rate updated to 1 USD = ${rateToSave} ETB!`;
+        setRateSaveSuccess(successMsg);
+        notify(successMsg);
+        // Refresh room types in background
+        fetch('/api/admin/room-types')
+          .then((r) => r.json())
+          .then((rtRes) => {
+            if (rtRes.success) setRoomTypes(rtRes.roomTypes || []);
+          })
+          .catch(() => {});
         setTimeout(() => setRateSaveSuccess(''), 7000);
       } else {
         alert(data.error || 'Failed to update exchange rate');
       }
     } catch (err: any) {
-      alert(err.message || 'Error updating exchange rate');
+      clearTimeout(timeoutTimer);
+      if (err.name === 'AbortError') {
+        alert('Server timed out while applying exchange rate. Please verify database engine status.');
+      } else {
+        alert(err.message || 'Error updating exchange rate');
+      }
     } finally {
       setIsSavingRate(false);
     }
@@ -2329,8 +2352,13 @@ export default function AdminPage() {
                     </span>
                     <span style={{ fontSize: '13px', color: '#A2B5BD' }}>Live USD to Ethiopian Birr (ETB) Converter</span>
                   </div>
-                  <h4 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#FFFFFF' }}>
-                    Universal Exchange Rate: 1 USD = <span style={{ color: '#E49951' }}>{universalRate} ETB</span>
+                  <h4 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span>Universal Exchange Rate: 1 USD = <span style={{ color: '#E49951' }}>{universalRate} ETB</span></span>
+                    {tempUniversalRate !== universalRate.toString() && (
+                      <span style={{ fontSize: '12px', padding: '3px 10px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.25)', border: '1px solid #F59E0B', color: '#FCD34D', fontWeight: 600 }}>
+                        Staged: {tempUniversalRate} ETB (Unsaved)
+                      </span>
+                    )}
                   </h4>
                   <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#B5C4CB', maxWidth: '680px', lineHeight: '1.5' }}>
                     Updating this rate automatically recalculates prices across room cards, booking modals, direct reservations, and checkout totals site-wide in real-time.
@@ -2340,9 +2368,20 @@ export default function AdminPage() {
                 {/* Quick Status / Reset */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
-                    onClick={() => {
-                      loadAllData();
-                      notify('Exchange rate synced with database');
+                    onClick={async () => {
+                      try {
+                        const r = await fetch('/api/settings/exchange-rate').then(res => res.json());
+                        if (r.success && r.rate) {
+                          setUniversalRate(r.rate);
+                          setTempUniversalRate(r.rate.toString());
+                          notify(`Forex rate synchronized: 1 USD = ${r.rate} ETB`);
+                        } else {
+                          loadAllData();
+                          notify('Exchange rate synced with database');
+                        }
+                      } catch {
+                        notify('Failed to sync rate from server');
+                      }
                     }}
                     style={{
                       padding: '8px 14px',
@@ -2359,7 +2398,7 @@ export default function AdminPage() {
                     }}
                   >
                     <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
-                    <span>Refresh Rate</span>
+                    <span>Sync with DB</span>
                   </button>
                 </div>
               </div>
@@ -2414,12 +2453,12 @@ export default function AdminPage() {
                             handleSaveUniversalRate();
                           }
                         }}
-                        placeholder="e.g. 189"
+                        placeholder="e.g. 159"
                         style={{
                           width: '100%',
                           padding: '10px 12px 10px 14px',
                           borderRadius: '8px',
-                          border: '2px solid #E49951',
+                          border: tempUniversalRate !== universalRate.toString() ? '2px solid #F59E0B' : '2px solid #E49951',
                           backgroundColor: '#09191F',
                           color: '#FFFFFF',
                           fontSize: '18px',
@@ -2432,28 +2471,45 @@ export default function AdminPage() {
                   </div>
 
                   {/* Preset quick buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '11px', color: '#8BA1AB', marginRight: '4px' }}>Presets:</span>
-                    {[180, 185, 189, 190, 195, 200].map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => setTempUniversalRate(preset.toString())}
-                        style={{
-                          padding: '5px 10px',
-                          borderRadius: '6px',
-                          border: tempUniversalRate === preset.toString() ? '1px solid #E49951' : '1px solid rgba(255,255,255,0.15)',
-                          backgroundColor: tempUniversalRate === preset.toString() ? 'rgba(228, 153, 81, 0.25)' : 'rgba(255,255,255,0.06)',
-                          color: tempUniversalRate === preset.toString() ? '#E49951' : '#FFFFFF',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {preset}
-                      </button>
-                    ))}
+                    {[150, 155, 159, 160, 175, 180, 185, 189, 190, 195, 200].map((preset) => {
+                      const isStaged = tempUniversalRate === preset.toString();
+                      const isLive = universalRate === preset;
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setTempUniversalRate(preset.toString())}
+                          title={isLive ? 'Currently Active in Database' : `Set rate to ${preset} ETB`}
+                          style={{
+                            padding: '5px 9px',
+                            borderRadius: '6px',
+                            border: isStaged
+                              ? '1px solid #E49951'
+                              : isLive
+                              ? '1px solid rgba(0, 163, 108, 0.6)'
+                              : '1px solid rgba(255,255,255,0.15)',
+                            backgroundColor: isStaged
+                              ? 'rgba(228, 153, 81, 0.3)'
+                              : isLive
+                              ? 'rgba(0, 163, 108, 0.15)'
+                              : 'rgba(255,255,255,0.06)',
+                            color: isStaged ? '#E49951' : isLive ? '#A3E635' : '#FFFFFF',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {isLive && <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#A3E635', display: 'inline-block' }} />}
+                          <span>{preset}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -2467,6 +2523,26 @@ export default function AdminPage() {
                     />
                     <span>Auto-sync all room catalog Birr prices (USD × Rate)</span>
                   </label>
+
+                  {tempUniversalRate !== universalRate.toString() && (
+                    <button
+                      type="button"
+                      onClick={() => setTempUniversalRate(universalRate.toString())}
+                      disabled={isSavingRate}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        backgroundColor: 'transparent',
+                        color: '#CAD5DA',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Revert to {universalRate}
+                    </button>
+                  )}
 
                   <button
                     onClick={() => handleSaveUniversalRate()}
@@ -2487,8 +2563,8 @@ export default function AdminPage() {
                       transition: 'all 0.2s',
                     }}
                   >
-                    <Sparkles size={16} />
-                    <span>{isSavingRate ? 'Applying Rate...' : 'Save & Update Whole Site'}</span>
+                    <RefreshCw size={16} className={isSavingRate ? 'spin' : ''} />
+                    <span>{isSavingRate ? 'Applying Rate...' : `Save & Apply ${tempUniversalRate} ETB`}</span>
                   </button>
                 </div>
               </div>

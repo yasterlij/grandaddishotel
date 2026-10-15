@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import type { QueryResult, QueryResultRow } from 'pg';
+import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 import mysql from 'mysql2/promise';
 import type { Pool as MysqlPool, PoolConnection } from 'mysql2/promise';
 import { GALLERY_IMAGES, EXPERIENCES } from '@/data/hotelData';
@@ -700,7 +700,7 @@ function translateQueryForMysql(sql: string, params?: any[]): { sql: string; par
 
   translated = translated.replace(
     /ON CONFLICT\s*\([^)]+\)\s*DO UPDATE SET\s+([^\n;]+)/gi,
-    (_match, setClause) => {
+    (_match: string, setClause: string) => {
       const mysqlSet = setClause.replace(/EXCLUDED\.("?[a-zA-Z0-9_]+")/g, 'VALUES($1)');
       return `ON DUPLICATE KEY UPDATE ${mysqlSet}`;
     }
@@ -719,7 +719,7 @@ function translateQueryForMysql(sql: string, params?: any[]): { sql: string; par
   translated = translated.replace(/"([a-zA-Z0-9_]+)"/g, '`$1`');
 
   // Normalize parameter types for MySQL (undefined to null, arrays/objects to JSON strings)
-  const mysqlParams = (params || []).map((p) => {
+  const mysqlParams = (params || []).map((p: any) => {
     if (p === undefined) {
       return null;
     }
@@ -1162,7 +1162,7 @@ function parseJsonArray(val: any): string[] {
       if (Array.isArray(parsed)) return parsed;
     } catch {}
     if (val.trim().startsWith('{') && val.trim().endsWith('}')) {
-      return val.slice(1, -1).split(',').map((s) => s.trim().replace(/^"|"$/g, ''));
+      return val.slice(1, -1).split(',').map((s: string) => s.trim().replace(/^"|"$/g, ''));
     }
   }
   return [];
@@ -1340,7 +1340,7 @@ export async function getDbRooms(): Promise<DbRoom[]> {
       `);
     }
 
-    const rooms: DbRoom[] = res.rows.map((row) => ({
+    const rooms: DbRoom[] = res.rows.map((row: any) => ({
       id: row.id,
       slug: row.slug,
       name: row.name,
@@ -1425,7 +1425,7 @@ export async function getDbExperiences() {
     if (res.rows.length === 0) {
       return EXPERIENCES;
     }
-    const experiences = res.rows.map((row) => ({
+    const experiences = res.rows.map((row: any) => ({
       ...row,
       highlights: parseJsonArray(row.highlights),
     }));
@@ -1529,7 +1529,7 @@ export async function getDbSpaTreatments() {
 export async function getDbPromotions() {
   try {
     const res = await query(`SELECT * FROM promotions ORDER BY created_at DESC`);
-    return res.rows.map((row) => ({
+    return res.rows.map((row: any) => ({
       ...row,
       inclusions: parseJsonArray(row.inclusions),
     }));
@@ -1608,7 +1608,7 @@ export async function addDbPromotion(promo: {
   const inclusionsArr = Array.isArray(promo.inclusions)
     ? promo.inclusions.filter(Boolean)
     : typeof promo.inclusions === 'string'
-    ? promo.inclusions.split('\n').map((s) => s.trim()).filter(Boolean)
+    ? promo.inclusions.split('\n').map((s: string) => s.trim()).filter(Boolean)
     : [];
   const inclusionsVal = isMysql ? JSON.stringify(inclusionsArr) : inclusionsArr;
 
@@ -1636,7 +1636,7 @@ export async function updateDbPromotion(promo: {
   const inclusionsArr = Array.isArray(promo.inclusions)
     ? promo.inclusions.filter(Boolean)
     : typeof promo.inclusions === 'string'
-    ? promo.inclusions.split('\n').map((s) => s.trim()).filter(Boolean)
+    ? promo.inclusions.split('\n').map((s: string) => s.trim()).filter(Boolean)
     : [];
   const inclusionsVal = isMysql ? JSON.stringify(inclusionsArr) : inclusionsArr;
 
@@ -1823,7 +1823,7 @@ export async function getDbGalleryImages(): Promise<DbGalleryImage[]> {
   try {
     const res = await query(`SELECT * FROM gallery_images ORDER BY sort_order ASC, created_at ASC`);
     if (res.rows.length === 0) {
-      return GALLERY_IMAGES.map((img, i) => ({
+      return GALLERY_IMAGES.map((img: any, i: number) => ({
         id: `gal-${i + 1}`,
         src: img.src,
         title: img.title,
@@ -1831,7 +1831,7 @@ export async function getDbGalleryImages(): Promise<DbGalleryImage[]> {
         sort_order: i + 1,
       }));
     }
-    const images: DbGalleryImage[] = res.rows.map((row) => ({
+    const images: DbGalleryImage[] = res.rows.map((row: any) => ({
       id: String(row.id),
       src: row.src,
       title: row.title,
@@ -1844,7 +1844,7 @@ export async function getDbGalleryImages(): Promise<DbGalleryImage[]> {
     return images;
   } catch (error) {
     console.error('getDbGalleryImages error:', error);
-    return GALLERY_IMAGES.map((img, i) => ({
+    return GALLERY_IMAGES.map((img: any, i: number) => ({
       id: `gal-${i + 1}`,
       src: img.src,
       title: img.title,
@@ -2041,7 +2041,7 @@ export async function getDbPageContent(): Promise<Record<string, string>> {
     const res = isMysql
       ? await rawQuery(`SELECT \`key\`, \`value\` FROM \`hotel_settings\` WHERE \`key\` LIKE 'page_%' OR \`key\` LIKE 'hotel_%'`)
       : await query(`SELECT key, value FROM hotel_settings WHERE key LIKE 'page_%' OR key LIKE 'hotel_%'`);
-    for (const row of res.rows) {
+    for (const row of (res.rows as any[])) {
       if (row.key && row.value !== undefined && row.value !== null) {
         content[row.key] = row.value;
       }
@@ -2079,24 +2079,27 @@ export async function updateDbPageContent(items: Record<string, string>): Promis
 
 /** Unified Pool object providing connection pooling & transactions across MySQL & PostgreSQL */
 export const pool = {
-  async connect() {
+  async connect(): Promise<PoolClient> {
     if (isMysql) {
       const conn = await mysqlPool.getConnection();
       await conn.query("SET SESSION sql_mode = 'ANSI_QUOTES,STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION'");
       return {
-        async query(text: string, params?: any[]) {
+        async query<T extends QueryResultRow = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
           const { sql, params: mysqlParams } = translateQueryForMysql(text, params);
           const [result] = await conn.query(sql, mysqlParams);
-          const rows = Array.isArray(result) ? result : [];
+          const rows = Array.isArray(result) ? (result as T[]) : [];
           return {
             rows,
-            rowCount: Array.isArray(result) ? result.length : (result as any).affectedRows || 0,
+            rowCount: Array.isArray(result) ? rows.length : (result as any).affectedRows || 0,
+            command: '',
+            oid: 0,
+            fields: [] as any,
           };
         },
         release() {
           conn.release();
         },
-      };
+      } as unknown as PoolClient;
     }
     return pgPool.connect();
   },

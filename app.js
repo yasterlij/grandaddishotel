@@ -24,6 +24,78 @@ try {
   console.warn('Failed to load dotenv:', e)
 }
 
+// ─── Sanitize database environment variables at the process level ───
+// The cPanel "Setup Node.js App" UI or a server .env may inject malformed
+// values such as DB_HOST="9223@localhost" (which causes getaddrinfo ENOTFOUND).
+// We fix these BEFORE Next.js boots so every code path sees clean values.
+function sanitizeEnvHost(envKey) {
+  const raw = process.env[envKey]
+  if (!raw) return
+  let host = raw.trim()
+  // Strip everything before the last '@' (e.g. "9223@localhost" → "localhost")
+  if (host.includes('@')) {
+    host = host.split('@').pop().trim()
+    console.log(`[app.js] Sanitized ${envKey}: "${raw}" → "${host}"`)
+  }
+  // If host has an embedded port like "localhost:3306", split it out
+  if (host.includes(':')) {
+    const [h, p] = host.split(':')
+    host = h.trim()
+    if (!process.env.DB_PORT && !process.env.MYSQL_PORT) {
+      const port = parseInt(p, 10)
+      if (!isNaN(port) && port > 0 && port < 65536) {
+        process.env.DB_PORT = String(port)
+        console.log(`[app.js] Extracted DB_PORT=${port} from ${envKey}`)
+      }
+    }
+  }
+  // Normalize "localhost" → "127.0.0.1" to avoid IPv6/getaddrinfo issues
+  if (host.toLowerCase() === 'localhost') {
+    host = '127.0.0.1'
+    console.log(`[app.js] Normalized ${envKey}: "localhost" → "127.0.0.1"`)
+  }
+  process.env[envKey] = host
+}
+sanitizeEnvHost('DB_HOST')
+sanitizeEnvHost('MYSQL_HOST')
+
+// Also sanitize DATABASE_URL if it contains a malformed host
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('@')) {
+  const dbUrl = process.env.DATABASE_URL
+  // Only fix mysql:// URLs (PostgreSQL URLs are not used on cPanel)
+  if (dbUrl.startsWith('mysql://') || dbUrl.startsWith('mysql:')) {
+    try {
+      const withoutScheme = dbUrl.replace(/^mysql:\/\//i, '')
+      const slashIdx = withoutScheme.indexOf('/')
+      const hostAndAuth = slashIdx !== -1 ? withoutScheme.slice(0, slashIdx) : withoutScheme
+      const lastAt = hostAndAuth.lastIndexOf('@')
+      if (lastAt !== -1) {
+        let hostPart = hostAndAuth.slice(lastAt + 1)
+        // If the host portion still contains '@', it's malformed
+        if (hostPart.includes('@')) {
+          const cleanHost = hostPart.split('@').pop()
+          const auth = hostAndAuth.slice(0, lastAt)
+          const rest = slashIdx !== -1 ? withoutScheme.slice(slashIdx) : ''
+          process.env.DATABASE_URL = `mysql://${auth}@${cleanHost}${rest}`
+          console.log(`[app.js] Sanitized DATABASE_URL host: "${hostPart}" → "${cleanHost}"`)
+        }
+      }
+    } catch (e) {
+      console.warn('[app.js] Failed to sanitize DATABASE_URL:', e.message)
+    }
+  }
+}
+
+console.log('[app.js] DB config after sanitization:', {
+  DB_HOST: process.env.DB_HOST || '(not set)',
+  DB_PORT: process.env.DB_PORT || '(not set)',
+  DB_USER: process.env.DB_USER || process.env.DB_USERNAME || '(not set)',
+  DB_NAME: process.env.DB_NAME || process.env.DB_DATABASE || '(not set)',
+  DATABASE_URL: process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:([^@:]+)@/, ':***@') : '(not set)',
+  MYSQL_HOST: process.env.MYSQL_HOST || '(not set)',
+  NODE_ENV: process.env.NODE_ENV || '(not set)',
+})
+
 const { createServer } = require('http')
 const { parse } = require('url')
 const next = require('next')

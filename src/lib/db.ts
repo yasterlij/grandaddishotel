@@ -2,11 +2,26 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 
-// Load environment in priority order
+// Load environment in priority order across candidate directories
 if (typeof process !== 'undefined' && process.env) {
-  const root = process.cwd ? process.cwd() : '.';
+  let projectRoot = process.cwd ? process.cwd() : '.';
+  const candidates = [
+    projectRoot,
+    process.env.PWD,
+    typeof __dirname !== 'undefined' ? __dirname : '',
+    typeof __dirname !== 'undefined' ? path.resolve(__dirname, '..') : '',
+    typeof __dirname !== 'undefined' ? path.resolve(__dirname, '../..') : '',
+  ].filter(Boolean) as string[];
+
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, 'package.json')) || fs.existsSync(path.join(dir, '.env'))) {
+      projectRoot = dir;
+      break;
+    }
+  }
+
   for (const envFile of ['.env.production.local', '.env.local', '.env.production', '.env']) {
-    const envPath = path.resolve(root, envFile);
+    const envPath = path.resolve(projectRoot, envFile);
     if (fs.existsSync(envPath)) {
       dotenv.config({ path: envPath });
     }
@@ -83,21 +98,53 @@ function parseMysqlUrl(rawUrl: string): {
       }
     }
 
-    if (host && host.includes('@')) {
-      const parts = host.split('@');
-      host = parts[parts.length - 1];
+    if (host) {
+      const sanitized = sanitizeHostAndPort(host, port);
+      host = sanitized.host;
+      port = sanitized.port;
     }
 
     return {
       user,
       password,
       host,
-      port: isNaN(port!) ? undefined : port,
+      port,
       database: database ? decodeURIComponent(database) : undefined,
     };
   } catch {
     return {};
   }
+}
+
+export function sanitizeHostAndPort(
+  rawHost?: string,
+  rawPort?: number | string
+): { host: string; port: number } {
+  let host = (rawHost || '').trim() || '127.0.0.1';
+  let port = typeof rawPort === 'number' ? rawPort : parseInt(String(rawPort || '3306'), 10);
+
+  // 1. If host contains '@' (e.g. "9223@localhost" or "user@host"), extract the host portion after the last '@'
+  if (host.includes('@')) {
+    const parts = host.split('@');
+    host = parts[parts.length - 1].trim();
+  }
+
+  // 2. If host contains ':' (e.g. "localhost:3306" or "127.0.0.1:3306")
+  if (host.includes(':')) {
+    const [h, p] = host.split(':');
+    host = h.trim();
+    const parsedP = parseInt(p, 10);
+    if (!isNaN(parsedP)) {
+      port = parsedP;
+    }
+  }
+
+  // 3. Normalize 'localhost' to IPv4 loopback '127.0.0.1' to avoid DNS getaddrinfo and IPv6 ::1 connection issues
+  if (host.toLowerCase() === 'localhost') {
+    host = '127.0.0.1';
+  }
+
+  return { host: host || '127.0.0.1', port: isNaN(port) ? 3306 : port };
 }
 
 export function getMysqlConfig(): {
@@ -149,11 +196,12 @@ export function getMysqlConfig(): {
 
   const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
 
-  let finalHost = dbHost || parsedFromUrl.host;
-  if (finalHost && finalHost.includes('@')) {
-    const parts = finalHost.split('@');
-    finalHost = parts[parts.length - 1];
-  }
+  // Sanitize host and port, stripping any lingering '@' or non-standard prefix
+  const { host: finalHost, port: finalPort } = sanitizeHostAndPort(
+    dbHost || parsedFromUrl.host,
+    !isNaN(dbPort) && process.env.DB_PORT ? dbPort : parsedFromUrl.port || dbPort
+  );
+
   const finalUser = dbUser || parsedFromUrl.user;
   const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
   const finalDatabase = dbName || parsedFromUrl.database;
@@ -166,7 +214,7 @@ export function getMysqlConfig(): {
 
   return {
     host: finalHost,
-    port: dbPort || parsedFromUrl.port || 3306,
+    port: finalPort,
     user: finalUser,
     password: finalPassword,
     database: finalDatabase,

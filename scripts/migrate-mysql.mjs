@@ -74,6 +74,23 @@ function parseMysqlUrl(rawUrl) {
   }
 }
 
+function sanitizeHostAndPort(rawHost, rawPort) {
+  let host = (rawHost || '').trim() || '127.0.0.1';
+  let port = typeof rawPort === 'number' ? rawPort : parseInt(String(rawPort || '3306'), 10);
+  if (host.includes('@')) {
+    const parts = host.split('@');
+    host = parts[parts.length - 1].trim();
+  }
+  if (host.includes(':')) {
+    const [h, p] = host.split(':');
+    host = h.trim();
+    const parsedP = parseInt(p, 10);
+    if (!isNaN(parsedP)) port = parsedP;
+  }
+  if (host.toLowerCase() === 'localhost') host = '127.0.0.1';
+  return { host: host || '127.0.0.1', port: isNaN(port) ? 3306 : port };
+}
+
 function getMysqlConnectionConfig() {
   const connectionString = process.env.DATABASE_URL || '';
   const dbUser = process.env.DB_USER || process.env.DB_USERNAME || process.env.MYSQL_USER || process.env.MYSQL_USERNAME;
@@ -84,11 +101,10 @@ function getMysqlConnectionConfig() {
   const rawUrl = process.env.MYSQL_URL || process.env.MYSQL_DATABASE_URL || (connectionString.startsWith('mysql') ? connectionString : null);
   const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
 
-  let finalHost = dbHost || parsedFromUrl.host;
-  if (finalHost && finalHost.includes('@')) {
-    const parts = finalHost.split('@');
-    finalHost = parts[parts.length - 1];
-  }
+  const { host: finalHost, port: finalPort } = sanitizeHostAndPort(
+    dbHost || parsedFromUrl.host,
+    !isNaN(dbPort) && process.env.DB_PORT ? dbPort : parsedFromUrl.port || dbPort
+  );
   const finalUser = dbUser || parsedFromUrl.user;
   const finalDatabase = dbName || parsedFromUrl.database;
   const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
@@ -99,7 +115,7 @@ function getMysqlConnectionConfig() {
 
   return {
     host: finalHost,
-    port: dbPort || 3306,
+    port: finalPort,
     user: finalUser,
     password: finalPassword,
     database: finalDatabase,

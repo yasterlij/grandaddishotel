@@ -39,10 +39,12 @@ else
   npx next build --webpack
 fi
 
-# 7. Create tmp directory and trigger Phusion Passenger reload
+# 7. Trigger application process restart for Plesk & cPanel (LiteSpeed / Passenger)
 echo "▶ Step 7: Triggering application process restart..."
 mkdir -p tmp
 touch tmp/restart.txt
+# If running under cPanel/LiteSpeed external app, kill stale worker so LiteSpeed immediately spawns fresh process
+pkill -u "$(whoami)" -f "node.*(app|server)\.js" 2>/dev/null || true
 
 echo "--------------------------------------------------------"
 echo "✓ Grand Addis Hotel deployment finished successfully!"

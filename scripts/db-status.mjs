@@ -88,6 +88,23 @@ function parseMysqlUrl(rawUrl) {
   }
 }
 
+function sanitizeHostAndPort(rawHost, rawPort) {
+  let host = (rawHost || '').trim() || '127.0.0.1';
+  let port = typeof rawPort === 'number' ? rawPort : parseInt(String(rawPort || '3306'), 10);
+  if (host.includes('@')) {
+    const parts = host.split('@');
+    host = parts[parts.length - 1].trim();
+  }
+  if (host.includes(':')) {
+    const [h, p] = host.split(':');
+    host = h.trim();
+    const parsedP = parseInt(p, 10);
+    if (!isNaN(parsedP)) port = parsedP;
+  }
+  if (host.toLowerCase() === 'localhost') host = '127.0.0.1';
+  return { host: host || '127.0.0.1', port: isNaN(port) ? 3306 : port };
+}
+
 async function checkStatus() {
   console.log('\n============================================================');
   console.log('GRAND ADDIS HOTEL - DATABASE HEALTH & STATUS CHECK');
@@ -104,11 +121,11 @@ async function checkStatus() {
     const dbPassword = process.env.DB_PASSWORD || process.env.DB_PASS || process.env.MYSQL_PASSWORD || process.env.MYSQL_PASS;
     const rawUrl = process.env.MYSQL_URL || process.env.MYSQL_DATABASE_URL || (connectionString.startsWith('mysql') ? connectionString : null);
     const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
-    let finalHost = dbHost || parsedFromUrl.host;
-    if (finalHost && finalHost.includes('@')) {
-      const parts = finalHost.split('@');
-      finalHost = parts[parts.length - 1];
-    }
+
+    const { host: finalHost, port: finalPort } = sanitizeHostAndPort(
+      dbHost || parsedFromUrl.host,
+      !isNaN(dbPort) && process.env.DB_PORT ? dbPort : parsedFromUrl.port || dbPort
+    );
     const finalUser = dbUser || parsedFromUrl.user;
     const finalDatabase = dbName || parsedFromUrl.database;
     const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
@@ -118,7 +135,7 @@ async function checkStatus() {
       process.exit(1);
     }
 
-    console.log(`Host:     ${finalHost}:${dbPort}`);
+    console.log(`Host:     ${finalHost}:${finalPort}`);
     console.log(`User:     ${finalUser}`);
     console.log(`Database: ${finalDatabase}`);
     console.log(`Password: ${finalPassword ? 'YES (' + String(finalPassword).length + ' chars)' : 'NO'}`);
@@ -127,7 +144,7 @@ async function checkStatus() {
     try {
       const conn = await mysql.createConnection({
         host: finalHost,
-        port: dbPort,
+        port: finalPort,
         user: finalUser,
         password: finalPassword,
         database: finalDatabase,

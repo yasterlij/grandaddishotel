@@ -1,9 +1,6 @@
-import { Pool } from 'pg';
+import { createPgPool, connectionString } from './db-common.mjs';
 
-const connectionString =
-  process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
-
-const pool = new Pool({ connectionString });
+const pool = createPgPool();
 
 async function seed() {
   console.log('Connecting to PostgreSQL at:', connectionString);

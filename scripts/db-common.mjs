@@ -51,22 +51,26 @@ sanitizeEnvHost('MYSQL_HOST');
 sanitizeEnvHost('PGHOST');
 sanitizeEnvHost('POSTGRES_HOST');
 
-export const connectionString =
-  process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
+const rawDatabaseUrl = (process.env.DATABASE_URL || '').trim();
 
 export const isMysql = Boolean(
-  (
-    process.env.DB_TYPE === 'mysql' ||
-    process.env.MYSQL_URL ||
-    process.env.MYSQL_DATABASE_URL ||
-    connectionString.startsWith('mysql://') ||
-    connectionString.startsWith('mysql:') ||
-    ((process.env.DB_HOST || process.env.DB_USER || process.env.MYSQL_USER) &&
-      !connectionString.startsWith('postgres://') &&
-      !connectionString.startsWith('postgresql://'))
-  ) &&
+  process.env.DB_TYPE === 'mysql' ||
+  process.env.MYSQL_URL ||
+  process.env.MYSQL_DATABASE_URL ||
+  rawDatabaseUrl.startsWith('mysql://') ||
+  rawDatabaseUrl.startsWith('mysql:') ||
+  (!rawDatabaseUrl &&
+    (process.env.DB_HOST || process.env.DB_USER || process.env.MYSQL_USER) &&
     process.env.DB_TYPE !== 'postgres' &&
-    process.env.DB_TYPE !== 'postgresql'
+    process.env.DB_TYPE !== 'postgresql' &&
+    !process.env.PGDATABASE &&
+    !process.env.PGUSER)
+);
+
+export const connectionString = rawDatabaseUrl || (
+  isMysql
+    ? `mysql://${process.env.DB_USER || process.env.MYSQL_USER || ''}:${encodeURIComponent(process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || '')}@${process.env.DB_HOST || process.env.MYSQL_HOST || '127.0.0.1'}:${process.env.DB_PORT || process.env.MYSQL_PORT || 3306}/${process.env.DB_NAME || process.env.MYSQL_DATABASE || ''}`
+    : `postgresql://${process.env.PGUSER || process.env.DB_USER || ''}:${encodeURIComponent(process.env.PGPASSWORD || process.env.DB_PASSWORD || '')}@${process.env.PGHOST || process.env.DB_HOST || '127.0.0.1'}:${process.env.PGPORT || process.env.DB_PORT || 5432}/${process.env.PGDATABASE || process.env.DB_NAME || ''}`
 );
 
 export function parsePostgresUrl(rawUrl) {
@@ -151,6 +155,18 @@ export function parsePostgresUrl(rawUrl) {
 
 export function createPgPool() {
   const pgParsed = parsePostgresUrl(connectionString);
+  if (!pgParsed.user || !pgParsed.database) {
+    throw new Error(
+      `Database credentials are missing in your .env file.\n` +
+      `Please provide either:\n` +
+      `  DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<database>"\n` +
+      `or separate variables:\n` +
+      `  DB_HOST="127.0.0.1"\n` +
+      `  DB_USER="<your_db_username>"\n` +
+      `  DB_PASSWORD="<your_db_password>"\n` +
+      `  DB_NAME="<your_db_name>"`
+    );
+  }
   return new Pool({
     host: pgParsed.host,
     port: pgParsed.port,

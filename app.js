@@ -1,6 +1,29 @@
 // =============================================================================
 // GRAND ADDIS HOTEL - Production Application Starter Script for Plesk
 // =============================================================================
+const path = require('path')
+const fs = require('fs')
+
+// Ensure working directory is always the application root
+try {
+  process.chdir(__dirname)
+} catch (e) {
+  console.warn('Failed to chdir to __dirname:', e)
+}
+
+// Load environment variables in priority order
+try {
+  const dotenv = require('dotenv')
+  for (const envFile of ['.env.production.local', '.env.local', '.env.production', '.env']) {
+    const envPath = path.resolve(__dirname, envFile)
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath })
+    }
+  }
+} catch (e) {
+  console.warn('Failed to load dotenv:', e)
+}
+
 const { createServer } = require('http')
 const { parse } = require('url')
 const next = require('next')

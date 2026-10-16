@@ -32,17 +32,61 @@ const isMysql = Boolean(
 );
 
 function parseMysqlUrl(rawUrl) {
-  const match = rawUrl?.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/([^?]+)(?:\?.*)?$/i);
-  if (match) {
+  try {
+    const withoutScheme = (rawUrl || '').replace(/^mysql:\/\//i, '');
+    const slashIdx = withoutScheme.indexOf('/');
+    const pathAndQuery = slashIdx !== -1 ? withoutScheme.slice(slashIdx + 1) : '';
+    const database = pathAndQuery.split('?')[0];
+
+    const hostAndAuth = slashIdx !== -1 ? withoutScheme.slice(0, slashIdx) : withoutScheme;
+    const lastAtIdx = hostAndAuth.lastIndexOf('@');
+
+    let user, password, host, port;
+
+    if (lastAtIdx !== -1) {
+      const auth = hostAndAuth.slice(0, lastAtIdx);
+      const hostPart = hostAndAuth.slice(lastAtIdx + 1);
+
+      const firstColonIdx = auth.indexOf(':');
+      if (firstColonIdx !== -1) {
+        user = decodeURIComponent(auth.slice(0, firstColonIdx));
+        password = decodeURIComponent(auth.slice(firstColonIdx + 1));
+      } else {
+        user = decodeURIComponent(auth);
+      }
+
+      const hostColonIdx = hostPart.lastIndexOf(':');
+      if (hostColonIdx !== -1) {
+        host = hostPart.slice(0, hostColonIdx);
+        port = parseInt(hostPart.slice(hostColonIdx + 1), 10);
+      } else {
+        host = hostPart;
+      }
+    } else {
+      const hostColonIdx = hostAndAuth.lastIndexOf(':');
+      if (hostColonIdx !== -1) {
+        host = hostAndAuth.slice(0, hostColonIdx);
+        port = parseInt(hostAndAuth.slice(hostColonIdx + 1), 10);
+      } else {
+        host = hostAndAuth;
+      }
+    }
+
+    if (host && host.includes('@')) {
+      const parts = host.split('@');
+      host = parts[parts.length - 1];
+    }
+
     return {
-      user: match[1] ? decodeURIComponent(match[1]) : undefined,
-      password: match[2] ? decodeURIComponent(match[2]) : undefined,
-      host: match[3],
-      port: match[4] ? parseInt(match[4], 10) : undefined,
-      database: match[5],
+      user,
+      password,
+      host,
+      port: isNaN(port) ? undefined : port,
+      database: database ? decodeURIComponent(database) : undefined,
     };
+  } catch {
+    return {};
   }
-  return {};
 }
 
 function getMysqlConnectionConfig() {
@@ -54,7 +98,11 @@ function getMysqlConnectionConfig() {
   const rawUrl = process.env.MYSQL_URL || process.env.MYSQL_DATABASE_URL || (connectionString.startsWith('mysql') ? connectionString : null);
   const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
 
-  const finalHost = dbHost || parsedFromUrl.host;
+  let finalHost = dbHost || parsedFromUrl.host;
+  if (finalHost && finalHost.includes('@')) {
+    const parts = finalHost.split('@');
+    finalHost = parts[parts.length - 1];
+  }
   const finalUser = dbUser || parsedFromUrl.user;
   const finalDatabase = dbName || parsedFromUrl.database;
   const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;

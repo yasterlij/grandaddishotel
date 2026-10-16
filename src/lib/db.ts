@@ -1,3 +1,18 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Load environment in priority order
+if (typeof process !== 'undefined' && process.env) {
+  const root = process.cwd ? process.cwd() : '.';
+  for (const envFile of ['.env.production.local', '.env.local', '.env.production', '.env']) {
+    const envPath = path.resolve(root, envFile);
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+    }
+  }
+}
+
 import { Pool } from 'pg';
 import type { PoolClient, QueryResult, QueryResultRow } from 'pg';
 import mysql from 'mysql2/promise';
@@ -25,34 +40,64 @@ function parseMysqlUrl(rawUrl: string): {
   port?: number;
   database?: string;
 } {
-  const match = rawUrl.match(/^mysql:\/\/(?:([^:]+)(?::([^@]*))?@)?([^:/]+)(?::(\d+))?\/([^?]+)(?:\?.*)?$/i);
-  if (match) {
-    return {
-      user: match[1] ? decodeURIComponent(match[1]) : undefined,
-      password: match[2] ? decodeURIComponent(match[2]) : undefined,
-      host: match[3],
-      port: match[4] ? parseInt(match[4], 10) : undefined,
-      database: match[5],
-    };
-  }
-
   try {
-    const ConnectionConfig = (mysql as any).ConnectionConfig;
-    if (ConnectionConfig && typeof ConnectionConfig.parseUrl === 'function') {
-      const parsed = ConnectionConfig.parseUrl(rawUrl) || {};
-      return {
-        user: parsed.user,
-        password: parsed.password,
-        host: parsed.host,
-        port: parsed.port,
-        database: parsed.database,
-      };
-    }
-  } catch {
-    // Ignore and fall back to a validation error below.
-  }
+    const withoutScheme = rawUrl.replace(/^mysql:\/\//i, '');
+    const slashIdx = withoutScheme.indexOf('/');
+    const pathAndQuery = slashIdx !== -1 ? withoutScheme.slice(slashIdx + 1) : '';
+    const database = pathAndQuery.split('?')[0];
 
-  return {};
+    const hostAndAuth = slashIdx !== -1 ? withoutScheme.slice(0, slashIdx) : withoutScheme;
+    const lastAtIdx = hostAndAuth.lastIndexOf('@');
+
+    let user: string | undefined;
+    let password: string | undefined;
+    let host: string | undefined;
+    let port: number | undefined;
+
+    if (lastAtIdx !== -1) {
+      const auth = hostAndAuth.slice(0, lastAtIdx);
+      const hostPart = hostAndAuth.slice(lastAtIdx + 1);
+
+      const firstColonIdx = auth.indexOf(':');
+      if (firstColonIdx !== -1) {
+        user = decodeURIComponent(auth.slice(0, firstColonIdx));
+        password = decodeURIComponent(auth.slice(firstColonIdx + 1));
+      } else {
+        user = decodeURIComponent(auth);
+      }
+
+      const hostColonIdx = hostPart.lastIndexOf(':');
+      if (hostColonIdx !== -1) {
+        host = hostPart.slice(0, hostColonIdx);
+        port = parseInt(hostPart.slice(hostColonIdx + 1), 10);
+      } else {
+        host = hostPart;
+      }
+    } else {
+      const hostColonIdx = hostAndAuth.lastIndexOf(':');
+      if (hostColonIdx !== -1) {
+        host = hostAndAuth.slice(0, hostColonIdx);
+        port = parseInt(hostAndAuth.slice(hostColonIdx + 1), 10);
+      } else {
+        host = hostAndAuth;
+      }
+    }
+
+    if (host && host.includes('@')) {
+      const parts = host.split('@');
+      host = parts[parts.length - 1];
+    }
+
+    return {
+      user,
+      password,
+      host,
+      port: isNaN(port!) ? undefined : port,
+      database: database ? decodeURIComponent(database) : undefined,
+    };
+  } catch {
+    return {};
+  }
 }
 
 export function getMysqlConfig(): {
@@ -104,7 +149,11 @@ export function getMysqlConfig(): {
 
   const parsedFromUrl = rawUrl ? parseMysqlUrl(rawUrl) : {};
 
-  const finalHost = dbHost || parsedFromUrl.host;
+  let finalHost = dbHost || parsedFromUrl.host;
+  if (finalHost && finalHost.includes('@')) {
+    const parts = finalHost.split('@');
+    finalHost = parts[parts.length - 1];
+  }
   const finalUser = dbUser || parsedFromUrl.user;
   const finalPassword = dbPassword !== undefined ? dbPassword : parsedFromUrl.password;
   const finalDatabase = dbName || parsedFromUrl.database;

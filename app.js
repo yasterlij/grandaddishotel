@@ -58,31 +58,38 @@ function sanitizeEnvHost(envKey) {
 }
 sanitizeEnvHost('DB_HOST')
 sanitizeEnvHost('MYSQL_HOST')
+sanitizeEnvHost('PGHOST')
+sanitizeEnvHost('POSTGRES_HOST')
 
 // Also sanitize DATABASE_URL if it contains a malformed host
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('@')) {
-  const dbUrl = process.env.DATABASE_URL
-  // Only fix mysql:// URLs (PostgreSQL URLs are not used on cPanel)
-  if (dbUrl.startsWith('mysql://') || dbUrl.startsWith('mysql:')) {
-    try {
-      const withoutScheme = dbUrl.replace(/^mysql:\/\//i, '')
-      const slashIdx = withoutScheme.indexOf('/')
-      const hostAndAuth = slashIdx !== -1 ? withoutScheme.slice(0, slashIdx) : withoutScheme
+  try {
+    const dbUrl = process.env.DATABASE_URL
+    const protoMatch = dbUrl.match(/^([a-z0-9+.-]+):\/\//i)
+    if (protoMatch) {
+      const proto = protoMatch[1].toLowerCase()
+      const rest = dbUrl.slice(protoMatch[0].length)
+      const slashIdx = rest.indexOf('/')
+      const hostAndAuth = slashIdx !== -1 ? rest.slice(0, slashIdx) : rest
+      const pathAndQuery = slashIdx !== -1 ? rest.slice(slashIdx) : ''
       const lastAt = hostAndAuth.lastIndexOf('@')
       if (lastAt !== -1) {
         let hostPart = hostAndAuth.slice(lastAt + 1)
-        // If the host portion still contains '@', it's malformed
         if (hostPart.includes('@')) {
-          const cleanHost = hostPart.split('@').pop()
-          const auth = hostAndAuth.slice(0, lastAt)
-          const rest = slashIdx !== -1 ? withoutScheme.slice(slashIdx) : ''
-          process.env.DATABASE_URL = `mysql://${auth}@${cleanHost}${rest}`
-          console.log(`[app.js] Sanitized DATABASE_URL host: "${hostPart}" → "${cleanHost}"`)
+          hostPart = hostPart.split('@').pop().trim()
         }
+        let [h, p] = hostPart.split(':')
+        if (h && h.toLowerCase() === 'localhost') {
+          h = '127.0.0.1'
+        }
+        hostPart = p ? `${h}:${p}` : h
+        const auth = hostAndAuth.slice(0, lastAt)
+        process.env.DATABASE_URL = `${proto}://${auth}@${hostPart}${pathAndQuery}`
+        console.log(`[app.js] Sanitized DATABASE_URL (${proto}) host: "${hostPart}"`)
       }
-    } catch (e) {
-      console.warn('[app.js] Failed to sanitize DATABASE_URL:', e.message)
     }
+  } catch (e) {
+    console.warn('[app.js] Failed to sanitize DATABASE_URL:', e.message)
   }
 }
 

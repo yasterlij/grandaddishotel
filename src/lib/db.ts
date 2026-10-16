@@ -38,15 +38,123 @@ const connectionString =
   process.env.DATABASE_URL || 'postgresql://tamrat@localhost:5432/grand_addis_db';
 
 export const isMysql = Boolean(
-  process.env.DB_HOST ||
-  process.env.DB_USER ||
-  process.env.DB_USERNAME ||
-  process.env.MYSQL_USER ||
-  process.env.MYSQL_URL ||
-  process.env.MYSQL_DATABASE_URL ||
-  connectionString.startsWith('mysql://') ||
-  connectionString.startsWith('mysql:')
+  (
+    process.env.DB_TYPE === 'mysql' ||
+    process.env.MYSQL_URL ||
+    process.env.MYSQL_DATABASE_URL ||
+    connectionString.startsWith('mysql://') ||
+    connectionString.startsWith('mysql:') ||
+    ((process.env.DB_HOST || process.env.DB_USER || process.env.MYSQL_USER) &&
+      !connectionString.startsWith('postgres://') &&
+      !connectionString.startsWith('postgresql://'))
+  ) &&
+    process.env.DB_TYPE !== 'postgres' &&
+    process.env.DB_TYPE !== 'postgresql'
 );
+
+/**
+ * Safely parse a PostgreSQL connection URL, handling passwords that contain '@'.
+ * The standard URL parser and pg's built-in parser both break on unencoded '@'
+ * in passwords (e.g. postgresql://user:Pass@9223@localhost:5432/db), producing
+ * "getaddrinfo ENOTFOUND 9223@localhost". We use lastIndexOf('@') to avoid this.
+ */
+function parsePostgresUrl(rawUrl: string): {
+  user?: string;
+  password?: string;
+  host: string;
+  port: number;
+  database?: string;
+  ssl?: boolean;
+} {
+  try {
+    // Strip scheme (postgresql:// or postgres://)
+    const withoutScheme = rawUrl.replace(/^postgres(?:ql)?:\/\//i, '');
+
+    // Split path: everything before first '/' is auth+host, after is database+params
+    const slashIdx = withoutScheme.indexOf('/');
+    const pathAndQuery = slashIdx !== -1 ? withoutScheme.slice(slashIdx + 1) : '';
+    const hostAndAuth = slashIdx !== -1 ? withoutScheme.slice(0, slashIdx) : withoutScheme;
+
+    // Parse query params (for ?sslmode=require etc.)
+    const [dbPart, queryPart] = pathAndQuery.split('?');
+    let database = dbPart ? decodeURIComponent(dbPart) : undefined;
+    const ssl = queryPart ? /sslmode=require/i.test(queryPart) : false;
+
+    // Split auth from host at the LAST '@' — this is the key fix
+    const lastAtIdx = hostAndAuth.lastIndexOf('@');
+
+    let user: string | undefined;
+    let password: string | undefined;
+    let host = 'localhost';
+    let port = 5432;
+
+    if (lastAtIdx !== -1) {
+      const auth = hostAndAuth.slice(0, lastAtIdx);
+      const hostPart = hostAndAuth.slice(lastAtIdx + 1);
+
+      // Auth: user:password
+      const firstColonIdx = auth.indexOf(':');
+      if (firstColonIdx !== -1) {
+        user = decodeURIComponent(auth.slice(0, firstColonIdx));
+        password = decodeURIComponent(auth.slice(firstColonIdx + 1));
+      } else {
+        user = decodeURIComponent(auth);
+      }
+
+      // Host: hostname:port
+      const hostColonIdx = hostPart.lastIndexOf(':');
+      if (hostColonIdx !== -1) {
+        host = hostPart.slice(0, hostColonIdx);
+        port = parseInt(hostPart.slice(hostColonIdx + 1), 10);
+      } else {
+        host = hostPart;
+      }
+    } else {
+      // No auth — just host:port
+      const hostColonIdx = hostAndAuth.lastIndexOf(':');
+      if (hostColonIdx !== -1) {
+        host = hostAndAuth.slice(0, hostColonIdx);
+        port = parseInt(hostAndAuth.slice(hostColonIdx + 1), 10);
+      } else {
+        host = hostAndAuth;
+      }
+    }
+
+    // Final host sanitization — strip stray '@' prefixes, normalize localhost
+    if (host.includes('@')) {
+      host = host.split('@').pop()!.trim();
+    }
+    if (host.toLowerCase() === 'localhost') {
+      host = '127.0.0.1';
+    }
+
+    if (process.env.PGHOST) {
+      let envH = process.env.PGHOST.trim();
+      if (envH.includes('@')) envH = envH.split('@').pop()!.trim();
+      if (envH.toLowerCase() === 'localhost') envH = '127.0.0.1';
+      host = envH;
+    }
+    if (process.env.PGPORT) {
+      const p = parseInt(process.env.PGPORT, 10);
+      if (!isNaN(p)) port = p;
+    }
+    if (process.env.PGUSER) user = process.env.PGUSER;
+    if (process.env.PGPASSWORD) password = process.env.PGPASSWORD;
+    if (process.env.PGDATABASE) database = process.env.PGDATABASE;
+
+    return {
+      user,
+      password,
+      host: host || '127.0.0.1',
+      port: isNaN(port) ? 5432 : port,
+      database,
+      ssl,
+    };
+  } catch {
+    return { host: '127.0.0.1', port: 5432 };
+  }
+}
+
 
 function parseMysqlUrl(rawUrl: string): {
   user?: string;
@@ -250,8 +358,25 @@ if (isMysql) {
   mysqlPool = global._mysqlPool;
 } else {
   if (!global._pgPool) {
+    // Parse the connection string ourselves to handle passwords with '@' chars.
+    // The pg library's built-in parser breaks on unencoded '@' in passwords,
+    // e.g. "postgresql://user:Pass@9223@localhost:5432/db" → host becomes "9223@localhost".
+    const pgParsed = parsePostgresUrl(connectionString);
+    console.log('[db.ts] PostgreSQL connection parsed:', {
+      host: pgParsed.host,
+      port: pgParsed.port,
+      user: pgParsed.user,
+      database: pgParsed.database,
+      hasPassword: Boolean(pgParsed.password),
+      ssl: pgParsed.ssl,
+    });
     global._pgPool = new Pool({
-      connectionString,
+      host: pgParsed.host,
+      port: pgParsed.port,
+      user: pgParsed.user,
+      password: pgParsed.password,
+      database: pgParsed.database,
+      ssl: pgParsed.ssl ? { rejectUnauthorized: false } : undefined,
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,

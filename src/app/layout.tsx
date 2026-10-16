@@ -71,7 +71,10 @@ export const metadata: Metadata = {
   icons: {
     icon: '/images/logo.png',
     apple: '/images/logo.png',
-  }
+  },
+  verification: {
+    google: 'z_sZfA0PDp_AFYRnV7S7RaBqTZgVOf5469wsdVExEjo',
+  },
 };
 
 export default function RootLayout({
@@ -84,6 +87,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/images/logo.png" />
         <meta name="theme-color" content="#0F2A33" />
+        <meta name="google-site-verification" content="z_sZfA0PDp_AFYRnV7S7RaBqTZgVOf5469wsdVExEjo" />
       </head>
       <body>
         <CurrencyProvider>

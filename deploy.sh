@@ -13,7 +13,7 @@ echo "--------------------------------------------------------"
 
 # 1. Install production & build dependencies
 echo "▶ Step 1: Installing dependencies..."
-npm install --legacy-peer-deps
+npm install --legacy-peer-deps --include=dev
 
 # 2. Generate Prisma client contracts
 echo "▶ Step 2: Generating Prisma client contracts..."

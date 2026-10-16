@@ -36,8 +36,9 @@ export async function GET(req: NextRequest) {
     .replace(/USE `?[a-zA-Z0-9_]+`?;/gi, '');
 
   let connection;
+  let connConfig: any = null;
   try {
-    const connConfig = getMysqlConfig();
+    connConfig = getMysqlConfig();
     connection = await mysql.createConnection(connConfig);
 
     await connection.query(sanitizedSql);
@@ -62,6 +63,13 @@ export async function GET(req: NextRequest) {
       {
         success: false,
         error: error.message || 'Failed to execute MySQL seed dump',
+        diagnostics: connConfig ? {
+          host: connConfig.host,
+          port: connConfig.port,
+          user: connConfig.user,
+          database: connConfig.database,
+          hasPassword: Boolean(connConfig.password),
+        } : null,
       },
       { status: 500 }
     );

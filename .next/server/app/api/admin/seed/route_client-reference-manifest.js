@@ -1,0 +1,1 @@
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/admin/seed/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"/Users/tamrat/Documents/Code/grandaddishotel/src/app/api/admin/seed/route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

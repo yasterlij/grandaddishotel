@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/testimonials/layout,_N_T_/testimonials/page,_N_T_/testimonials"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/testimonials/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/1fded85d9c0b53aa3127e006cf9c652bdd9600381778d28b6195ceb0303d485e/$/testimonials",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/testimonials/page"
+    },
+    "isFallback": false
+  }
+}

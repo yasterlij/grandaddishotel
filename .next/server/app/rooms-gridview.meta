@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/rooms-gridview/layout,_N_T_/rooms-gridview/page,_N_T_/rooms-gridview"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/rooms-gridview/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/338e2d54e2a53fe57d7b777b817e3cc4ceb56afdfa341a20ea2cf61b27ee19a5/$/rooms-gridview",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/rooms-gridview/page"
+    },
+    "isFallback": false
+  }
+}

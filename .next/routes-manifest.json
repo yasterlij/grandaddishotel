@@ -1,0 +1,471 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/:path*",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://sandbox.sikinapay.com; frame-src 'self' https://www.google.com https://maps.google.com; frame-ancestors 'self'"
+        }
+      ],
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+    }
+  ],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/rooms/[slug]",
+      "regex": "^/api/rooms/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/api/rooms/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/rooms/[slug]",
+      "regex": "^/rooms/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/rooms/(?<nxtPslug>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/about-us",
+      "regex": "^/about\\-us(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/about\\-us(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/api/admin/auth-check",
+      "regex": "^/api/admin/auth\\-check(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/auth\\-check(?:/)?$"
+    },
+    {
+      "page": "/api/admin/content",
+      "regex": "^/api/admin/content(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/content(?:/)?$"
+    },
+    {
+      "page": "/api/admin/experiences",
+      "regex": "^/api/admin/experiences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/experiences(?:/)?$"
+    },
+    {
+      "page": "/api/admin/faqs",
+      "regex": "^/api/admin/faqs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/faqs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/gallery",
+      "regex": "^/api/admin/gallery(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/gallery(?:/)?$"
+    },
+    {
+      "page": "/api/admin/login",
+      "regex": "^/api/admin/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/login(?:/)?$"
+    },
+    {
+      "page": "/api/admin/logout",
+      "regex": "^/api/admin/logout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/logout(?:/)?$"
+    },
+    {
+      "page": "/api/admin/menu",
+      "regex": "^/api/admin/menu(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/menu(?:/)?$"
+    },
+    {
+      "page": "/api/admin/overview",
+      "regex": "^/api/admin/overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/overview(?:/)?$"
+    },
+    {
+      "page": "/api/admin/payments",
+      "regex": "^/api/admin/payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/payments(?:/)?$"
+    },
+    {
+      "page": "/api/admin/promotions",
+      "regex": "^/api/admin/promotions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/promotions(?:/)?$"
+    },
+    {
+      "page": "/api/admin/reservations",
+      "regex": "^/api/admin/reservations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/reservations(?:/)?$"
+    },
+    {
+      "page": "/api/admin/room-types",
+      "regex": "^/api/admin/room\\-types(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/room\\-types(?:/)?$"
+    },
+    {
+      "page": "/api/admin/rooms",
+      "regex": "^/api/admin/rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/rooms(?:/)?$"
+    },
+    {
+      "page": "/api/admin/seed",
+      "regex": "^/api/admin/seed(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/seed(?:/)?$"
+    },
+    {
+      "page": "/api/admin/settings/exchange-rate",
+      "regex": "^/api/admin/settings/exchange\\-rate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/settings/exchange\\-rate(?:/)?$"
+    },
+    {
+      "page": "/api/admin/spa",
+      "regex": "^/api/admin/spa(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/spa(?:/)?$"
+    },
+    {
+      "page": "/api/admin/testimonials",
+      "regex": "^/api/admin/testimonials(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/testimonials(?:/)?$"
+    },
+    {
+      "page": "/api/contact",
+      "regex": "^/api/contact(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/contact(?:/)?$"
+    },
+    {
+      "page": "/api/content",
+      "regex": "^/api/content(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/content(?:/)?$"
+    },
+    {
+      "page": "/api/dining-reservations",
+      "regex": "^/api/dining\\-reservations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dining\\-reservations(?:/)?$"
+    },
+    {
+      "page": "/api/events",
+      "regex": "^/api/events(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/events(?:/)?$"
+    },
+    {
+      "page": "/api/experiences",
+      "regex": "^/api/experiences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/experiences(?:/)?$"
+    },
+    {
+      "page": "/api/faqs",
+      "regex": "^/api/faqs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/faqs(?:/)?$"
+    },
+    {
+      "page": "/api/gallery",
+      "regex": "^/api/gallery(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gallery(?:/)?$"
+    },
+    {
+      "page": "/api/menu",
+      "regex": "^/api/menu(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/menu(?:/)?$"
+    },
+    {
+      "page": "/api/payments/config",
+      "regex": "^/api/payments/config(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/payments/config(?:/)?$"
+    },
+    {
+      "page": "/api/payments/initialize",
+      "regex": "^/api/payments/initialize(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/payments/initialize(?:/)?$"
+    },
+    {
+      "page": "/api/payments/verify",
+      "regex": "^/api/payments/verify(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/payments/verify(?:/)?$"
+    },
+    {
+      "page": "/api/prisma-health",
+      "regex": "^/api/prisma\\-health(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/prisma\\-health(?:/)?$"
+    },
+    {
+      "page": "/api/promotions",
+      "regex": "^/api/promotions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/promotions(?:/)?$"
+    },
+    {
+      "page": "/api/reservations",
+      "regex": "^/api/reservations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reservations(?:/)?$"
+    },
+    {
+      "page": "/api/rooms",
+      "regex": "^/api/rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/rooms(?:/)?$"
+    },
+    {
+      "page": "/api/settings/exchange-rate",
+      "regex": "^/api/settings/exchange\\-rate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/exchange\\-rate(?:/)?$"
+    },
+    {
+      "page": "/api/setup",
+      "regex": "^/api/setup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/setup(?:/)?$"
+    },
+    {
+      "page": "/api/spa-appointments",
+      "regex": "^/api/spa\\-appointments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/spa\\-appointments(?:/)?$"
+    },
+    {
+      "page": "/api/spa-treatments",
+      "regex": "^/api/spa\\-treatments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/spa\\-treatments(?:/)?$"
+    },
+    {
+      "page": "/api/testimonials",
+      "regex": "^/api/testimonials(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/testimonials(?:/)?$"
+    },
+    {
+      "page": "/api/upload",
+      "regex": "^/api/upload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/upload(?:/)?$"
+    },
+    {
+      "page": "/book-now",
+      "regex": "^/book\\-now(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/book\\-now(?:/)?$"
+    },
+    {
+      "page": "/checkout",
+      "regex": "^/checkout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/checkout(?:/)?$"
+    },
+    {
+      "page": "/contact",
+      "regex": "^/contact(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/contact(?:/)?$"
+    },
+    {
+      "page": "/double-rooms",
+      "regex": "^/double\\-rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/double\\-rooms(?:/)?$"
+    },
+    {
+      "page": "/experiences",
+      "regex": "^/experiences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/experiences(?:/)?$"
+    },
+    {
+      "page": "/faqs",
+      "regex": "^/faqs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/faqs(?:/)?$"
+    },
+    {
+      "page": "/gallery",
+      "regex": "^/gallery(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/gallery(?:/)?$"
+    },
+    {
+      "page": "/our-rooms",
+      "regex": "^/our\\-rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/our\\-rooms(?:/)?$"
+    },
+    {
+      "page": "/robots.txt",
+      "regex": "^/robots\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/robots\\.txt(?:/)?$"
+    },
+    {
+      "page": "/rooms",
+      "regex": "^/rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/rooms(?:/)?$"
+    },
+    {
+      "page": "/rooms-gallery",
+      "regex": "^/rooms\\-gallery(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/rooms\\-gallery(?:/)?$"
+    },
+    {
+      "page": "/rooms-gridview",
+      "regex": "^/rooms\\-gridview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/rooms\\-gridview(?:/)?$"
+    },
+    {
+      "page": "/rooms-listview",
+      "regex": "^/rooms\\-listview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/rooms\\-listview(?:/)?$"
+    },
+    {
+      "page": "/rooms-reservation",
+      "regex": "^/rooms\\-reservation(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/rooms\\-reservation(?:/)?$"
+    },
+    {
+      "page": "/search-result",
+      "regex": "^/search\\-result(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/search\\-result(?:/)?$"
+    },
+    {
+      "page": "/sitemap.xml",
+      "regex": "^/sitemap\\.xml(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sitemap\\.xml(?:/)?$"
+    },
+    {
+      "page": "/terms-conditions",
+      "regex": "^/terms\\-conditions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/terms\\-conditions(?:/)?$"
+    },
+    {
+      "page": "/testimonials",
+      "regex": "^/testimonials(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/testimonials(?:/)?$"
+    },
+    {
+      "page": "/your-booking-detail",
+      "regex": "^/your\\-booking\\-detail(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/your\\-booking\\-detail(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

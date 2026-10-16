@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/our-rooms/layout,_N_T_/our-rooms/page,_N_T_/our-rooms"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/our-rooms/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/a27fad126d4631438b77251d0760aa02670b9c2946700047e811692a29c551b7/$/our-rooms",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/our-rooms/page"
+    },
+    "isFallback": false
+  }
+}

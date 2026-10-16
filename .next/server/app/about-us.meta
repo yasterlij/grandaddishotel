@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/about-us/layout,_N_T_/about-us/page,_N_T_/about-us"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/about-us/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/234a7dd5017743d111ef53c9cc94eb81862e90bdff8d90f3c4161b283c062e45/$/about-us",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/about-us/page"
+    },
+    "isFallback": false
+  }
+}

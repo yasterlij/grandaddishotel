@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/double-rooms/layout,_N_T_/double-rooms/page,_N_T_/double-rooms"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/double-rooms/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/bf24fde6eeea5244f36187eaad993a330a6d9ea3d3556cd6d78ee8403d4027ae/$/double-rooms",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/double-rooms/page"
+    },
+    "isFallback": false
+  }
+}

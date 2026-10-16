@@ -1,0 +1,1 @@
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/spa-treatments/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"/Users/tamrat/Documents/Code/grandaddishotel/src/app/api/spa-treatments/route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

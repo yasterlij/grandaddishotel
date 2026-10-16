@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/rooms-gallery/layout,_N_T_/rooms-gallery/page,_N_T_/rooms-gallery"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/rooms-gallery/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/981bf1ae1367b8b0a9b489dfb86477bfd0ccd39278e8f6de23f0d5482178058d/$/rooms-gallery",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/rooms-gallery/page"
+    },
+    "isFallback": false
+  }
+}

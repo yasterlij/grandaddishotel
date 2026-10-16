@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/your-booking-detail/layout,_N_T_/your-booking-detail/page,_N_T_/your-booking-detail"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/your-booking-detail/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/19c0b2c200e2f4155a38d972c7f43babc88cce9109c93ab5982bb84e2f1d37d8/$/your-booking-detail",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/your-booking-detail/page"
+    },
+    "isFallback": false
+  }
+}

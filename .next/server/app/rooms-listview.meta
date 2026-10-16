@@ -1,0 +1,34 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/rooms-listview/layout,_N_T_/rooms-listview/page,_N_T_/rooms-listview"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/rooms-listview/__PAGE__"
+  ],
+  "prefetchHints": {
+    "hints": 64,
+    "slots": {
+      "children": {
+        "hints": 96,
+        "slots": {
+          "children": {
+            "hints": 160,
+            "slots": null
+          }
+        }
+      }
+    }
+  },
+  "routeCache": {
+    "key": "/route-cache/APP_PAGE/7b98a2268ccd868de9ef8d6dea34c22c6abda767bcb9d40ebdb0e08b4f7dd66a/$/rooms-listview",
+    "owner": {
+      "kind": "APP_PAGE",
+      "sourceRoute": "/rooms-listview/page"
+    },
+    "isFallback": false
+  }
+}

@@ -32,8 +32,12 @@ echo "▶ Step 5: Checking database health & row counts..."
 node scripts/db-status.mjs || true
 
 # 6. Build the optimized Next.js production bundle
-echo "▶ Step 6: Compiling Next.js application bundle..."
-npx next build --webpack
+if [ -f ".next/BUILD_ID" ]; then
+  echo "▶ Step 6: Pre-compiled production build detected (.next/BUILD_ID exists). Skipping build to bypass server RAM limits!"
+else
+  echo "▶ Step 6: Compiling Next.js application bundle..."
+  npx next build --webpack
+fi
 
 # 7. Create tmp directory and trigger Phusion Passenger reload
 echo "▶ Step 7: Triggering application process restart..."

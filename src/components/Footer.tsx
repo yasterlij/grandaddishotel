@@ -311,23 +311,18 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/rooms/standard-room" style={{ color: 'inherit' }}>
-                  Standard Room ($27/night)
-                </Link>
-              </li>
-              <li>
                 <Link href="/rooms/deluxe-room" style={{ color: 'inherit' }}>
                   Deluxe Room ($34/night)
                 </Link>
               </li>
               <li>
-                <Link href="/rooms/twin-room" style={{ color: 'inherit' }}>
-                  Twin Room ($34/night)
+                <Link href="/rooms/deluxe-twin-room" style={{ color: 'inherit' }}>
+                  Deluxe Twin Room ($34/night)
                 </Link>
               </li>
               <li>
-                <Link href="/rooms/executive-suite" style={{ color: 'inherit' }}>
-                  Grand Executive Suite ($55/night)
+                <Link href="/rooms/standard-room" style={{ color: 'inherit' }}>
+                  Standard Room ($27/night)
                 </Link>
               </li>
               <li>

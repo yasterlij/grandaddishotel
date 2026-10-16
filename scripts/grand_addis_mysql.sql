@@ -70,59 +70,37 @@ INSERT INTO `room_types` (
   `amenities`, `images`, `basePriceETB`, `basePriceUSD`, `size`, `bedType`, `view`, `category`, `featured`, `aliases`
 ) VALUES
 (
-  'rt-standard-double',
-  'standard-double-room',
-  'Standard Double Room',
-  'Refined comfort for business and leisure travelers. Features comfortable queen bed, ergonomic desk, blackout drapes, and modern en-suite marble bathroom.',
-  2, 2,
-  JSON_ARRAY('Queen Bed', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Tea & Ethiopian Coffee Maker', '24/7 Room Service', 'Daily Housekeeping', 'Electronic Safe'),
-  JSON_ARRAY('/images/vikbooking/bo5a5902.jpg', '/images/vikbooking/big_bo5a5894.jpg', '/images/vikbooking/big_bo5a5900.jpg', '/hotel_images/1760816082.webp'),
-  5800.00, 50.00, '28 m²', 'Queen Bed', 'City View', 'Hotel Rooms', 1,
-  JSON_ARRAY('standard-room', 'double-rooms', 'standard')
-),
-(
-  'rt-twin-deluxe',
-  'twin-deluxe-room',
-  'Twin Deluxe Room',
-  'Two plush double beds ideal for colleagues, friends, or small families visiting Addis Ababa. Includes private balcony, modern workspace, and city views.',
-  2, 3,
-  JSON_ARRAY('2 Double Beds', 'City View Balcony', 'High-speed Wi-Fi', 'Spacious Marble Bathroom', 'Complimentary Breakfast', 'Electric Kettle', 'In-Room Safe'),
-  JSON_ARRAY('/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/images/vikbooking/big_bo5a5852.jpg', '/hotel_images/1760816141.webp'),
-  7200.00, 62.00, '34 m²', 'Two Double Beds', 'City View Balcony', 'Hotel Rooms', 1,
-  JSON_ARRAY('twin-room', 'twin-deluxe')
-),
-(
-  'rt-deluxe-king',
-  'deluxe-king-room',
-  'Deluxe King Room',
+  'rt-deluxe-room',
+  'deluxe-room',
+  'Deluxe Room',
   'Spacious luxury room featuring a plush king-sized bed, panoramic balcony with skyline view of Addis Ababa, marble bathroom with deep soaking tub and rainfall shower, and ergonomic work desk.',
   2, 3,
   JSON_ARRAY('King Bed', 'Private Balcony', 'High-speed Wi-Fi', 'Rainfall Shower & Soaking Tub', 'Smart 55" 4K TV', 'Mini-bar & Refreshment Station', 'Complimentary Breakfast', '24/7 Room Service'),
   JSON_ARRAY('/images/vikbooking/bo5a5878.jpg', '/images/vikbooking/big_bo5a5868.jpg', '/images/BO5A5826-scaled.jpg', '/hotel_images/1760816140.webp'),
   8500.00, 75.00, '36 m²', 'King Size Bed', 'Panoramic City & Mountain View', 'Hotel Rooms', 1,
-  JSON_ARRAY('deluxe-room', 'deluxe-king')
+  JSON_ARRAY('deluxe-room', 'deluxe-king-room', 'rt-deluxe-king', 'rt-deluxe-room', 'deluxe', '1', '2')
 ),
 (
-  'rt-executive-suite',
-  'executive-suite',
-  'Executive Suite with Balcony',
-  'An elevated luxury sanctuary with separated living room, master bedroom, executive lounge access, espresso bar, and scenic mountain and city views over the Bole district.',
-  2, 4,
-  JSON_ARRAY('King Bed', 'Separate Living Room', 'Executive Lounge Access', 'Espresso Machine', 'Panoramic Balcony', 'Bathtub & Jacuzzi', 'VIP Airport Shuttle', 'Breakfast Buffet Included'),
-  JSON_ARRAY('/images/BO5A5992-scaled.jpg', '/images/BO5A5989-scaled.jpg', '/images/BO5A5976-scaled.jpg', '/hotel_images/1760816139.webp'),
-  14000.00, 120.00, '52 m²', 'Master King Bed + Daybed', 'Corner Skyline View', 'Suites', 1,
-  JSON_ARRAY('grand-executive-suite', 'executive')
+  'rt-deluxe-twin',
+  'deluxe-twin-room',
+  'Deluxe Twin Room',
+  'Modern twin room designed for comfort and connectivity, with two ergonomic beds, plush bedding, soundproof windows, dedicated workspace, and an en-suite marble bathroom. Ideal for colleagues or friends traveling together.',
+  2, 3,
+  JSON_ARRAY('Two Twin Beds', 'City View Balcony', 'High-speed Wi-Fi', 'Spacious Marble Bathroom', 'Complimentary Breakfast', 'Electric Kettle', 'In-Room Safe'),
+  JSON_ARRAY('/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/images/vikbooking/big_bo5a5852.jpg', '/images/BO5A5924-1-scaled.jpg', '/hotel_images/1760816141.webp'),
+  7200.00, 62.00, '34 m²', 'Two Twin Beds', 'City View Balcony', 'Hotel Rooms', 1,
+  JSON_ARRAY('deluxe-twin-room', 'twin-room', 'twin-deluxe-room', 'rt-twin-deluxe', 'rt-deluxe-twin', 'deluxe-twin', 'twin', '2', '3')
 ),
 (
-  'rt-presidential-suite',
-  'presidential-suite',
-  'Grand Addis Presidential Suite',
-  'The pinnacle of luxury in Addis Ababa. Palatial top-floor residence with grand dining room, kitchen, private butler service, jacuzzi, and 360-degree terrace overlooking the capital.',
-  4, 6,
-  JSON_ARRAY('Master King Bed + Guest Suite', '360° Private Rooftop Terrace', 'Jacuzzi Spa & Sauna', 'Private Dining Room & Kitchenette', 'Dedicated 24/7 Butler Service', 'Complimentary Limousine Airport Transfer', 'Full Stocked Mini-bar', 'Chef Tasting Experience'),
-  JSON_ARRAY('/hotel_images/1760816135.webp', '/images/BO5A5992-scaled.jpg', '/images/BO5A5976-scaled.jpg', '/images/BO5A5805-scaled.jpg'),
-  35000.00, 300.00, '96 m²', 'Palatial King Master + Guest Suite', '360° Private Rooftop Terrace View', 'Suites', 1,
-  JSON_ARRAY('grand-presidential-suite', 'presidential')
+  'rt-standard-room',
+  'standard-room',
+  'Standard Room',
+  'Refined comfort for business and leisure travelers. Features comfortable queen bed, ergonomic desk, blackout drapes, and modern en-suite marble bathroom.',
+  2, 2,
+  JSON_ARRAY('Queen Bed', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Tea & Ethiopian Coffee Maker', '24/7 Room Service', 'Daily Housekeeping', 'Electronic Safe'),
+  JSON_ARRAY('/images/vikbooking/bo5a5902.jpg', '/images/vikbooking/big_bo5a5894.jpg', '/images/vikbooking/big_bo5a5900.jpg', '/images/BO5A5900-scaled.jpg', '/hotel_images/1760816082.webp'),
+  5800.00, 50.00, '28 m²', 'Queen Bed', 'City View', 'Hotel Rooms', 1,
+  JSON_ARRAY('standard-room', 'standard-double-room', 'rt-standard-double', 'rt-standard-room', 'standard', 'double-rooms', '3', '1')
 )
 ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `basePriceUSD`=VALUES(`basePriceUSD`), `basePriceETB`=VALUES(`basePriceETB`);
 
@@ -145,25 +123,25 @@ CREATE TABLE `rooms` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `rooms` (`id`, `roomNumber`, `floor`, `status`, `roomTypeId`) VALUES
-('rm-101', '101', 1, 'AVAILABLE', 'rt-standard-double'),
-('rm-102', '102', 1, 'AVAILABLE', 'rt-standard-double'),
-('rm-103', '103', 1, 'AVAILABLE', 'rt-standard-double'),
-('rm-104', '104', 1, 'AVAILABLE', 'rt-standard-double'),
-('rm-105', '105', 1, 'AVAILABLE', 'rt-standard-double'),
-('rm-201', '201', 2, 'AVAILABLE', 'rt-twin-deluxe'),
-('rm-202', '202', 2, 'AVAILABLE', 'rt-twin-deluxe'),
-('rm-203', '203', 2, 'AVAILABLE', 'rt-twin-deluxe'),
-('rm-204', '204', 2, 'AVAILABLE', 'rt-twin-deluxe'),
-('rm-205', '205', 2, 'AVAILABLE', 'rt-twin-deluxe'),
-('rm-301', '301', 3, 'AVAILABLE', 'rt-deluxe-king'),
-('rm-302', '302', 3, 'AVAILABLE', 'rt-deluxe-king'),
-('rm-303', '303', 3, 'AVAILABLE', 'rt-deluxe-king'),
-('rm-304', '304', 3, 'AVAILABLE', 'rt-deluxe-king'),
-('rm-305', '305', 3, 'AVAILABLE', 'rt-deluxe-king'),
-('rm-401', '401', 4, 'AVAILABLE', 'rt-executive-suite'),
-('rm-402', '402', 4, 'AVAILABLE', 'rt-executive-suite'),
-('rm-403', '403', 4, 'AVAILABLE', 'rt-executive-suite'),
-('rm-501', '501', 5, 'AVAILABLE', 'rt-presidential-suite')
+('rm-101', '101', 1, 'AVAILABLE', 'rt-standard-room'),
+('rm-102', '102', 1, 'AVAILABLE', 'rt-standard-room'),
+('rm-103', '103', 1, 'AVAILABLE', 'rt-standard-room'),
+('rm-104', '104', 1, 'AVAILABLE', 'rt-standard-room'),
+('rm-105', '105', 1, 'AVAILABLE', 'rt-standard-room'),
+('rm-201', '201', 2, 'AVAILABLE', 'rt-deluxe-twin'),
+('rm-202', '202', 2, 'AVAILABLE', 'rt-deluxe-twin'),
+('rm-203', '203', 2, 'AVAILABLE', 'rt-deluxe-twin'),
+('rm-204', '204', 2, 'AVAILABLE', 'rt-deluxe-twin'),
+('rm-205', '205', 2, 'AVAILABLE', 'rt-deluxe-twin'),
+('rm-301', '301', 3, 'AVAILABLE', 'rt-deluxe-room'),
+('rm-302', '302', 3, 'AVAILABLE', 'rt-deluxe-room'),
+('rm-303', '303', 3, 'AVAILABLE', 'rt-deluxe-room'),
+('rm-304', '304', 3, 'AVAILABLE', 'rt-deluxe-room'),
+('rm-305', '305', 3, 'AVAILABLE', 'rt-deluxe-room'),
+('rm-401', '401', 4, 'AVAILABLE', 'rt-deluxe-room'),
+('rm-402', '402', 4, 'AVAILABLE', 'rt-deluxe-room'),
+('rm-403', '403', 4, 'AVAILABLE', 'rt-deluxe-twin'),
+('rm-501', '501', 5, 'AVAILABLE', 'rt-deluxe-room')
 ON DUPLICATE KEY UPDATE `status`='AVAILABLE';
 
 -- -----------------------------------------------------------------------------
@@ -324,7 +302,7 @@ CREATE TABLE `testimonials` (
 
 INSERT INTO `testimonials` (`id`, `name`, `location`, `rating`, `date`, `title`, `comment`, `room_type`, `status`) VALUES
 ('t1', 'Alexander Wright', 'London, United Kingdom', 5, 'February 2026', 'Exceptional hospitality and prime location', 'We arrived early and could not check in immediately due to high occupancy, but the reception staff warmly welcomed us with fresh coffee, took care of our luggage, and allowed us to relax in the lounge. The Deluxe room was spotless, peaceful, and the bed exceptionally comfortable. We will definitely return!', 'Deluxe Room', 'APPROVED'),
-('t2', 'Bethelhem Tadesse', 'Nairobi, Kenya', 5, 'January 2026', 'True gem in the heart of Addis Ababa', 'Grand Addis Hotel exceeded all my expectations. The staff are so courteous, always greeting with genuine smiles. The restaurant serves incredible Ethiopian food alongside international dishes. Highly recommended for both business and leisure.', 'Grand Executive Suite', 'APPROVED'),
+('t2', 'Bethelhem Tadesse', 'Nairobi, Kenya', 5, 'January 2026', 'True gem in the heart of Addis Ababa', 'Grand Addis Hotel exceeded all my expectations. The staff are so courteous, always greeting with genuine smiles. The restaurant serves incredible Ethiopian food alongside international dishes. Highly recommended for both business and leisure.', 'Deluxe Room', 'APPROVED'),
 ('t3', 'Jean-Pierre Laurent', 'Paris, France', 5, 'March 2026', 'Unbeatable value and peaceful oasis', 'Traveling for diplomatic meetings, I needed reliable high-speed internet and quiet nights. The Standard Room delivered on every level. Quiet AC, modern bathroom, and 10 minutes to Bole Airport. Outstanding value!', 'Standard Room', 'APPROVED'),
 ('t4', 'Sarah & Michael Jenkins', 'Toronto, Canada', 5, 'December 2025', 'Memorable stay for our anniversary', 'From the warm welcome upon arrival to the authentic Ethiopian coffee tasting, everything was flawless. The location in 22 around Golagul made it so easy to get everywhere in the city.', 'Deluxe Room', 'APPROVED')
 ON DUPLICATE KEY UPDATE `title`=VALUES(`title`);

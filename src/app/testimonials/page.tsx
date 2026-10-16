@@ -257,9 +257,8 @@ export default function TestimonialsPage() {
                       style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #D5D4CC', fontSize: '13px' }}
                     >
                       <option value="Deluxe Room">Deluxe Room</option>
+                      <option value="Deluxe Twin Room">Deluxe Twin Room</option>
                       <option value="Standard Room">Standard Room</option>
-                      <option value="Twin Room">Twin Room</option>
-                      <option value="Executive Suite">Grand Executive Suite</option>
                     </select>
                   </div>
 

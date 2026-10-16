@@ -991,43 +991,9 @@ export async function query<T extends QueryResultRow = any>(
 
 export const DEFAULT_ROOM_TYPES = [
   {
-    id: 'rt-standard-double',
-    slug: 'standard-double-room',
-    name: 'Standard Double Room',
-    category: 'Hotel Rooms',
-    size: '28 m²',
-    bedType: 'Queen Bed',
-    view: 'City View',
-    basePriceETB: 5800,
-    basePriceUSD: 50,
-    baseCapacity: 2,
-    maxCapacity: 2,
-    description: 'Refined comfort for business and leisure travelers. Features comfortable queen bed, ergonomic desk, blackout drapes, and modern en-suite marble bathroom.',
-    amenities: ['Queen Bed', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Tea & Ethiopian Coffee Maker', '24/7 Room Service', 'Daily Housekeeping', 'Electronic Safe'],
-    images: ['/images/vikbooking/bo5a5902.jpg', '/images/vikbooking/big_bo5a5894.jpg', '/images/vikbooking/big_bo5a5900.jpg', '/hotel_images/1760816082.webp'],
-    aliases: ['standard-room', 'double-rooms', 'standard', '1'],
-  },
-  {
-    id: 'rt-twin-deluxe',
-    slug: 'twin-deluxe-room',
-    name: 'Twin Deluxe Room',
-    category: 'Hotel Rooms',
-    size: '34 m²',
-    bedType: 'Two Double Beds',
-    view: 'City View Balcony',
-    basePriceETB: 7200,
-    basePriceUSD: 62,
-    baseCapacity: 2,
-    maxCapacity: 3,
-    description: 'Two plush double beds ideal for colleagues, friends, or small families visiting Addis Ababa. Includes private balcony, modern workspace, and city views.',
-    amenities: ['2 Double Beds', 'City View Balcony', 'High-speed Wi-Fi', 'Spacious Marble Bathroom', 'Complimentary Breakfast', 'Electric Kettle', 'In-Room Safe'],
-    images: ['/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/images/vikbooking/big_bo5a5852.jpg', '/hotel_images/1760816141.webp'],
-    aliases: ['twin-room', 'twin-deluxe', '3'],
-  },
-  {
-    id: 'rt-deluxe-king',
-    slug: 'deluxe-king-room',
-    name: 'Deluxe King Room',
+    id: 'rt-deluxe-room',
+    slug: 'deluxe-room',
+    name: 'Deluxe Room',
     category: 'Hotel Rooms',
     size: '36 m²',
     bedType: 'King Size Bed',
@@ -1038,65 +1004,65 @@ export const DEFAULT_ROOM_TYPES = [
     maxCapacity: 3,
     description: 'Spacious luxury room featuring a plush king-sized bed, panoramic balcony with skyline view of Addis Ababa, marble bathroom with deep soaking tub and rainfall shower, and ergonomic work desk.',
     amenities: ['King Bed', 'Private Balcony', 'High-speed Wi-Fi', 'Rainfall Shower & Soaking Tub', 'Smart 55" 4K TV', 'Mini-bar & Refreshment Station', 'Complimentary Breakfast', '24/7 Room Service'],
-    images: ['/images/vikbooking/bo5a5878.jpg', '/images/vikbooking/big_bo5a5868.jpg', '/images/BO5A5826-scaled.jpg', '/hotel_images/1760816140.webp'],
-    aliases: ['deluxe-room', 'deluxe-king', '2'],
+    images: ['/images/vikbooking/bo5a5878.jpg', '/images/vikbooking/big_bo5a5868.jpg', '/images/BO5A5826-scaled.jpg', '/images/BO5A5821-scaled.jpg', '/hotel_images/1760816140.webp'],
+    aliases: ['deluxe-room', 'deluxe-king-room', 'rt-deluxe-king', 'rt-deluxe-room', 'deluxe', '1', '2'],
   },
   {
-    id: 'rt-executive-suite',
-    slug: 'executive-suite',
-    name: 'Executive Suite with Balcony',
-    category: 'Suites',
-    size: '52 m²',
-    bedType: 'Master King Bed + Daybed',
-    view: 'Corner Skyline View',
-    basePriceETB: 14000,
-    basePriceUSD: 120,
+    id: 'rt-deluxe-twin',
+    slug: 'deluxe-twin-room',
+    name: 'Deluxe Twin Room',
+    category: 'Hotel Rooms',
+    size: '34 m²',
+    bedType: 'Two Twin Beds',
+    view: 'City View Balcony',
+    basePriceETB: 7200,
+    basePriceUSD: 62,
     baseCapacity: 2,
-    maxCapacity: 4,
-    description: 'An elevated luxury sanctuary with separated living room, master bedroom, executive lounge access, espresso bar, and scenic mountain and city views over the Bole district.',
-    amenities: ['King Bed', 'Separate Living Room', 'Executive Lounge Access', 'Espresso Machine', 'Panoramic Balcony', 'Bathtub & Jacuzzi', 'VIP Airport Shuttle', 'Breakfast Buffet Included'],
-    images: ['/images/BO5A5992-scaled.jpg', '/images/BO5A5989-scaled.jpg', '/images/BO5A5976-scaled.jpg', '/hotel_images/1760816139.webp'],
-    aliases: ['grand-executive-suite', 'executive', '4'],
+    maxCapacity: 3,
+    description: 'Modern twin room designed for comfort and connectivity, with two ergonomic beds, plush bedding, soundproof windows, dedicated workspace, and an en-suite marble bathroom. Ideal for colleagues or friends traveling together.',
+    amenities: ['Two Twin Beds', 'City View Balcony', 'High-speed Wi-Fi', 'Spacious Marble Bathroom', 'Complimentary Breakfast', 'Electric Kettle', 'In-Room Safe'],
+    images: ['/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/images/vikbooking/big_bo5a5852.jpg', '/images/BO5A5924-1-scaled.jpg', '/hotel_images/1760816141.webp'],
+    aliases: ['deluxe-twin-room', 'twin-room', 'twin-deluxe-room', 'rt-twin-deluxe', 'rt-deluxe-twin', 'deluxe-twin', 'twin', '2', '3'],
   },
   {
-    id: 'rt-presidential-suite',
-    slug: 'presidential-suite',
-    name: 'Grand Addis Presidential Suite',
-    category: 'Suites',
-    size: '96 m²',
-    bedType: 'Palatial King Master + Guest Suite',
-    view: '360° Private Rooftop Terrace View',
-    basePriceETB: 35000,
-    basePriceUSD: 300,
-    baseCapacity: 4,
-    maxCapacity: 6,
-    description: 'The pinnacle of luxury in Addis Ababa. Palatial top-floor residence with grand dining room, kitchen, private butler service, jacuzzi, and 360-degree terrace overlooking the capital.',
-    amenities: ['Master King Bed + Guest Suite', '360° Private Rooftop Terrace', 'Jacuzzi Spa & Sauna', 'Private Dining Room & Kitchenette', 'Dedicated 24/7 Butler Service', 'Complimentary Limousine Airport Transfer', 'Full Stocked Mini-bar', 'Chef Tasting Experience'],
-    images: ['/hotel_images/1760816135.webp', '/images/BO5A5992-scaled.jpg', '/images/BO5A5976-scaled.jpg', '/images/BO5A5805-scaled.jpg'],
-    aliases: ['grand-presidential-suite', 'presidential', '5'],
+    id: 'rt-standard-room',
+    slug: 'standard-room',
+    name: 'Standard Room',
+    category: 'Hotel Rooms',
+    size: '28 m²',
+    bedType: 'Queen Bed',
+    view: 'City View',
+    basePriceETB: 5800,
+    basePriceUSD: 50,
+    baseCapacity: 2,
+    maxCapacity: 2,
+    description: 'Refined comfort for business and leisure travelers. Features comfortable queen bed, ergonomic desk, blackout drapes, and modern en-suite marble bathroom.',
+    amenities: ['Queen Bed', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Tea & Ethiopian Coffee Maker', '24/7 Room Service', 'Daily Housekeeping', 'Electronic Safe'],
+    images: ['/images/vikbooking/bo5a5902.jpg', '/images/vikbooking/big_bo5a5894.jpg', '/images/vikbooking/big_bo5a5900.jpg', '/images/BO5A5900-scaled.jpg', '/hotel_images/1760816082.webp'],
+    aliases: ['standard-room', 'standard-double-room', 'rt-standard-double', 'rt-standard-room', 'standard', 'double-rooms', '3', '1'],
   },
 ];
 
 export const DEFAULT_PHYSICAL_ROOMS = [
-  { id: 'rm-101', roomNumber: '101', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-102', roomNumber: '102', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-103', roomNumber: '103', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-104', roomNumber: '104', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-105', roomNumber: '105', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-201', roomNumber: '201', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-202', roomNumber: '202', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-203', roomNumber: '203', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-204', roomNumber: '204', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-205', roomNumber: '205', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-301', roomNumber: '301', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-302', roomNumber: '302', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-303', roomNumber: '303', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-304', roomNumber: '304', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-305', roomNumber: '305', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-401', roomNumber: '401', floor: 4, roomTypeId: 'rt-executive-suite' },
-  { id: 'rm-402', roomNumber: '402', floor: 4, roomTypeId: 'rt-executive-suite' },
-  { id: 'rm-403', roomNumber: '403', floor: 4, roomTypeId: 'rt-executive-suite' },
-  { id: 'rm-501', roomNumber: '501', floor: 5, roomTypeId: 'rt-presidential-suite' },
+  { id: 'rm-101', roomNumber: '101', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-102', roomNumber: '102', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-103', roomNumber: '103', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-104', roomNumber: '104', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-105', roomNumber: '105', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-201', roomNumber: '201', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-202', roomNumber: '202', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-203', roomNumber: '203', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-204', roomNumber: '204', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-205', roomNumber: '205', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-301', roomNumber: '301', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-302', roomNumber: '302', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-303', roomNumber: '303', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-304', roomNumber: '304', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-305', roomNumber: '305', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-401', roomNumber: '401', floor: 4, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-402', roomNumber: '402', floor: 4, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-403', roomNumber: '403', floor: 4, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-501', roomNumber: '501', floor: 5, roomTypeId: 'rt-deluxe-room' },
 ];
 
 async function autoSeedDefaultsIfEmpty(): Promise<void> {
@@ -1421,11 +1387,11 @@ export async function resolveDbRoomType(
   const norm = (s: any) => String(s || '').toLowerCase().trim();
 
   const legacyMap: Record<string, string[]> = {
-    '1': ['standard-double-room', 'standard-room', 'rt-standard-double', 'standard'],
-    '2': ['deluxe-king-room', 'deluxe-room', 'rt-deluxe-king', 'deluxe'],
-    '3': ['twin-deluxe-room', 'twin-room', 'rt-twin-deluxe', 'twin'],
-    '4': ['executive-suite', 'grand-executive-suite', 'rt-executive-suite', 'executive'],
-    '5': ['presidential-suite', 'grand-presidential-suite', 'rt-presidential-suite', 'presidential'],
+    '1': ['deluxe-room', 'deluxe-king-room', 'rt-deluxe-room', 'rt-deluxe-king', 'deluxe', 'standard-room', 'standard'],
+    '2': ['deluxe-twin-room', 'twin-room', 'twin-deluxe-room', 'rt-deluxe-twin', 'rt-twin-deluxe', 'deluxe-room', 'deluxe'],
+    '3': ['standard-room', 'standard-double-room', 'rt-standard-room', 'rt-standard-double', 'standard', 'twin-room'],
+    '4': ['deluxe-room', 'rt-deluxe-room'],
+    '5': ['deluxe-room', 'rt-deluxe-room'],
   };
 
   const idNorm = norm(idStr);
@@ -1441,25 +1407,65 @@ export async function resolveDbRoomType(
     for (const t of legacyMap[slugStr]) targetTerms.add(t.toLowerCase());
   }
 
-  if (idNorm === 'standard-room' || slugNorm === 'standard-room') {
-    targetTerms.add('standard-double-room');
-    targetTerms.add('rt-standard-double');
-  }
-  if (idNorm === 'deluxe-room' || slugNorm === 'deluxe-room') {
+  if (
+    idNorm === 'deluxe-room' ||
+    slugNorm === 'deluxe-room' ||
+    idNorm === 'deluxe-king-room' ||
+    slugNorm === 'deluxe-king-room' ||
+    idNorm === 'rt-deluxe-room' ||
+    slugNorm === 'rt-deluxe-room' ||
+    idNorm === 'rt-deluxe-king' ||
+    slugNorm === 'rt-deluxe-king'
+  ) {
+    targetTerms.add('deluxe-room');
     targetTerms.add('deluxe-king-room');
+    targetTerms.add('rt-deluxe-room');
     targetTerms.add('rt-deluxe-king');
   }
-  if (idNorm === 'twin-room' || slugNorm === 'twin-room') {
+
+  if (
+    idNorm === 'deluxe-twin-room' ||
+    slugNorm === 'deluxe-twin-room' ||
+    idNorm === 'twin-room' ||
+    slugNorm === 'twin-room' ||
+    idNorm === 'twin-deluxe-room' ||
+    slugNorm === 'twin-deluxe-room' ||
+    idNorm === 'rt-deluxe-twin' ||
+    slugNorm === 'rt-deluxe-twin' ||
+    idNorm === 'rt-twin-deluxe' ||
+    slugNorm === 'rt-twin-deluxe'
+  ) {
+    targetTerms.add('deluxe-twin-room');
+    targetTerms.add('twin-room');
     targetTerms.add('twin-deluxe-room');
+    targetTerms.add('rt-deluxe-twin');
     targetTerms.add('rt-twin-deluxe');
   }
-  if (idNorm === 'executive-suite' || slugNorm === 'executive-suite') {
-    targetTerms.add('rt-executive-suite');
-    targetTerms.add('grand-executive-suite');
+
+  if (
+    idNorm === 'standard-room' ||
+    slugNorm === 'standard-room' ||
+    idNorm === 'standard-double-room' ||
+    slugNorm === 'standard-double-room' ||
+    idNorm === 'rt-standard-room' ||
+    slugNorm === 'rt-standard-room' ||
+    idNorm === 'rt-standard-double' ||
+    slugNorm === 'rt-standard-double'
+  ) {
+    targetTerms.add('standard-room');
+    targetTerms.add('standard-double-room');
+    targetTerms.add('rt-standard-room');
+    targetTerms.add('rt-standard-double');
   }
-  if (idNorm === 'presidential-suite' || slugNorm === 'presidential-suite') {
-    targetTerms.add('rt-presidential-suite');
-    targetTerms.add('grand-presidential-suite');
+
+  if (
+    idNorm === 'executive-suite' ||
+    slugNorm === 'executive-suite' ||
+    idNorm === 'presidential-suite' ||
+    slugNorm === 'presidential-suite'
+  ) {
+    targetTerms.add('deluxe-room');
+    targetTerms.add('rt-deluxe-room');
   }
 
   // Priority 1: Exact ID match

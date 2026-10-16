@@ -9,43 +9,9 @@ import {
 
 const SEED_ROOM_TYPES = [
   {
-    id: 'rt-standard-double',
-    slug: 'standard-double-room',
-    name: 'Standard Double Room',
-    category: 'Hotel Rooms',
-    size: '28 m²',
-    bedType: 'Queen Bed',
-    view: 'City View',
-    basePriceETB: 5800,
-    basePriceUSD: 50,
-    baseCapacity: 2,
-    maxCapacity: 2,
-    description: 'Refined comfort for business and leisure travelers. Features comfortable queen bed, ergonomic desk, blackout drapes, and modern en-suite marble bathroom.',
-    amenities: ['Queen Bed', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Tea & Ethiopian Coffee Maker', '24/7 Room Service', 'Daily Housekeeping', 'Electronic Safe'],
-    images: ['/images/vikbooking/bo5a5902.jpg', '/images/vikbooking/big_bo5a5894.jpg', '/images/vikbooking/big_bo5a5900.jpg', '/hotel_images/1760816082.webp'],
-    aliases: ['standard-room', 'double-rooms', 'standard', '1'],
-  },
-  {
-    id: 'rt-twin-deluxe',
-    slug: 'twin-deluxe-room',
-    name: 'Twin Deluxe Room',
-    category: 'Hotel Rooms',
-    size: '34 m²',
-    bedType: 'Two Double Beds',
-    view: 'City View Balcony',
-    basePriceETB: 7200,
-    basePriceUSD: 62,
-    baseCapacity: 2,
-    maxCapacity: 3,
-    description: 'Two plush double beds ideal for colleagues, friends, or small families visiting Addis Ababa. Includes private balcony, modern workspace, and city views.',
-    amenities: ['2 Double Beds', 'City View Balcony', 'High-speed Wi-Fi', 'Spacious Marble Bathroom', 'Complimentary Breakfast', 'Electric Kettle', 'In-Room Safe'],
-    images: ['/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/images/vikbooking/big_bo5a5852.jpg', '/hotel_images/1760816141.webp'],
-    aliases: ['twin-room', 'twin-deluxe', '3'],
-  },
-  {
-    id: 'rt-deluxe-king',
-    slug: 'deluxe-king-room',
-    name: 'Deluxe King Room',
+    id: 'rt-deluxe-room',
+    slug: 'deluxe-room',
+    name: 'Deluxe Room',
     category: 'Hotel Rooms',
     size: '36 m²',
     bedType: 'King Size Bed',
@@ -57,41 +23,7 @@ const SEED_ROOM_TYPES = [
     description: 'Spacious luxury room featuring a plush king-sized bed, panoramic balcony with skyline view of Addis Ababa, marble bathroom with deep soaking tub and rainfall shower, and ergonomic work desk.',
     amenities: ['King Bed', 'Private Balcony', 'High-speed Wi-Fi', 'Rainfall Shower & Soaking Tub', 'Smart 55" 4K TV', 'Mini-bar & Refreshment Station', 'Complimentary Breakfast', '24/7 Room Service'],
     images: ['/images/vikbooking/bo5a5878.jpg', '/images/vikbooking/big_bo5a5868.jpg', '/images/BO5A5826-scaled.jpg', '/hotel_images/1760816140.webp'],
-    aliases: ['deluxe-room', 'deluxe-king', '2'],
-  },
-  {
-    id: 'rt-executive-suite',
-    slug: 'executive-suite',
-    name: 'Executive Suite with Balcony',
-    category: 'Suites',
-    size: '52 m²',
-    bedType: 'Master King Bed + Daybed',
-    view: 'Corner Skyline View',
-    basePriceETB: 14000,
-    basePriceUSD: 120,
-    baseCapacity: 2,
-    maxCapacity: 4,
-    description: 'Distinct master bedroom with separate open-plan lounge, dining corner, dual private balconies, and dedicated concierge access.',
-    amenities: ['Separate Living & Dining Area', 'Dual Private Balconies', 'Executive Lounge Access', 'Nespresso Coffee Machine', 'Jacuzzi & Rainfall Shower', 'Airport Transfer Included', 'Complimentary Laundry Service'],
-    images: ['/images/vikbooking/bo5a5826.jpg', '/images/vikbooking/big_bo5a5821.jpg', '/images/BO5A5992-scaled.jpg', '/hotel_images/1760816082.webp'],
-    aliases: ['executive', 'executive-suite', '4'],
-  },
-  {
-    id: 'rt-presidential-suite',
-    slug: 'presidential-suite',
-    name: 'Grand Presidential Suite',
-    category: 'Suites',
-    size: '88 m²',
-    bedType: 'Grand Emperor Bed',
-    view: 'Panoramic 360° City View',
-    basePriceETB: 28000,
-    basePriceUSD: 240,
-    baseCapacity: 2,
-    maxCapacity: 5,
-    description: 'The pinnacle of luxury in 22 Addis Ababa. Spans expansive master wing, lavish marble bathroom with jacuzzi, private boardroom/dining salon for 8 guests, and dedicated 24/7 butler service.',
-    amenities: ['VIP Airport Chauffeur', '24/7 Dedicated Butler', 'Private Dining Salon', 'Oversized Jacuzzi & Steam Shower', 'Bang & Olufsen Sound System', 'Private Bar with Curated Wines', 'Panoramic Wrap-around Balcony'],
-    images: ['/images/BO5A5992-scaled.jpg', '/images/BO5A5826-scaled.jpg', '/images/BO5A5989-scaled.jpg', '/images/BO5A5976-scaled.jpg'],
-    aliases: ['presidential', 'presidential-suite', '5'],
+    aliases: ['deluxe-room', 'deluxe-king-room', 'rt-deluxe-king', 'rt-deluxe-room', 'deluxe', '1', '2'],
   },
   {
     id: 'rt-deluxe-twin',
@@ -100,38 +32,55 @@ const SEED_ROOM_TYPES = [
     category: 'Hotel Rooms',
     size: '34 m²',
     bedType: 'Two Twin Beds',
-    view: 'City View',
-    basePriceETB: 7500,
-    basePriceUSD: 65,
+    view: 'City View Balcony',
+    basePriceETB: 7200,
+    basePriceUSD: 62,
     baseCapacity: 2,
     maxCapacity: 3,
-    description: 'Modern twin room designed for comfort and connectivity, with two twin beds, premium bedding, and en-suite bath.',
-    amenities: ['Two Twin Beds', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Coffee/Tea Maker', '24/7 Room Service'],
-    images: ['/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/hotel_images/1760816141.webp'],
-    aliases: ['deluxe-twin', 'twin-beds', '6'],
+    description: 'Modern twin room designed for comfort and connectivity, with two ergonomic beds, plush bedding, soundproof windows, dedicated workspace, and an en-suite marble bathroom. Ideal for colleagues or friends traveling together.',
+    amenities: ['Two Twin Beds', 'City View Balcony', 'High-speed Wi-Fi', 'Spacious Marble Bathroom', 'Complimentary Breakfast', 'Electric Kettle', 'In-Room Safe'],
+    images: ['/images/vikbooking/bo5a5832.jpg', '/images/vikbooking/big_260bo5a5832.jpg', '/images/vikbooking/big_bo5a5852.jpg', '/images/BO5A5924-1-scaled.jpg', '/hotel_images/1760816141.webp'],
+    aliases: ['deluxe-twin-room', 'twin-room', 'twin-deluxe-room', 'rt-twin-deluxe', 'rt-deluxe-twin', 'deluxe-twin', 'twin', '2', '3'],
+  },
+  {
+    id: 'rt-standard-room',
+    slug: 'standard-room',
+    name: 'Standard Room',
+    category: 'Hotel Rooms',
+    size: '28 m²',
+    bedType: 'Queen Bed',
+    view: 'City View',
+    basePriceETB: 5800,
+    basePriceUSD: 50,
+    baseCapacity: 2,
+    maxCapacity: 2,
+    description: 'Refined comfort for business and leisure travelers. Features comfortable queen bed, ergonomic desk, blackout drapes, and modern en-suite marble bathroom.',
+    amenities: ['Queen Bed', 'High-Speed Wi-Fi', 'Work Station', 'Satellite HD TV', 'Tea & Ethiopian Coffee Maker', '24/7 Room Service', 'Daily Housekeeping', 'Electronic Safe'],
+    images: ['/images/vikbooking/bo5a5902.jpg', '/images/vikbooking/big_bo5a5894.jpg', '/images/vikbooking/big_bo5a5900.jpg', '/images/BO5A5900-scaled.jpg', '/hotel_images/1760816082.webp'],
+    aliases: ['standard-room', 'standard-double-room', 'rt-standard-double', 'rt-standard-room', 'standard', 'double-rooms', '3', '1'],
   },
 ];
 
 const SEED_PHYSICAL_ROOMS = [
-  { id: 'rm-101', roomNumber: '101', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-102', roomNumber: '102', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-103', roomNumber: '103', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-104', roomNumber: '104', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-105', roomNumber: '105', floor: 1, roomTypeId: 'rt-standard-double' },
-  { id: 'rm-201', roomNumber: '201', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-202', roomNumber: '202', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-203', roomNumber: '203', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-204', roomNumber: '204', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-205', roomNumber: '205', floor: 2, roomTypeId: 'rt-twin-deluxe' },
-  { id: 'rm-301', roomNumber: '301', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-302', roomNumber: '302', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-303', roomNumber: '303', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-304', roomNumber: '304', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-305', roomNumber: '305', floor: 3, roomTypeId: 'rt-deluxe-king' },
-  { id: 'rm-401', roomNumber: '401', floor: 4, roomTypeId: 'rt-executive-suite' },
-  { id: 'rm-402', roomNumber: '402', floor: 4, roomTypeId: 'rt-executive-suite' },
-  { id: 'rm-403', roomNumber: '403', floor: 4, roomTypeId: 'rt-executive-suite' },
-  { id: 'rm-501', roomNumber: '501', floor: 5, roomTypeId: 'rt-presidential-suite' },
+  { id: 'rm-101', roomNumber: '101', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-102', roomNumber: '102', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-103', roomNumber: '103', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-104', roomNumber: '104', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-105', roomNumber: '105', floor: 1, roomTypeId: 'rt-standard-room' },
+  { id: 'rm-201', roomNumber: '201', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-202', roomNumber: '202', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-203', roomNumber: '203', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-204', roomNumber: '204', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-205', roomNumber: '205', floor: 2, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-301', roomNumber: '301', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-302', roomNumber: '302', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-303', roomNumber: '303', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-304', roomNumber: '304', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-305', roomNumber: '305', floor: 3, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-401', roomNumber: '401', floor: 4, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-402', roomNumber: '402', floor: 4, roomTypeId: 'rt-deluxe-room' },
+  { id: 'rm-403', roomNumber: '403', floor: 4, roomTypeId: 'rt-deluxe-twin' },
+  { id: 'rm-501', roomNumber: '501', floor: 5, roomTypeId: 'rt-deluxe-room' },
 ];
 
 const SEED_GALLERY_IMAGES = [
@@ -204,9 +153,9 @@ const SEED_SPA = [
 ];
 
 const SEED_TESTIMONIALS = [
-  { id: 't1', name: 'Marcus Vance', location: 'London, UK', rating: 5, date: 'October 2026', title: 'Exceptional Luxury in Addis Ababa', comment: 'From the warm greeting at Bole Airport to the impeccable suite on the 4th floor, Grand Addis Hotel delivered perfection. The Ethiopian coffee ceremony was truly unforgettable.', room_type: 'Executive Suite with Balcony', status: 'APPROVED' },
-  { id: 't2', name: 'Sarah Lin', location: 'Geneva, Switzerland', rating: 5, date: 'September 2026', title: 'Perfect Business & Leisure Base', comment: 'Super fast fiber-optic Wi-Fi, incredibly quiet rooms, and the finest hospitality. The dining experience was five-star.', room_type: 'Deluxe King Room', status: 'APPROVED' },
-  { id: 't3', name: 'Dawit Bekele', location: 'Addis Ababa / Diaspora', rating: 5, date: 'September 2026', title: 'Proud of This Level of Hospitality', comment: 'World-class comfort right in the vibrant heart of 22. Highly recommended for international travelers and local staycations alike.', room_type: 'Grand Presidential Suite', status: 'APPROVED' },
+  { id: 't1', name: 'Marcus Vance', location: 'London, UK', rating: 5, date: 'October 2026', title: 'Exceptional Luxury in Addis Ababa', comment: 'From the warm greeting at Bole Airport to the impeccable room on the 4th floor, Grand Addis Hotel delivered perfection. The Ethiopian coffee ceremony was truly unforgettable.', room_type: 'Deluxe Room', status: 'APPROVED' },
+  { id: 't2', name: 'Sarah Lin', location: 'Geneva, Switzerland', rating: 5, date: 'September 2026', title: 'Perfect Business & Leisure Base', comment: 'Super fast fiber-optic Wi-Fi, incredibly quiet rooms, and the finest hospitality. The dining experience was five-star.', room_type: 'Deluxe Twin Room', status: 'APPROVED' },
+  { id: 't3', name: 'Dawit Bekele', location: 'Addis Ababa / Diaspora', rating: 5, date: 'September 2026', title: 'Proud of This Level of Hospitality', comment: 'World-class comfort right in the vibrant heart of 22. Highly recommended for international travelers and local staycations alike.', room_type: 'Standard Room', status: 'APPROVED' },
 ];
 
 const MYSQL_COLUMN_MIGRATIONS = [
@@ -319,42 +268,74 @@ async function seed() {
       `);
       console.log('✓ Hotel settings verified.');
 
-      // 2. Room Types (only if empty to protect customizations)
-      const [rtRows] = await conn.query(`SELECT COUNT(*) as count FROM \`room_types\``);
-      if (rtRows[0]?.count === 0) {
-        for (const r of SEED_ROOM_TYPES) {
-          await conn.query(
-            `INSERT INTO \`room_types\` (
-              \`id\`, \`slug\`, \`name\`, \`description\`, \`baseCapacity\`, \`maxCapacity\`,
-              \`amenities\`, \`images\`, \`basePriceETB\`, \`basePriceUSD\`, \`size\`,
-              \`bedType\`, \`view\`, \`category\`, \`featured\`, \`aliases\`, \`createdAt\`, \`updatedAt\`
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), NOW());`,
-            [
-              r.id, r.slug, r.name, r.description, r.baseCapacity, r.maxCapacity,
-              JSON.stringify(r.amenities), JSON.stringify(r.images), r.basePriceETB, r.basePriceUSD,
-              r.size, r.bedType, r.view, r.category, JSON.stringify(r.aliases),
-            ]
-          );
-        }
-        console.log(`✓ ${SEED_ROOM_TYPES.length} Room types seeded.`);
-      } else {
-        console.log(`✓ Room types already exist (${rtRows[0]?.count} records).`);
+      // 2. Room Types
+      for (const r of SEED_ROOM_TYPES) {
+        await conn.query(
+          `INSERT INTO \`room_types\` (
+            \`id\`, \`slug\`, \`name\`, \`description\`, \`baseCapacity\`, \`maxCapacity\`,
+            \`amenities\`, \`images\`, \`basePriceETB\`, \`basePriceUSD\`, \`size\`,
+            \`bedType\`, \`view\`, \`category\`, \`featured\`, \`aliases\`, \`createdAt\`, \`updatedAt\`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW(), NOW())
+          ON DUPLICATE KEY UPDATE
+            \`name\` = VALUES(\`name\`),
+            \`slug\` = VALUES(\`slug\`),
+            \`description\` = VALUES(\`description\`),
+            \`baseCapacity\` = VALUES(\`baseCapacity\`),
+            \`maxCapacity\` = VALUES(\`maxCapacity\`),
+            \`amenities\` = VALUES(\`amenities\`),
+            \`images\` = VALUES(\`images\`),
+            \`basePriceETB\` = VALUES(\`basePriceETB\`),
+            \`basePriceUSD\` = VALUES(\`basePriceUSD\`),
+            \`size\` = VALUES(\`size\`),
+            \`bedType\` = VALUES(\`bedType\`),
+            \`view\` = VALUES(\`view\`),
+            \`category\` = VALUES(\`category\`),
+            \`aliases\` = VALUES(\`aliases\`),
+            \`updatedAt\` = NOW();`,
+          [
+            r.id, r.slug, r.name, r.description, r.baseCapacity, r.maxCapacity,
+            JSON.stringify(r.amenities), JSON.stringify(r.images), r.basePriceETB, r.basePriceUSD,
+            r.size, r.bedType, r.view, r.category, JSON.stringify(r.aliases),
+          ]
+        );
       }
+      const validRtIds = SEED_ROOM_TYPES.map((r) => r.id);
+      try {
+        await conn.query(`UPDATE \`reservations\` SET \`roomTypeId\` = 'rt-standard-room' WHERE \`roomTypeId\` = 'rt-standard-double'`);
+        await conn.query(`UPDATE \`reservations\` SET \`roomTypeId\` = 'rt-deluxe-twin' WHERE \`roomTypeId\` = 'rt-twin-deluxe'`);
+        await conn.query(`UPDATE \`reservations\` SET \`roomTypeId\` = 'rt-deluxe-room' WHERE \`roomTypeId\` IN ('rt-deluxe-king', 'rt-executive-suite', 'rt-presidential-suite')`);
+        await conn.query(
+          `UPDATE \`reservations\` SET \`roomTypeId\` = ? WHERE \`roomTypeId\` NOT IN (?, ?, ?)`,
+          [validRtIds[0], validRtIds[0], validRtIds[1], validRtIds[2]]
+        );
+      } catch {}
+      try {
+        await conn.query(`UPDATE \`rooms\` SET \`roomTypeId\` = 'rt-standard-room' WHERE \`roomTypeId\` = 'rt-standard-double'`);
+        await conn.query(`UPDATE \`rooms\` SET \`roomTypeId\` = 'rt-deluxe-twin' WHERE \`roomTypeId\` = 'rt-twin-deluxe'`);
+        await conn.query(`UPDATE \`rooms\` SET \`roomTypeId\` = 'rt-deluxe-room' WHERE \`roomTypeId\` IN ('rt-deluxe-king', 'rt-executive-suite', 'rt-presidential-suite')`);
+        await conn.query(
+          `UPDATE \`rooms\` SET \`roomTypeId\` = ? WHERE \`roomTypeId\` NOT IN (?, ?, ?)`,
+          [validRtIds[0], validRtIds[0], validRtIds[1], validRtIds[2]]
+        );
+      } catch {}
+      try {
+        await conn.query(
+          `DELETE FROM \`room_types\` WHERE \`id\` NOT IN (?, ?, ?)`,
+          [validRtIds[0], validRtIds[1], validRtIds[2]]
+        );
+      } catch {}
+      console.log(`✓ ${SEED_ROOM_TYPES.length} Room types synchronized.`);
 
-      // 3. Physical Rooms Inventory (only if empty)
-      const [rmRows] = await conn.query(`SELECT COUNT(*) as count FROM \`rooms\``);
-      if (rmRows[0]?.count === 0) {
-        for (const rm of SEED_PHYSICAL_ROOMS) {
-          await conn.query(
-            `INSERT INTO \`rooms\` (\`id\`, \`roomNumber\`, \`floor\`, \`status\`, \`roomTypeId\`, \`createdAt\`, \`updatedAt\`)
-             VALUES (?, ?, ?, 'AVAILABLE', ?, NOW(), NOW());`,
-            [rm.id, rm.roomNumber, rm.floor, rm.roomTypeId]
-          );
-        }
-        console.log(`✓ ${SEED_PHYSICAL_ROOMS.length} Physical rooms seeded.`);
-      } else {
-        console.log(`✓ Rooms inventory already exists (${rmRows[0]?.count} records).`);
+      // 3. Physical Rooms Inventory
+      for (const rm of SEED_PHYSICAL_ROOMS) {
+        await conn.query(
+          `INSERT INTO \`rooms\` (\`id\`, \`roomNumber\`, \`floor\`, \`status\`, \`roomTypeId\`, \`createdAt\`, \`updatedAt\`)
+           VALUES (?, ?, ?, 'AVAILABLE', ?, NOW(), NOW())
+           ON DUPLICATE KEY UPDATE \`roomTypeId\` = VALUES(\`roomTypeId\`);`,
+          [rm.id, rm.roomNumber, rm.floor, rm.roomTypeId]
+        );
       }
+      console.log(`✓ ${SEED_PHYSICAL_ROOMS.length} Physical rooms synchronized.`);
 
       // 4. Gallery Images (only if empty)
       const [galRows] = await conn.query(`SELECT COUNT(*) as count FROM \`gallery_images\``);
@@ -488,44 +469,74 @@ async function seed() {
       `);
       console.log('✓ Hotel settings verified.');
 
-      // 2. Room Types (only if empty)
-      const rtRes = await client.query(`SELECT COUNT(*) as count FROM room_types`);
-      if (parseInt(rtRes.rows[0]?.count || '0', 10) === 0) {
-        for (const r of SEED_ROOM_TYPES) {
-          await client.query(
-            `INSERT INTO room_types (
-              id, slug, name, description, "baseCapacity", "maxCapacity",
-              amenities, images, "basePriceETB", "basePriceUSD", size,
-              "bedType", view, category, featured, aliases, "createdAt", "updatedAt"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, $15, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING;`,
-            [
-              r.id, r.slug, r.name, r.description, r.baseCapacity, r.maxCapacity,
-              r.amenities, r.images, r.basePriceETB, r.basePriceUSD,
-              r.size, r.bedType, r.view, r.category, r.aliases,
-            ]
-          );
-        }
-        console.log(`✓ ${SEED_ROOM_TYPES.length} Room types seeded.`);
-      } else {
-        console.log(`✓ Room types already exist (${rtRes.rows[0]?.count} records).`);
+      // 2. Room Types
+      for (const r of SEED_ROOM_TYPES) {
+        await client.query(
+          `INSERT INTO room_types (
+            id, slug, name, description, "baseCapacity", "maxCapacity",
+            amenities, images, "basePriceETB", "basePriceUSD", size,
+            "bedType", view, category, featured, aliases, "createdAt", "updatedAt"
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, true, $15, NOW(), NOW())
+          ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            slug = EXCLUDED.slug,
+            description = EXCLUDED.description,
+            "baseCapacity" = EXCLUDED."baseCapacity",
+            "maxCapacity" = EXCLUDED."maxCapacity",
+            amenities = EXCLUDED.amenities,
+            images = EXCLUDED.images,
+            "basePriceETB" = EXCLUDED."basePriceETB",
+            "basePriceUSD" = EXCLUDED."basePriceUSD",
+            size = EXCLUDED.size,
+            "bedType" = EXCLUDED."bedType",
+            view = EXCLUDED.view,
+            category = EXCLUDED.category,
+            aliases = EXCLUDED.aliases,
+            "updatedAt" = NOW();`,
+          [
+            r.id, r.slug, r.name, r.description, r.baseCapacity, r.maxCapacity,
+            r.amenities, r.images, r.basePriceETB, r.basePriceUSD,
+            r.size, r.bedType, r.view, r.category, r.aliases,
+          ]
+        );
       }
+      const pgValidRtIds = SEED_ROOM_TYPES.map((r) => r.id);
+      try {
+        await client.query(`UPDATE reservations SET "roomTypeId" = 'rt-standard-room' WHERE "roomTypeId" = 'rt-standard-double'`);
+        await client.query(`UPDATE reservations SET "roomTypeId" = 'rt-deluxe-twin' WHERE "roomTypeId" = 'rt-twin-deluxe'`);
+        await client.query(`UPDATE reservations SET "roomTypeId" = 'rt-deluxe-room' WHERE "roomTypeId" IN ('rt-deluxe-king', 'rt-executive-suite', 'rt-presidential-suite')`);
+        await client.query(
+          `UPDATE reservations SET "roomTypeId" = $1 WHERE "roomTypeId" NOT IN ($1, $2, $3)`,
+          [pgValidRtIds[0], pgValidRtIds[1], pgValidRtIds[2]]
+        );
+      } catch {}
+      try {
+        await client.query(`UPDATE rooms SET "roomTypeId" = 'rt-standard-room' WHERE "roomTypeId" = 'rt-standard-double'`);
+        await client.query(`UPDATE rooms SET "roomTypeId" = 'rt-deluxe-twin' WHERE "roomTypeId" = 'rt-twin-deluxe'`);
+        await client.query(`UPDATE rooms SET "roomTypeId" = 'rt-deluxe-room' WHERE "roomTypeId" IN ('rt-deluxe-king', 'rt-executive-suite', 'rt-presidential-suite')`);
+        await client.query(
+          `UPDATE rooms SET "roomTypeId" = $1 WHERE "roomTypeId" NOT IN ($1, $2, $3)`,
+          [pgValidRtIds[0], pgValidRtIds[1], pgValidRtIds[2]]
+        );
+      } catch {}
+      try {
+        await client.query(
+          `DELETE FROM room_types WHERE id NOT IN ($1, $2, $3)`,
+          [pgValidRtIds[0], pgValidRtIds[1], pgValidRtIds[2]]
+        );
+      } catch {}
+      console.log(`✓ ${SEED_ROOM_TYPES.length} Room types synchronized.`);
 
-      // 3. Physical Rooms (only if empty)
-      const rmRes = await client.query(`SELECT COUNT(*) as count FROM rooms`);
-      if (parseInt(rmRes.rows[0]?.count || '0', 10) === 0) {
-        for (const rm of SEED_PHYSICAL_ROOMS) {
-          await client.query(
-            `INSERT INTO rooms (id, "roomNumber", floor, status, "roomTypeId", "createdAt", "updatedAt")
-             VALUES ($1, $2, $3, 'AVAILABLE', $4, NOW(), NOW())
-             ON CONFLICT (id) DO NOTHING;`,
-            [rm.id, rm.roomNumber, rm.floor, rm.roomTypeId]
-          );
-        }
-        console.log(`✓ ${SEED_PHYSICAL_ROOMS.length} Physical rooms seeded.`);
-      } else {
-        console.log(`✓ Rooms inventory already exists (${rmRes.rows[0]?.count} records).`);
+      // 3. Physical Rooms
+      for (const rm of SEED_PHYSICAL_ROOMS) {
+        await client.query(
+          `INSERT INTO rooms (id, "roomNumber", floor, status, "roomTypeId", "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, 'AVAILABLE', $4, NOW(), NOW())
+           ON CONFLICT ("roomNumber") DO UPDATE SET "roomTypeId" = EXCLUDED."roomTypeId", floor = EXCLUDED.floor, "updatedAt" = NOW();`,
+          [rm.id, rm.roomNumber, rm.floor, rm.roomTypeId]
+        );
       }
+      console.log(`✓ ${SEED_PHYSICAL_ROOMS.length} Physical rooms synchronized.`);
 
       // 4. Gallery Images (only if empty)
       const galCount = await client.query(`SELECT COUNT(*) as count FROM gallery_images`);

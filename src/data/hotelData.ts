@@ -103,6 +103,69 @@ export function formatMapEmbedUrl(rawUrl?: string): string {
 export const ROOMS: Room[] = [
   {
     id: '1',
+    slug: 'deluxe-room',
+    name: 'Deluxe Room',
+    category: 'Hotel Rooms',
+    pricePerNight: 34,
+    capacity: 2,
+    size: '36 m²',
+    bedType: 'King Size Bed',
+    view: 'Panoramic City & Mountain View',
+    description: 'Generously proportioned and bathed in natural light, the Deluxe Room offers a sanctuary of elevated relaxation. Enjoy plush king bedding, an intimate sitting lounge area, floor-to-ceiling windows overlooking Addis Ababa, and premium guest amenities.',
+    images: [
+      '/images/vikbooking/bo5a5878.jpg',
+      '/images/vikbooking/big_bo5a5868.jpg',
+      '/images/BO5A5826-scaled.jpg',
+      '/images/BO5A5821-scaled.jpg',
+      '/hotel_images/1760816140.webp'
+    ],
+    amenities: [
+      'Ultra High-Speed Wi-Fi',
+      '50-inch 4K Smart TV',
+      'Individual Climate Control',
+      'Marble Bathroom with Deep Soaking Tub & Rain Shower',
+      'Executive Working Desk',
+      'Mini Bar & Refreshment Station',
+      'Complimentary Bottled Mineral Water',
+      'Bathrobes & Luxury Toiletries',
+      'In-Room Safe & 24/7 Room Service'
+    ],
+    featured: true,
+    aliases: ['deluxe-room', 'deluxe-king-room', 'rt-deluxe-king', 'rt-deluxe-room', 'deluxe', '1', '2']
+  },
+  {
+    id: '2',
+    slug: 'deluxe-twin-room',
+    name: 'Deluxe Twin Room',
+    category: 'Hotel Rooms',
+    pricePerNight: 34,
+    capacity: 2,
+    size: '34 m²',
+    bedType: 'Two Single Beds',
+    view: 'City View',
+    description: 'Modern twin room designed for comfort and connectivity, with two ergonomic beds, plush bedding, soundproof windows, dedicated workspace, and an en-suite marble bathroom. Ideal for colleagues or friends traveling together.',
+    images: [
+      '/images/vikbooking/bo5a5832.jpg',
+      '/images/vikbooking/big_260bo5a5832.jpg',
+      '/images/vikbooking/big_bo5a5852.jpg',
+      '/images/BO5A5924-1-scaled.jpg',
+      '/hotel_images/1760816141.webp'
+    ],
+    amenities: [
+      'Two Twin Beds',
+      'High-Speed Wi-Fi',
+      'Smart TV',
+      'Air Conditioning',
+      'Spacious Marble Bathroom',
+      'Writing Desk',
+      'Coffee & Tea Making Facilities',
+      'Electronic Safe'
+    ],
+    featured: true,
+    aliases: ['deluxe-twin-room', 'twin-room', 'twin-deluxe-room', 'rt-twin-deluxe', 'rt-deluxe-twin', 'deluxe-twin', 'twin', '2', '3']
+  },
+  {
+    id: '3',
     slug: 'standard-room',
     name: 'Standard Room',
     category: 'Hotel Rooms',
@@ -117,6 +180,7 @@ export const ROOMS: Room[] = [
       '/images/vikbooking/big_bo5a5894.jpg',
       '/images/vikbooking/big_bo5a5900.jpg',
       '/images/BO5A5900-scaled.jpg',
+      '/hotel_images/1760816082.webp'
     ],
     amenities: [
       'High-Speed Wi-Fi',
@@ -129,128 +193,7 @@ export const ROOMS: Room[] = [
       'Electronic In-Room Safe'
     ],
     featured: true,
-    aliases: ['standard-room', 'standard-double-room', 'rt-standard-double', '1']
-  },
-  {
-    id: '2',
-    slug: 'deluxe-room',
-    name: 'Deluxe Room',
-    category: 'Hotel Rooms',
-    pricePerNight: 34,
-    capacity: 2,
-    size: '36 m²',
-    bedType: 'King Size Bed',
-    view: 'Panoramic City & Mountain View',
-    description: 'Generously proportioned and bathed in natural light, the Deluxe Room offers a sanctuary of elevated relaxation. Enjoy plush king bedding, an intimate sitting lounge area, floor-to-ceiling windows overlooking Addis Ababa, and premium guest amenities.',
-    images: [
-      '/images/vikbooking/bo5a5878.jpg',
-      '/images/vikbooking/big_bo5a5868.jpg',
-      '/images/BO5A5826-scaled.jpg',
-      '/images/BO5A5821-scaled.jpg'
-    ],
-    amenities: [
-      'Ultra High-Speed Wi-Fi',
-      '50-inch 4K Smart TV',
-      'Individual Climate Control',
-      'Marble Bathroom with Deep Soaking Tub & Rain Shower',
-      'Executive Working Desk',
-      'Mini Bar & Refreshment Station',
-      'Complimentary Bottled Mineral Water',
-      'Bathrobes & Luxury Toiletries',
-      'In-Room Safe & 24/7 Room Service'
-    ],
-    featured: true,
-    aliases: ['deluxe-room', 'deluxe-king-room', 'rt-deluxe-king', '2']
-  },
-  {
-    id: '3',
-    slug: 'twin-room',
-    name: 'Twin Room',
-    category: 'Hotel Rooms',
-    pricePerNight: 34,
-    capacity: 2,
-    size: '34 m²',
-    bedType: 'Two Single Beds',
-    view: 'City View',
-    description: 'Ideal for colleagues or friends traveling together, our Twin Room provides generous space without sacrificing comfort or luxury. Fitted with two ergonomic single beds, soundproof windows, and dedicated workspace.',
-    images: [
-      '/images/vikbooking/bo5a5832.jpg',
-      '/images/vikbooking/big_260bo5a5832.jpg',
-      '/images/vikbooking/big_bo5a5852.jpg',
-      '/images/BO5A5924-1-scaled.jpg'
-    ],
-    amenities: [
-      'High-Speed Wi-Fi',
-      'Smart TV',
-      'Air Conditioning',
-      'Two Premium Single Mattresses',
-      'Spacious Marble Bathroom',
-      'Writing Desk',
-      'Coffee & Tea Making Facilities',
-      'Electronic Safe'
-    ],
-    featured: true,
-    aliases: ['twin-room', 'twin-deluxe-room', 'rt-twin-deluxe', '3']
-  },
-  {
-    id: '4',
-    slug: 'executive-suite',
-    name: 'Grand Executive Suite',
-    category: 'Suites',
-    pricePerNight: 55,
-    capacity: 3,
-    size: '52 m²',
-    bedType: 'Master King Bed + Daybed',
-    view: 'Corner Skyline View',
-    description: 'The pinnacle of luxury at Grand Addis Hotel. The Executive Suite comprises a separate living parlor, dining nook, expansive master bedroom, dressing area, and deluxe bathroom with soaking tub.',
-    images: [
-      '/images/BO5A5992-scaled.jpg',
-      '/images/BO5A5989-scaled.jpg',
-      '/images/BO5A5976-scaled.jpg',
-      '/images/BO5A5988-scaled.jpg'
-    ],
-    amenities: [
-      'Complimentary Airport VIP Shuttle',
-      'Separate Living Room & Dining Area',
-      'Espresso Machine & Premium Tea Selection',
-      '55-inch Smart 4K TV & Soundbar',
-      'Designer Bathrobes & Luxury Bathroom Amenities',
-      'Complimentary Full Breakfast for Two',
-      'Evening Turn-down Service with Chocolates',
-      'Priority Concierge & Tour Bookings'
-    ],
-    featured: true,
-    aliases: ['executive-suite', 'grand-executive-suite', 'rt-executive-suite', '4']
-  },
-  {
-    id: '5',
-    slug: 'presidential-suite',
-    name: 'Grand Addis Presidential Suite',
-    category: 'Suites',
-    pricePerNight: 300,
-    capacity: 4,
-    size: '96 m²',
-    bedType: 'Palatial King Master + Guest Suite',
-    view: '360° Private Rooftop Terrace View',
-    description: 'The pinnacle of luxury in Addis Ababa. Palatial top-floor residence with grand dining room, kitchen, private butler service, jacuzzi, and 360-degree terrace overlooking the capital.',
-    images: [
-      '/hotel_images/1760816135.webp',
-      '/images/BO5A5992-scaled.jpg',
-      '/images/BO5A5976-scaled.jpg',
-      '/images/BO5A5805-scaled.jpg'
-    ],
-    amenities: [
-      'Master King Bed + Guest Suite',
-      '360° Private Rooftop Terrace',
-      'Jacuzzi Spa & Sauna',
-      'Private Dining Room & Kitchenette',
-      'Dedicated 24/7 Butler Service',
-      'Complimentary Limousine Airport Transfer',
-      'Full Stocked Mini-bar',
-      'Chef Tasting Experience'
-    ],
-    featured: true,
-    aliases: ['presidential-suite', 'grand-presidential-suite', 'rt-presidential-suite', '5']
+    aliases: ['standard-room', 'standard-double-room', 'rt-standard-double', 'rt-standard-room', 'standard', '3', '1']
   }
 ];
 
@@ -316,7 +259,7 @@ export const TESTIMONIALS: Testimonial[] = [
     date: 'January 2026',
     title: 'True gem in the heart of Addis Ababa',
     comment: 'Grand Addis Hotel exceeded all my expectations. The staff are so courteous, always greeting with genuine smiles. The restaurant serves incredible Ethiopian food alongside international dishes. Highly recommended for both business and leisure.',
-    roomType: 'Grand Executive Suite'
+    roomType: 'Deluxe Room'
   },
   {
     id: 't3',

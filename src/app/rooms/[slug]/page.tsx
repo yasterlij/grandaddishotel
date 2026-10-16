@@ -31,7 +31,7 @@ export default function RoomDetailPage() {
   const { formatPrice } = useCurrency();
 
   const initialRoom =
-    ROOMS.find((r) => r.slug === slug) ||
+    ROOMS.find((r) => r.slug === slug || r.aliases?.includes(slug)) ||
     ROOMS.find((r) => r.slug === 'deluxe-room') ||
     ROOMS[0];
 

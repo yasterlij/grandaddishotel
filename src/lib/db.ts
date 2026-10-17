@@ -2140,7 +2140,7 @@ export const DEFAULT_PAGE_CONTENT: Record<string, string> = {
   page_home_hero_title: 'Your Grand Stay In The Heart Of Addis',
   page_home_hero_subtitle: '',
   page_home_hero_image: '/images/BO5A5779-scaled.jpg',
-  page_home_hero_badge: 'Resort & Luxury Hotel in 22 Addis Ababa',
+  page_home_hero_badge: 'Luxury Hotel in 22 Addis Ababa',
   page_home_hero_btn1_text: 'Book Your Stay',
   page_home_hero_btn2_text: 'Explore Our Rooms',
 

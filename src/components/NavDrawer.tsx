@@ -115,7 +115,7 @@ export default function NavDrawer() {
                 GRAND ADDIS
               </div>
               <div style={{ fontSize: '10px', color: '#E49951', letterSpacing: '2px' }}>
-                HOTEL & RESORT
+                HOTEL
               </div>
             </div>
           </div>

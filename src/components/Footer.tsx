@@ -223,7 +223,7 @@ export default function Footer() {
                   GRAND ADDIS
                 </span>
                 <span style={{ fontSize: '10px', color: '#E49951', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                  HOTEL & RESORT
+                  HOTEL
                 </span>
               </div>
             </div>

@@ -1154,7 +1154,7 @@ export default function AdminPage() {
               <img src="/images/logo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '3px', color: '#E49951', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
-              GRAND ADDIS HOTEL & RESORT
+              GRAND ADDIS HOTEL
             </span>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 600, margin: 0 }}>
               Executive Management Portal
@@ -3817,7 +3817,7 @@ export default function AdminPage() {
                           type="text"
                           value={pageContent.page_home_hero_badge || ''}
                           onChange={(e) => setPageContent({ ...pageContent, page_home_hero_badge: e.target.value })}
-                          placeholder="Welcome to Grand Addis Hotel & Resort"
+                          placeholder="Welcome to Grand Addis Hotel"
                           style={{ width: '100%', padding: '10px 14px', borderRadius: '6px', border: '1px solid #E2E1DA', fontSize: '13px' }}
                         />
                       </div>

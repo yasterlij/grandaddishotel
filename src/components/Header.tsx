@@ -126,7 +126,7 @@ export default function Header() {
                 marginTop: '2px',
               }}
             >
-              HOTEL & RESORT
+              HOTEL
             </span>
           </div>
         </Link>

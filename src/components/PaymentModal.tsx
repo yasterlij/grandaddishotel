@@ -312,7 +312,7 @@ export default function PaymentModal({
               </span>
             </div>
             <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '23px', margin: 0, fontWeight: 500 }}>
-              Grand Addis Hotel & Resorts
+              Grand Addis Hotel
             </h2>
           </div>
 

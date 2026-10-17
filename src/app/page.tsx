@@ -96,7 +96,7 @@ export default function HomePage() {
         >
           <Image
             src={pageContent.page_home_hero_image || '/images/BO5A5779-scaled.jpg'}
-            alt="Grand Addis Hotel & Resort"
+            alt="Grand Addis Hotel"
             fill
             priority
             sizes="100vw"
@@ -144,7 +144,7 @@ export default function HomePage() {
               marginBottom: '24px',
             }}
           >
-            <Sparkles size={14} /> {pageContent.page_home_hero_badge || 'Welcome to Grand Addis Hotel & Resort'}
+            <Sparkles size={14} /> {pageContent.page_home_hero_badge || 'Welcome to Grand Addis Hotel'}
           </div>
 
           <h1

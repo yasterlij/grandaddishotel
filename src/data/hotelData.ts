@@ -43,7 +43,7 @@ export interface Testimonial {
 
 export const HOTEL_INFO = {
   name: 'Grand Addis Hotel',
-  tagline: 'Resort & Hotel',
+  tagline: 'Luxury Hotel',
   headline: 'Your Grand Stay In The Heart Of Addis',
   description: 'Welcome to Grand Addis Hotel, an oasis of luxury and tranquility located at 22 Around Golagul in Addis Ababa, Ethiopia. Experience bespoke hospitality, refined comfort, and authentic Ethiopian culture.',
   phone: '+251 116 672 828',

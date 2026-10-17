@@ -25,12 +25,12 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://grandaddishotel.et'),
-  title: 'Grand Addis Hotel - Resort & Hotel | Addis Ababa, Ethiopia',
+  title: 'Grand Addis Hotel | Addis Ababa, Ethiopia',
   description: 'Your Grand Stay in the Heart of Addis. Discover refined boutique luxury, authentic Ethiopian hospitality, and modern accommodations at 22 Around Golagul, Addis Ababa.',
   keywords: [
     'Grand Addis Hotel',
     'Addis Ababa Hotel',
-    'Ethiopia Luxury Resort',
+    'Ethiopia Luxury Hotel',
     'Bole Airport Hotel',
     'Golagul Addis Ababa',
     'Hotel Rooms Addis',
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     'Best Hotel Addis Ababa'
   ],
   openGraph: {
-    title: 'Grand Addis Hotel - Resort & Hotel | Addis Ababa, Ethiopia',
+    title: 'Grand Addis Hotel | Addis Ababa, Ethiopia',
     description: 'Your Grand Stay in the Heart of Addis. Experience luxury accommodations and authentic Ethiopian hospitality.',
     url: 'https://grandaddishotel.et',
     siteName: 'Grand Addis Hotel',

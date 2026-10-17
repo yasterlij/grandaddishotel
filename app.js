@@ -112,7 +112,11 @@ if (typeof PhusionPassenger !== 'undefined') {
   PhusionPassenger.configure({ autoInstall: false })
 }
 
-const dev = process.env.NODE_ENV !== 'production'
+// Always run Next.js in production mode inside app.js (cPanel / Plesk starter)
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'production'
+}
+const dev = false
 
 // Determine listen target (Plesk Phusion Passenger passes 'passenger' or custom port)
 const rawPort = process.env.PORT
